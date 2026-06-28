@@ -16,7 +16,7 @@ ENV LOG_CHANNEL stderr
 
 ENV COMPOSER_ALLOW_SUPERUSER 1
 
-# Install PHP extensions (Alpine - pakai apk)
+# Install PHP extensions
 RUN apk add --no-cache \
     libpng-dev \
     libjpeg-turbo-dev \
