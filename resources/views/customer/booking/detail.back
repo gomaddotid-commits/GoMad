@@ -1,0 +1,276 @@
+@extends('layouts.customer')
+
+@section('title', 'Detail Booking')
+@section('content')
+<div class="max-w-3xl mx-auto px-4 py-8">
+    @if(isset($booking))
+    
+    {{-- Status Banner --}}
+    <div class="rounded-2xl p-4 mb-6 text-center
+        @if($booking->status == 'paid') bg-green-50 border border-green-200
+        @elseif($booking->status == 'pending') bg-yellow-50 border border-yellow-200
+        @elseif($booking->status == 'cancelled') bg-red-50 border border-red-200
+        @elseif($booking->status == 'completed') bg-blue-50 border border-blue-200
+        @else bg-gray-50 border border-gray-200 @endif">
+        <div class="text-4xl mb-2">
+            @if($booking->status == 'paid') ✅
+            @elseif($booking->status == 'pending') ⏳
+            @elseif($booking->status == 'cancelled') ❌
+            @elseif($booking->status == 'completed') 🎉
+            @else 🚗
+            @endif
+        </div>
+        <h2 class="text-xl font-bold">{{ $booking->status_label }}</h2>
+        <p class="text-sm mt-1">
+            @if($booking->status == 'pending') Silakan pilih metode pembayaran di bawah ini.
+            @elseif($booking->status == 'paid') Booking sudah dikonfirmasi. E-Ticket tersedia.
+            @elseif($booking->status == 'completed') Perjalanan selesai. Berikan ulasan!
+            @endif
+        </p>
+    </div>
+
+    {{-- Booking Card --}}
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-6">
+        <div class="flex justify-between items-start mb-4">
+            <div><h1 class="text-2xl font-bold">{{ $booking->booking_code }}</h1><p class="text-gray-500">{{ $booking->schedule->agency->agency_name ?? '-' }}</p></div>
+            <p class="text-2xl font-bold text-primary-600">Rp {{ number_format($booking->total_price, 0, ',', '.') }}</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+            <div><span class="text-gray-500">Naik dari</span><p class="font-semibold">{{ $booking->originStop->city_name ?? '-' }}</p><p class="text-xs text-gray-400 mt-1">{{ $booking->pickup_address }}</p></div>
+            <div><span class="text-gray-500">Turun di</span><p class="font-semibold">{{ $booking->destinationStop->city_name ?? '-' }}</p><p class="text-xs text-gray-400 mt-1">{{ $booking->destination_address }}</p></div>
+            <div><span class="text-gray-500">Tanggal</span><p class="font-semibold">{{ $booking->schedule->departure_date->format('d M Y') }}</p></div>
+            <div><span class="text-gray-500">Jam</span><p class="font-semibold">{{ $booking->schedule->departure_time }}</p></div>
+            <div><span class="text-gray-500">Kendaraan</span><p class="font-semibold">{{ $booking->schedule->vehicle->plate_number ?? '-' }}</p></div>
+            <div><span class="text-gray-500">Penumpang</span><p class="font-semibold">{{ $booking->total_passengers }} orang</p></div>
+        </div>
+        
+        <div class="mt-4 pt-4 border-t">
+            <h4 class="font-semibold mb-2">Daftar Penumpang</h4>
+            @forelse($booking->passengers as $p)
+            <div class="flex justify-between text-sm py-1 border-b border-gray-100"><span>{{ $p->passenger_name }} (Seat {{ $p->seat_number }})</span><span class="text-gray-500">{{ $p->passenger_phone }}</span></div>
+            @empty<p class="text-gray-400 text-sm">-</p>@endforelse
+        </div>
+    </div>
+
+    {{-- PILIH PEMBAYARAN (hanya jika pending dan belum pilih) --}}
+    @if($booking->status == 'pending' && !$booking->payment && !$booking->cashPayment)
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-6">
+        <h2 class="text-lg font-bold text-secondary mb-4">Pilih Metode Pembayaran</h2>
+        <div class="grid grid-cols-2 gap-4">
+            <form action="{{ route('customer.booking.pay-midtrans', $booking) }}" method="POST">
+                @csrf
+                <button type="submit" class="w-full border-2 border-primary-600 rounded-2xl p-4 hover:shadow-md transition bg-primary-50 text-left">
+                    <div class="text-center"><div class="text-3xl mb-2">💳</div><h4 class="font-bold text-secondary">Bayar Online</h4><p class="text-xs text-gray-500 mt-1">Transfer Bank, VA, QRIS</p></div>
+                </button>
+            </form>
+            <form action="{{ route('customer.booking.pay-cash', $booking) }}" method="POST">
+                @csrf
+                <button type="submit" class="w-full border-2 border-green-400 rounded-2xl p-4 hover:shadow-md transition bg-green-50 text-left">
+                    <div class="text-center"><div class="text-3xl mb-2">🏪</div><h4 class="font-bold text-secondary">Warung GoMad</h4><p class="text-xs text-gray-500 mt-1">Bayar cash di warung</p></div>
+                </button>
+            </form>
+        </div>
+    </div>
+    @endif
+
+    {{-- Midtrans Pay Button --}}
+    @if($booking->payment && $booking->payment->payment_type == 'midtrans' && $booking->payment->status == 'pending')
+    <div class="mb-6">
+        @if(isset($snapToken))
+        <button id="pay-button" class="w-full bg-primary-600 text-white py-3 rounded-xl font-bold text-lg hover:bg-primary-700 transition">Bayar Sekarang</button>
+        @else
+        <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-4 text-center text-sm text-yellow-800">
+            Menghubungkan ke gateway... <a href="{{ route('customer.booking.show', $booking) }}" class="text-primary-600 underline ml-2">Muat Ulang</a>
+        </div>
+        @endif
+    </div>
+    @endif
+
+    {{-- CASH PAYMENT: Kode Bayar + Peta Warung --}}
+    @if($booking->cashPayment && $booking->cashPayment->status == 'pending')
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-6">
+        <h2 class="text-lg font-bold text-secondary mb-4">Pembayaran di Warung GoMad</h2>
+        
+        {{-- Kode Bayar --}}
+        <div class="bg-green-50 border-2 border-green-300 rounded-2xl p-6 text-center mb-6">
+            <p class="text-sm text-green-700 mb-2">Tunjukkan kode ini ke Warung GoMad terdekat</p>
+            <p class="text-4xl font-mono font-bold text-primary-600 tracking-widest mb-2">{{ $booking->cashPayment->payment_code }}</p>
+            <p class="text-xs text-gray-500">Expired: {{ $booking->cashPayment->expired_at ? $booking->cashPayment->expired_at->format('d M Y H:i') : '-' }}</p>
+            <div class="mt-3 flex justify-center gap-2">
+                <button onclick="copyPaymentCode()" class="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700 transition">
+                    Salin Kode
+                </button>
+            </div>
+        </div>
+
+        {{-- Peta Warung GoMad Terdekat --}}
+        <div>
+            <h3 class="font-bold text-secondary mb-3">Warung GoMad Terdekat</h3>
+            <p class="text-sm text-gray-500 mb-4">Kunjungi salah satu Warung GoMad di bawah ini untuk melakukan pembayaran</p>
+            
+            <div id="warungMap" style="height: 400px;" class="rounded-xl border border-gray-200 mb-4"></div>
+            
+            <div id="warungList" class="space-y-3">
+                <p class="text-sm text-gray-500 text-center">Memuat data warung...</p>
+            </div>
+        </div>
+    </div>
+    @endif
+
+    {{-- Payment Success --}}
+    @if($booking->payment && $booking->payment->status == 'paid')
+    <div class="bg-green-50 border border-green-200 rounded-xl p-4 mb-6 text-center">
+        <p class="font-bold text-green-800">Pembayaran Berhasil</p>
+        <p class="text-sm text-green-600">Metode: {{ $booking->payment->payment_type == 'midtrans' ? 'Online' : 'Cash' }}</p>
+    </div>
+    @endif
+
+    {{-- Actions --}}
+    <div class="space-y-3">
+        @if(in_array($booking->status, ['paid', 'on_going', 'completed']))
+        <a href="{{ route('customer.booking.e-ticket', $booking) }}" class="block w-full text-center bg-blue-600 text-white py-3 rounded-xl font-bold text-lg hover:bg-blue-700 transition">Lihat E-Ticket</a>
+        @endif
+        @if($booking->can_cancel)
+        <form action="{{ route('customer.booking.cancel', $booking) }}" method="POST" onsubmit="return confirm('Batalkan?')">
+            @csrf
+            <button type="submit" class="w-full border border-red-500 text-red-500 py-3 rounded-xl font-bold hover:bg-red-50 transition">Batalkan Booking</button>
+        </form>
+        @endif
+        <a href="{{ route('customer.bookings') }}" class="block w-full text-center border border-gray-300 text-gray-700 py-3 rounded-xl font-semibold hover:bg-gray-50 transition">Kembali ke Booking Saya</a>
+    </div>
+    @endif
+</div>
+
+{{-- Midtrans Script --}}
+@if(isset($snapToken))
+@push('scripts')
+<script src="{{ config('gomad.midtrans.snap_url') }}" data-client-key="{{ config('gomad.midtrans.client_key') }}"></script>
+<script>
+document.getElementById('pay-button').addEventListener('click', function() {
+    snap.pay('{{ $snapToken }}', {
+        onSuccess: function(result) { window.location.reload(); },
+        onPending: function(result) { alert('Menunggu pembayaran...'); },
+        onError: function(result) { alert('Pembayaran gagal.'); }
+    });
+});
+</script>
+@endpush
+@endif
+
+{{-- Leaflet Map Script --}}
+@if($booking->cashPayment && $booking->cashPayment->status == 'pending')
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Inisialisasi peta
+    var map = L.map('warungMap').setView([-7.0051, 113.8586], 12);
+    
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors',
+        maxZoom: 18,
+    }).addTo(map);
+
+    // Ambil data warung dari API
+    var pickupLat = {{ $booking->pickup_latitude ?? -7.0051 }};
+    var pickupLng = {{ $booking->pickup_longitude ?? 113.8586 }};
+    
+    // Marker lokasi customer
+    var customerIcon = L.divIcon({
+        html: '<div style="background:#DC2626;color:white;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);">📍</div>',
+        className: '',
+        iconSize: [30, 30],
+        iconAnchor: [15, 15],
+    });
+    
+    L.marker([pickupLat, pickupLng], { icon: customerIcon })
+        .addTo(map)
+        .bindPopup('<strong>Lokasi Anda</strong><br>{{ $booking->pickup_address }}');
+
+    // Ambil daftar warung via API
+    fetch('/api/v1/nearby-warungs?latitude=' + pickupLat + '&longitude=' + pickupLng + '&radius=50')
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+            var warungs = data.data || [];
+            var warungList = document.getElementById('warungList');
+            
+            if (warungs.length === 0) {
+                warungList.innerHTML = '<p class="text-gray-500 text-center py-4">Tidak ada Warung GoMad terdekat. Silakan hubungi customer service.</p>';
+                return;
+            }
+            
+            var listHtml = '';
+            var bounds = L.latLngBounds();
+            
+            warungs.forEach(function(w, index) {
+                if (w.latitude && w.longitude) {
+                    var warungIcon = L.divIcon({
+                        html: '<div style="background:#16a34a;color:white;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);">🏪</div>',
+                        className: '',
+                        iconSize: [32, 32],
+                        iconAnchor: [16, 16],
+                    });
+                    
+                    var marker = L.marker([w.latitude, w.longitude], { icon: warungIcon })
+                    .addTo(map)
+                    .bindPopup(
+                        '<div style="min-width:180px;">' +
+                            '<strong style="font-size:14px;">' + w.agent_name + '</strong><br>' +
+                            '<span style="font-size:12px;color:#666;">' + (w.address || '') + '</span><br>' +
+                            '<span style="font-size:12px;">📞 ' + (w.owner_phone || '-') + '</span><br>' +
+                            (w.maps_link ? 
+                                '<a href="' + w.maps_link + '" target="_blank" style="display:inline-block;margin-top:6px;background:#DC2626;color:white;padding:6px 12px;border-radius:8px;text-decoration:none;font-size:12px;font-weight:600;">🗺️ Buka Google Maps</a>' 
+                                : 
+                                '<a href="https://www.google.com/maps?q=' + encodeURIComponent(w.latitude + ',' + w.longitude) + '" target="_blank" style="display:inline-block;margin-top:6px;background:#DC2626;color:white;padding:6px 12px;border-radius:8px;text-decoration:none;font-size:12px;font-weight:600;">🗺️ Buka Google Maps</a>'
+                            ) +
+                        '</div>'
+                    );
+                    bounds.extend([w.latitude, w.longitude]);
+                }
+                
+                var distanceText = w.distance_km ? w.distance_km.toFixed(1) + ' km' : '';
+                
+                listHtml += '<div class="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md transition cursor-pointer">' +
+                    '<div class="flex items-start gap-3">' +
+                        '<div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center text-lg flex-shrink-0">🏪</div>' +
+                        '<div class="flex-1">' +
+                            '<h4 class="font-bold text-secondary text-sm">' + w.agent_name + '</h4>' +
+                            '<p class="text-xs text-gray-500 mt-1">' + (w.address || '') + '</p>' +
+                            '<div class="flex items-center gap-3 mt-2 text-xs">' +
+                                '<span class="text-gray-500">📞 ' + (w.owner_phone || '-') + '</span>' +
+                                (distanceText ? '<span class="text-primary-600 font-medium">📍 ' + distanceText + '</span>' : '') +
+                            '</div>' +
+                            '<div class="flex gap-2 mt-2">' +
+                                '<button onclick="event.stopPropagation(); map.setView([' + w.latitude + ', ' + w.longitude + '], 16)" class="text-xs bg-green-100 text-green-700 px-3 py-1.5 rounded-lg hover:bg-green-200 transition font-medium">Lihat Peta</button>' +
+                                (w.maps_link ? 
+                                    '<a href="' + w.maps_link + '" target="_blank" onclick="event.stopPropagation();" class="text-xs bg-red-100 text-red-700 px-3 py-1.5 rounded-lg hover:bg-red-200 transition font-medium">🗺️ Google Maps</a>'
+                                    :
+                                    '<a href="https://www.google.com/maps?q=' + encodeURIComponent(w.latitude + ',' + w.longitude) + '" target="_blank" onclick="event.stopPropagation();" class="text-xs bg-red-100 text-red-700 px-3 py-1.5 rounded-lg hover:bg-red-200 transition font-medium">🗺️ Google Maps</a>'
+                                ) +
+                            '</div>' +
+                        '</div>' +
+                    '</div>' +
+                '</div>';
+            });
+            
+            warungList.innerHTML = listHtml;
+            
+            // Sesuaikan bounds peta
+            bounds.extend([pickupLat, pickupLng]);
+            if (warungs.length > 0) {
+                map.fitBounds(bounds, { padding: [50, 50], maxZoom: 14 });
+            }
+        })
+        .catch(function() {
+            document.getElementById('warungList').innerHTML = '<p class="text-red-500 text-center py-4">Gagal memuat data warung.</p>';
+        });
+});
+
+function copyPaymentCode() {
+    navigator.clipboard.writeText('{{ $booking->cashPayment->payment_code }}');
+    alert('Kode bayar berhasil disalin!');
+}
+</script>
+@endpush
+@endif
+@endsection

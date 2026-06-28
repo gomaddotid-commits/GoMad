@@ -1,0 +1,134 @@
+@extends('layouts.agency')
+
+@section('title', 'Lengkapi Profil Agency')
+@section('content')
+@php
+    $agency = auth()->user()->agency;
+@endphp
+
+<div>
+    <div class="text-center mb-8">
+        <div class="text-5xl mb-4">🏢</div>
+        <h1 class="text-xl font-bold text-secondary mb-2">
+            {{ $agency && $agency->agency_name ? 'Setup Ulang Profil Agency' : 'Lengkapi Profil Agency' }}
+        </h1>
+        <p class="text-gray-500">
+            {{ $agency && $agency->agency_name ? 'Perbaiki data agency Anda sesuai catatan penolakan' : 'Isi data agency Anda untuk mulai beroperasi di GoMad' }}
+        </p>
+    </div>
+
+    <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-6">
+        <p class="text-sm text-yellow-800">
+            ⚠️ <strong>Semua field wajib diisi.</strong> Data yang lengkap akan mempercepat proses verifikasi.
+        </p>
+    </div>
+
+    <form action="{{ route('agency.setup.save') }}" method="POST" enctype="multipart/form-data" class="space-y-6">
+        @csrf
+
+        <!-- Informasi Dasar -->
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+            <h3 class="font-bold text-secondary mb-4">📋 Informasi Dasar</h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-secondary mb-1">Nama Agency <span class="text-red-500">*</span></label>
+                    <input type="text" name="agency_name" value="{{ old('agency_name', $agency->agency_name ?? '') }}"
+                           class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-600 bg-gray-50"
+                           placeholder="Contoh: Travel Jaya Abadi" required>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-secondary mb-1">Alamat Lengkap <span class="text-red-500">*</span></label>
+                    <textarea name="address" rows="3" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-600 bg-gray-50"
+                              placeholder="Jl. Trunojoyo No. 45, Sumenep" required>{{ old('address', $agency->address ?? '') }}</textarea>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-secondary mb-1">Deskripsi Agency <span class="text-red-500">*</span></label>
+                    <textarea name="description" rows="4" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-600 bg-gray-50"
+                              placeholder="Ceritakan tentang agency Anda, armada, layanan, dll." required>{{ old('description', $agency->description ?? '') }}</textarea>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-secondary mb-1">Tahun Berdiri <span class="text-red-500">*</span></label>
+                        <input type="number" name="founded_year" value="{{ old('founded_year', $agency->founded_year ?? '') }}"
+                               class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-600 bg-gray-50"
+                               placeholder="2020" min="1950" max="{{ date('Y') }}" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-secondary mb-1">Kontak Person <span class="text-red-500">*</span></label>
+                        <input type="text" name="contact_person" value="{{ old('contact_person', $agency->contact_person ?? '') }}"
+                               class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-600 bg-gray-50"
+                               placeholder="Nama kontak person" required>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Kontak -->
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+            <h3 class="font-bold text-secondary mb-4">📞 Kontak</h3>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-secondary mb-1">Nomor Telepon <span class="text-red-500">*</span></label>
+                    <input type="text" name="phone" value="{{ old('phone', $agency->contact_alternate ?? '') }}"
+                           class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-600 bg-gray-50" placeholder="081234567890" required>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-secondary mb-1">Nomor WhatsApp <span class="text-red-500">*</span></label>
+                    <input type="text" name="whatsapp" value="{{ old('whatsapp', auth()->user()->phone ?? '') }}"
+                           class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-600 bg-gray-50" placeholder="081234567890" required>
+                </div>
+                <div class="col-span-2">
+                    <label class="block text-sm font-medium text-secondary mb-1">Email Bisnis</label>
+                    <input type="email" name="email_alternate" value="{{ old('email_alternate', $agency->email_alternate ?? '') }}"
+                           class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-600 bg-gray-50" placeholder="agency@email.com">
+                </div>
+            </div>
+        </div>
+
+        <!-- Foto & Cover -->
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+            <h3 class="font-bold text-secondary mb-4">🖼️ Foto Agency</h3>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-secondary mb-1">Logo Agency</label>
+                    <input type="file" name="logo" accept="image/*" class="w-full text-sm">
+                    <p class="text-xs text-gray-500 mt-1">Format: JPG, PNG. Max 2MB</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-secondary mb-1">Cover Image</label>
+                    <input type="file" name="cover" accept="image/*" class="w-full text-sm">
+                    <p class="text-xs text-gray-500 mt-1">Format: JPG, PNG. Max 5MB</p>
+                </div>
+            </div>
+            <div class="mt-4">
+                <label class="block text-sm font-medium text-secondary mb-1">Galeri Foto (max 10)</label>
+                <input type="file" name="gallery[]" accept="image/*" multiple class="w-full text-sm">
+                <p class="text-xs text-gray-500 mt-1">Bisa upload beberapa foto sekaligus</p>
+            </div>
+        </div>
+
+        <!-- Dokumen Pengajuan -->
+        <div class="bg-white rounded-2xl shadow-sm border-2 border-orange-300 p-6">
+            <h3 class="font-bold text-orange-800 mb-4">📄 Dokumen Pengajuan Verifikasi <span class="text-red-500">*</span></h3>
+            <div class="bg-orange-50 rounded-lg p-4 mb-4">
+                <p class="text-sm text-orange-800 mb-2"><strong>Dokumen PDF harus berisi:</strong></p>
+                <ol class="list-decimal list-inside text-sm text-orange-700 space-y-1">
+                    <li>Profil Agency (nama, alamat, deskripsi layanan)</li>
+                    <li>Profil Pemilik (nama, KTP, alamat)</li>
+                    <li>Dokumen Identitas Pemilik (scan KTP/SIM)</li>
+                    <li>Tanda tangan pernyataan keaslian data</li>
+                </ol>
+            </div>
+            <input type="file" name="documents" accept=".pdf" class="w-full text-sm" {{ $agency && $agency->business_license ? '' : 'required' }}>
+            <p class="text-xs text-gray-500 mt-1">Format: PDF. Max 10MB</p>
+            @if($agency && $agency->business_license)
+            <p class="text-xs text-green-600 mt-1">✅ Dokumen sudah diupload sebelumnya. Upload ulang jika ingin mengganti.</p>
+            @endif
+        </div>
+
+        <button type="submit" class="w-full bg-primary-600 text-white py-4 rounded-xl font-bold text-lg hover:bg-primary-700 transition active:scale-95">
+            📝 SIMPAN & AJUKAN VERIFIKASI
+        </button>
+    </form>
+</div>
+@endsection

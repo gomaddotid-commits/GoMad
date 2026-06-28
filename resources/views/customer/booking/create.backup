@@ -1,0 +1,579 @@
+@extends('layouts.customer')
+
+@section('title', 'Booking Travel')
+@section('content')
+@php
+    $scheduleParam = request()->route('schedule');
+    
+    if ($scheduleParam instanceof \App\Models\Schedule) {
+        $schedule = $scheduleParam;
+        $schedule->load(['route.stops', 'agency', 'vehicle', 'scheduleStops.routeStop', 'routePricing']);
+    } else {
+        $scheduleId = is_object($scheduleParam) ? $scheduleParam->id : (int) $scheduleParam;
+        $schedule = \App\Models\Schedule::with([
+            'route.stops', 'agency', 'vehicle', 'scheduleStops.routeStop', 'routePricing'
+        ])->findOrFail($scheduleId);
+    }
+    
+    $scheduleService = app(\App\Services\ScheduleService::class);
+    $availablePickups = $scheduleService->getAvailablePickupStops($schedule);
+    
+    // Data untuk JavaScript
+    $scheduleData = [
+        'id' => $schedule->id,
+        'agency_name' => $schedule->agency->agency_name ?? 'Agency',
+        'agency_logo' => $schedule->agency->logo ? asset('storage/' . $schedule->agency->logo) : null,
+        'agency_rating' => (float) ($schedule->agency->rating ?? 0),
+        'route_name' => $schedule->route->route_name ?? 'Rute',
+        'vehicle' => ($schedule->vehicle->plate_number ?? '-') . ' - ' . ($schedule->vehicle->brand ?? '') . ' ' . ($schedule->vehicle->model ?? ''),
+        'departure_date' => $schedule->departure_date ? $schedule->departure_date->format('d M Y') : '-',
+        'departure_time' => $schedule->departure_time ?? '-',
+        'travel_class' => $schedule->travel_class ?? 'economy',
+        'travel_class_label' => ucfirst($schedule->travel_class ?? 'ekonomi'),
+        'base_price' => (float) ($schedule->price_per_seat ?? 0),
+        'available_pickups' => $availablePickups,
+    ];
+    
+    // Data user untuk "Gunakan Pemilik Akun"
+    $user = auth()->user();
+    $userData = [
+        'name' => $user->name,
+        'phone' => $user->phone ?? '',
+    ];
+    
+    // Promo tersedia
+    $promoService = app(\App\Services\PromoService::class);
+    $availablePromos = $promoService->getAvailablePromosForCustomer($user);
+    $schedulePromos = \App\Models\Promo::whereHas('schedules', function($q) use ($schedule) {
+        $q->where('schedule_id', $schedule->id);
+    })->active()->get();
+    $allPromos = $availablePromos->merge($schedulePromos);
+@endphp
+
+<div class="max-w-4xl mx-auto px-4 py-8" id="bookingApp">
+    
+    <!-- Header Info -->
+    <div class="bg-white rounded-xl shadow-md p-4 mb-6">
+        <div class="flex items-center gap-4">
+            <div class="w-12 h-12 rounded-full bg-primary-light flex items-center justify-center text-xl overflow-hidden flex-shrink-0">
+                @if($schedule->agency && $schedule->agency->logo)
+                <img src="{{ asset('storage/' . $schedule->agency->logo) }}" alt="Logo" class="w-full h-full object-cover">
+                @else
+                <span>🏢</span>
+                @endif
+            </div>
+            <div class="min-w-0">
+                <h2 class="font-bold text-lg truncate">{{ $schedule->agency->agency_name ?? 'Agency' }}</h2>
+                <p class="text-sm text-gray-500">
+                    ⭐ {{ number_format((float) ($schedule->agency->rating ?? 0), 1) }} 
+                    | 🚐 {{ $schedule->vehicle->plate_number ?? '-' }}
+                </p>
+                <p class="text-sm text-gray-500">
+                    📅 {{ $schedule->departure_date ? $schedule->departure_date->format('d M Y') : '-' }} 
+                    | 🕐 {{ $schedule->departure_time ?? '-' }}
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Progress Bar -->
+    <div class="bg-white rounded-xl shadow-md p-4 mb-6">
+        <div class="flex justify-between text-xs md:text-sm mb-2">
+            <span class="step-indicator font-bold text-primary" data-step="1">1. Pilih Naik</span>
+            <span class="step-indicator text-gray-400 hidden sm:inline" data-step="2">2. Alamat Jemput</span>
+            <span class="step-indicator text-gray-400 hidden sm:inline" data-step="3">3. Pilih Turun</span>
+            <span class="step-indicator text-gray-400" data-step="4">4. Konfirmasi</span>
+        </div>
+        <div class="bg-gray-200 rounded-full h-2">
+            <div id="progressBar" class="bg-primary rounded-full h-2 transition-all duration-300" style="width: 25%"></div>
+        </div>
+    </div>
+
+    <!-- STEP 1: Pilih Kota Penjemputan -->
+    <div id="step1" class="step-content">
+        <div class="bg-white rounded-xl shadow-md p-6 mb-6">
+            <h2 class="text-xl font-bold text-gray-900 mb-2">Pilih Kota Penjemputan 🚶</h2>
+            <p class="text-gray-500 mb-6">Pilih kota di mana Anda akan dijemput</p>
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-4" id="pickupGrid"></div>
+            <div class="mt-6 text-center">
+                <button type="button" onclick="goToStep2()" id="btnStep1" 
+                        class="bg-gray-300 text-gray-500 px-8 py-3 rounded-lg font-semibold cursor-not-allowed" disabled>LANJUT</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- STEP 2: Alamat Penjemputan -->
+    <div id="step2" class="step-content" style="display:none;">
+        <div class="bg-white rounded-xl shadow-md p-6 mb-6">
+            <h2 class="text-xl font-bold text-gray-900 mb-2">Alamat Penjemputan 📍</h2>
+            <p class="text-gray-500 mb-6">Isi alamat lengkap penjemputan di <strong id="pickupCityName">-</strong></p>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium mb-1">Alamat Lengkap <span class="text-red-500">*</span></label>
+                    <textarea id="pickupAddress" rows="3" class="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary" 
+                              placeholder="Jl. Trunojoyo No. 10, RT/RW, Kelurahan, Kecamatan, Kabupaten"></textarea>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">Link Google Maps</label>
+                    <input type="url" id="pickupMapsLink" class="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary" 
+                           placeholder="https://maps.google.com/?q=...">
+                </div>
+            </div>
+            <div class="mt-6 flex gap-4 justify-center">
+                <button type="button" onclick="goToStep1()" class="border border-gray-300 px-6 py-3 rounded-lg font-semibold hover:bg-gray-50">← KEMBALI</button>
+                <button type="button" onclick="goToStep3()" id="btnStep2" class="bg-primary text-white px-8 py-3 rounded-lg font-semibold hover:bg-primary-dark">LANJUT</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- STEP 3: Pilih Kota Tujuan -->
+    <div id="step3" class="step-content" style="display:none;">
+        <div class="bg-white rounded-xl shadow-md p-6 mb-6">
+            <h2 class="text-xl font-bold text-gray-900 mb-2">Pilih Kota Tujuan 🎯</h2>
+            <p class="text-gray-500 mb-6">Pilih kota tujuan Anda (setelah <strong id="pickupCityName3">-</strong>)</p>
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-4" id="dropoffGrid"></div>
+            <div id="priceDetail" class="mt-6 bg-primary-light rounded-xl p-4" style="display:none;">
+                <h4 class="font-bold text-primary mb-2">💰 Rincian Harga</h4>
+                <div class="flex justify-between text-sm mb-1">
+                    <span id="priceRoute">-</span>
+                    <span class="font-bold" id="pricePerPerson">-</span>
+                </div>
+                <hr class="my-2 border-primary/30">
+                <div class="flex justify-between font-bold text-lg">
+                    <span>Total per orang</span>
+                    <span class="text-primary" id="priceTotal">-</span>
+                </div>
+            </div>
+            <div class="mt-6 flex gap-4 justify-center">
+                <button type="button" onclick="goToStep2()" class="border border-gray-300 px-6 py-3 rounded-lg font-semibold hover:bg-gray-50">← KEMBALI</button>
+                <button type="button" onclick="goToStep4()" id="btnStep3" 
+                        class="bg-gray-300 text-gray-500 px-8 py-3 rounded-lg font-semibold cursor-not-allowed" disabled>LANJUT</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- STEP 4: Konfirmasi Pemesanan -->
+    <div id="step4" class="step-content" style="display:none;">
+        <div class="bg-white rounded-xl shadow-md p-6 mb-6">
+            <h2 class="text-xl font-bold text-gray-900 mb-2">Konfirmasi Pemesanan ✅</h2>
+            
+            <!-- Alamat Tujuan -->
+            <div class="mb-6">
+                <h3 class="font-semibold mb-2">📍 Alamat Tujuan di <strong id="dropoffCityName4">-</strong></h3>
+                <textarea id="destinationAddress" rows="2" class="w-full px-4 py-3 border rounded-lg mb-2 focus:ring-2 focus:ring-primary" 
+                          placeholder="Alamat lengkap tujuan"></textarea>
+                <input type="url" id="destinationMapsLink" class="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary" 
+                       placeholder="Link Google Maps tujuan (opsional)">
+            </div>
+
+            <!-- Data Penumpang -->
+            <div class="mb-6">
+                <div class="flex justify-between items-center mb-3">
+                    <h3 class="font-semibold">👥 Data Penumpang</h3>
+                    <button type="button" onclick="useAccountOwner()" id="btnUseOwner" 
+                            class="text-primary text-sm hover:underline font-medium">
+                        👤 Gunakan Pemilik Akun
+                    </button>
+                </div>
+                
+                <div id="passengerList" class="space-y-3">
+                    <!-- Passenger items akan diisi oleh JavaScript -->
+                </div>
+                
+                <button type="button" onclick="addPassenger()" class="mt-3 text-primary text-sm hover:underline font-medium">
+                    + Tambah Penumpang Lain
+                </button>
+                <p class="text-xs text-gray-500 mt-1">Maksimal 10 penumpang</p>
+            </div>
+
+            <!-- Promo Tersedia -->
+            @if($allPromos->isNotEmpty())
+            <div class="mb-6 bg-gradient-to-r from-purple-50 to-pink-50 border-2 border-purple-200 rounded-xl p-4">
+                <h3 class="font-bold text-purple-800 mb-3">🎫 Promo Tersedia</h3>
+                <div class="space-y-2" id="promoList">
+                    <label class="flex items-center p-3 bg-white rounded-lg cursor-pointer hover:shadow border-2 border-purple-300 promo-option bg-purple-50" 
+                           onclick="selectPromo(null, 0, this)">
+                        <input type="radio" name="promo_select" value="" class="mr-3" checked>
+                        <div>
+                            <span class="font-semibold text-gray-700">Tanpa Promo</span>
+                            <span class="text-sm text-gray-500">- Harga normal</span>
+                        </div>
+                    </label>
+                    @foreach($allPromos as $promo)
+                    <label class="flex items-center p-3 bg-white rounded-lg cursor-pointer hover:shadow border-2 border-transparent hover:border-purple-300 promo-option" 
+                           onclick="selectPromo({{ $promo->id }}, {{ $promo->discount_percent }}, {{ $promo->max_discount }}, this)">
+                        <input type="radio" name="promo_select" value="{{ $promo->id }}" class="mr-3">
+                        <div class="flex-1">
+                            <span class="font-semibold text-purple-800">{{ $promo->name }}</span>
+                            <span class="text-sm text-purple-600">- Diskon {{ $promo->discount_percent }}%</span>
+                            <span class="text-xs text-gray-500 block">Maks Rp {{ number_format($promo->max_discount, 0, ',', '.') }}</span>
+                        </div>
+                        <span class="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded-full">🎫</span>
+                    </label>
+                    @endforeach
+                </div>
+            </div>
+            @endif
+
+            <!-- Ringkasan -->
+            <div class="bg-red-50 border-2 border-red-200 rounded-xl p-4 mb-6">
+                <h3 class="font-bold text-red-800 mb-3">📋 Ringkasan Pemesanan</h3>
+                <div class="space-y-2 text-sm">
+                    <div class="flex justify-between"><span>Naik dari</span><span class="font-semibold" id="summaryPickup">-</span></div>
+                    <div class="flex justify-between"><span>Turun di</span><span class="font-semibold" id="summaryDropoff">-</span></div>
+                    <div class="flex justify-between">
+                        <span>Jadwal</span>
+                        <span class="font-semibold">{{ $schedule->departure_date ? $schedule->departure_date->format('d M Y') : '-' }} {{ $schedule->departure_time ?? '-' }}</span>
+                    </div>
+                    <div class="flex justify-between"><span>Jumlah Penumpang</span><span class="font-semibold" id="summaryPassengers">0 orang</span></div>
+                    <hr class="border-red-200">
+                    <div class="text-right" id="summaryTotalContainer">
+                        <span class="text-lg font-bold text-red-800" id="summaryTotal">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex gap-4 justify-center">
+                <button type="button" onclick="goToStep3()" class="border border-gray-300 px-6 py-3 rounded-lg font-semibold hover:bg-gray-50">← KEMBALI</button>
+                <button type="button" onclick="submitBooking()" class="bg-green-600 text-white px-8 py-3 rounded-lg font-bold text-lg hover:bg-green-700">
+                    🚀 BUAT BOOKING
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Form tersembunyi -->
+    <form id="bookingForm" action="{{ route('customer.booking.store') }}" method="POST" style="display:none;">
+        @csrf
+        <input type="hidden" name="schedule_id" value="{{ $schedule->id }}">
+        <input type="hidden" name="origin_stop_id" id="fOriginStopId">
+        <input type="hidden" name="destination_stop_id" id="fDestStopId">
+        <input type="hidden" name="pickup_address" id="fPickupAddress">
+        <input type="hidden" name="pickup_maps_link" id="fPickupMapsLink">
+        <input type="hidden" name="destination_address" id="fDestAddress">
+        <input type="hidden" name="destination_maps_link" id="fDestMapsLink">
+        <input type="hidden" name="promo_id" id="fPromoId">
+        <div id="fPassengers"></div>
+    </form>
+</div>
+
+@endsection
+
+@push('scripts')
+<script>
+// Data dari server
+var scheduleData = @json($scheduleData);
+var userData = @json($userData);
+var availablePickups = scheduleData.available_pickups || [];
+var availableDropoffs = [];
+var selectedPickup = null;
+var selectedDropoff = null;
+var selectedPromoId = null;
+var selectedPromoPercent = 0;
+var selectedPromoMaxDiscount = 0;
+var hasUsedOwner = false;
+
+document.addEventListener('DOMContentLoaded', function() {
+    renderPickupGrid();
+    // Mulai dengan 1 penumpang kosong
+    addPassenger();
+});
+
+// ==================== STEP 1: Pilih Pickup ====================
+function renderPickupGrid() {
+    var grid = document.getElementById('pickupGrid');
+    var html = '';
+    
+    if (!availablePickups || availablePickups.length === 0) {
+        grid.innerHTML = '<p class="text-gray-500 col-span-full text-center py-4">Tidak ada kota penjemputan tersedia.</p>';
+        return;
+    }
+    
+    availablePickups.forEach(function(stop, index) {
+        var isFirst = index === 0;
+        var bgClass = isFirst ? 'border-green-400 bg-green-50' : 'border-blue-400 bg-blue-50';
+        var labelClass = isFirst ? 'bg-green-500' : 'bg-blue-500';
+        var label = isFirst ? 'Kota Asal' : 'Stop ' + (stop.stop_order || index + 1);
+        var safeCity = stop.city_name.replace(/'/g, "\\'");
+        
+        html += '<div class="pickup-card rounded-xl border-2 p-4 cursor-pointer transition hover:shadow-lg ' + bgClass + '" onclick="selectPickup(this, ' + stop.route_stop_id + ', \'' + safeCity + '\')">';
+        html += '<span class="inline-block px-2 py-0.5 rounded-full text-xs text-white font-medium mb-2 ' + labelClass + '">' + label + '</span>';
+        html += '<h3 class="font-bold text-lg">' + stop.city_name + '</h3>';
+        html += '<p class="text-sm mt-1">🚶 Titik Jemput</p>';
+        html += '<p class="text-sm font-semibold text-gray-700 mt-1">Mulai ' + (stop.min_price_formatted || 'Belum ada harga') + '</p>';
+        html += '</div>';
+    });
+    
+    grid.innerHTML = html;
+}
+
+function selectPickup(card, stopId, cityName) {
+    document.querySelectorAll('.pickup-card').forEach(function(c) { c.classList.remove('ring-4', 'ring-primary', 'border-primary'); });
+    card.classList.add('ring-4', 'ring-primary', 'border-primary');
+    selectedPickup = { id: stopId, city_name: cityName };
+    var btn = document.getElementById('btnStep1');
+    btn.disabled = false;
+    btn.className = 'bg-primary text-white px-8 py-3 rounded-lg font-semibold hover:bg-primary-dark cursor-pointer';
+}
+
+function goToStep1() { showStep(1); }
+
+function goToStep2() {
+    if (!selectedPickup) return alert('Pilih kota penjemputan!');
+    document.getElementById('pickupCityName').textContent = selectedPickup.city_name;
+    showStep(2);
+}
+
+function goToStep3() {
+    var address = document.getElementById('pickupAddress').value.trim();
+    if (!address) return alert('Isi alamat penjemputan!');
+    document.getElementById('pickupCityName3').textContent = selectedPickup.city_name;
+    
+    fetch('/api/v1/schedules/' + scheduleData.id + '/dropoffs/' + selectedPickup.id)
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+            availableDropoffs = data.data || [];
+            renderDropoffGrid();
+            showStep(3);
+        })
+        .catch(function() { alert('Gagal memuat data tujuan.'); });
+}
+
+function renderDropoffGrid() {
+    var grid = document.getElementById('dropoffGrid');
+    var html = '';
+    
+    if (!availableDropoffs || availableDropoffs.length === 0) {
+        grid.innerHTML = '<p class="text-gray-500 col-span-full text-center py-4">Tidak ada kota tujuan tersedia.</p>';
+        return;
+    }
+    
+    availableDropoffs.forEach(function(stop, index) {
+        var isLast = index === availableDropoffs.length - 1;
+        var bgClass = isLast ? 'border-red-400 bg-red-50' : 'border-purple-400 bg-purple-50';
+        var labelClass = isLast ? 'bg-red-500' : 'bg-purple-500';
+        var label = isLast ? 'Kota Tujuan' : 'Stop ' + (stop.stop_order || index + 1);
+        var safeCity = stop.city_name.replace(/'/g, "\\'");
+        
+        html += '<div class="dropoff-card rounded-xl border-2 p-4 cursor-pointer transition hover:shadow-lg ' + bgClass + '" onclick="selectDropoff(this, ' + stop.route_stop_id + ', \'' + safeCity + '\', ' + (stop.price || 0) + ')">';
+        html += '<span class="inline-block px-2 py-0.5 rounded-full text-xs text-white font-medium mb-2 ' + labelClass + '">' + label + '</span>';
+        html += '<h3 class="font-bold text-lg">' + stop.city_name + '</h3>';
+        html += '<p class="text-sm mt-1">🎯 Titik Turun</p>';
+        html += '<p class="text-sm font-semibold text-gray-700 mt-1">' + (stop.price_formatted || 'Belum ada harga') + '</p>';
+        html += '</div>';
+    });
+    
+    grid.innerHTML = html;
+}
+
+function selectDropoff(card, stopId, cityName, price) {
+    document.querySelectorAll('.dropoff-card').forEach(function(c) { c.classList.remove('ring-4', 'ring-primary', 'border-primary'); });
+    card.classList.add('ring-4', 'ring-primary', 'border-primary');
+    selectedDropoff = { id: stopId, city_name: cityName, price: price };
+    
+    document.getElementById('priceDetail').style.display = 'block';
+    document.getElementById('priceRoute').textContent = (selectedPickup ? selectedPickup.city_name : '') + ' → ' + cityName;
+    document.getElementById('pricePerPerson').textContent = 'Rp ' + formatRupiah(price) + ' /orang';
+    document.getElementById('priceTotal').textContent = 'Rp ' + formatRupiah(price) + ' /orang';
+    
+    var btn = document.getElementById('btnStep3');
+    btn.disabled = false;
+    btn.className = 'bg-primary text-white px-8 py-3 rounded-lg font-semibold hover:bg-primary-dark cursor-pointer';
+}
+
+// ==================== STEP 4: Konfirmasi ====================
+function goToStep4() {
+    if (!selectedDropoff) return alert('Pilih kota tujuan!');
+    document.getElementById('dropoffCityName4').textContent = selectedDropoff.city_name;
+    updateSummary();
+    showStep(4);
+}
+
+// ==================== PASSENGER MANAGEMENT ====================
+function addPassenger() {
+    var list = document.getElementById('passengerList');
+    var items = list.querySelectorAll('.passenger-item');
+    if (items.length >= 10) return alert('Maksimal 10 penumpang!');
+    
+    var div = document.createElement('div');
+    div.className = 'passenger-item bg-gray-50 rounded-lg p-4';
+    div.innerHTML = 
+        '<div class="flex justify-between items-start mb-2">' +
+            '<span class="text-xs font-medium text-gray-500">Penumpang ' + (items.length + 1) + '</span>' +
+            '<button type="button" onclick="this.closest(\'.passenger-item\').remove(); updateSummary();" class="text-red-500 text-xs hover:underline">✕ Hapus</button>' +
+        '</div>' +
+        '<div class="grid grid-cols-3 gap-3">' +
+            '<input type="text" class="passenger-name px-3 py-2 border rounded-lg" placeholder="Nama lengkap" required>' +
+            '<input type="text" class="passenger-phone px-3 py-2 border rounded-lg" placeholder="No. HP">' +
+            '<input type="number" class="passenger-baggage px-3 py-2 border rounded-lg" placeholder="Bagasi (kg)" value="0" min="0">' +
+        '</div>';
+    list.appendChild(div);
+    updateSummary();
+}
+
+function useAccountOwner() {
+    if (hasUsedOwner) {
+        alert('Pemilik akun sudah digunakan sebagai penumpang.');
+        return;
+    }
+    
+    var list = document.getElementById('passengerList');
+    var items = list.querySelectorAll('.passenger-item');
+    
+    // Cek apakah masih ada slot
+    if (items.length >= 10) return alert('Maksimal 10 penumpang!');
+    
+    // Cek apakah ada form kosong pertama, jika ya isi
+    var emptyItem = null;
+    items.forEach(function(item) {
+        var nameInput = item.querySelector('.passenger-name');
+        if (!emptyItem && nameInput && !nameInput.value.trim()) {
+            emptyItem = item;
+        }
+    });
+    
+    if (emptyItem) {
+        // Isi form kosong dengan data user
+        emptyItem.querySelector('.passenger-name').value = userData.name;
+        emptyItem.querySelector('.passenger-phone').value = userData.phone;
+        emptyItem.querySelector('.passenger-baggage').value = '0';
+    } else {
+        // Buat form baru dengan data user
+        var div = document.createElement('div');
+        div.className = 'passenger-item bg-blue-50 rounded-lg p-4 border border-blue-200';
+        div.innerHTML = 
+            '<div class="flex justify-between items-start mb-2">' +
+                '<span class="text-xs font-medium text-blue-600">👤 Pemilik Akun</span>' +
+                '<button type="button" onclick="this.closest(\'.passenger-item\').remove(); hasUsedOwner = false; updateSummary();" class="text-red-500 text-xs hover:underline">✕ Hapus</button>' +
+            '</div>' +
+            '<div class="grid grid-cols-3 gap-3">' +
+                '<input type="text" class="passenger-name px-3 py-2 border rounded-lg bg-blue-50" value="' + userData.name + '" required>' +
+                '<input type="text" class="passenger-phone px-3 py-2 border rounded-lg bg-blue-50" value="' + (userData.phone || '') + '">' +
+                '<input type="number" class="passenger-baggage px-3 py-2 border rounded-lg bg-blue-50" placeholder="Bagasi (kg)" value="0" min="0">' +
+            '</div>';
+        list.appendChild(div);
+    }
+    
+    hasUsedOwner = true;
+    document.getElementById('btnUseOwner').textContent = '✅ Pemilik Akun Ditambahkan';
+    document.getElementById('btnUseOwner').classList.add('text-green-600');
+    updateSummary();
+}
+
+// ==================== PROMO ====================
+function selectPromo(promoId, percent, maxDiscount, card) {
+    selectedPromoId = promoId;
+    selectedPromoPercent = percent;
+    selectedPromoMaxDiscount = maxDiscount || 1000000;
+    
+    document.querySelectorAll('.promo-option').forEach(function(el) {
+        el.classList.remove('border-purple-400', 'bg-purple-50');
+        el.classList.add('border-transparent');
+    });
+    
+    if (card) {
+        card.classList.add('border-purple-400', 'bg-purple-50');
+        card.classList.remove('border-transparent');
+    }
+    
+    updateSummary();
+}
+
+// ==================== SUMMARY ====================
+function updateSummary() {
+    var passengerItems = document.querySelectorAll('.passenger-item');
+    var count = passengerItems.length;
+    var basePrice = selectedDropoff ? selectedDropoff.price : 0;
+    var subtotal = basePrice * count;
+    
+    // Hitung diskon
+    var discount = 0;
+    if (selectedPromoId && selectedPromoPercent > 0) {
+        discount = Math.min(subtotal * (selectedPromoPercent / 100), selectedPromoMaxDiscount);
+    }
+    var total = Math.max(0, subtotal - discount);
+    
+    document.getElementById('summaryPickup').textContent = selectedPickup ? selectedPickup.city_name : '-';
+    document.getElementById('summaryDropoff').textContent = selectedDropoff ? selectedDropoff.city_name : '-';
+    document.getElementById('summaryPassengers').textContent = count + ' orang';
+    
+    var totalContainer = document.getElementById('summaryTotalContainer');
+    if (discount > 0) {
+        totalContainer.innerHTML = 
+            '<div class="text-right">' +
+                '<span class="text-gray-400 line-through text-sm">Rp ' + formatRupiah(subtotal) + '</span><br>' +
+                '<span class="text-green-600 text-xs">🎫 Diskon -Rp ' + formatRupiah(discount) + '</span><br>' +
+                '<span class="text-lg font-bold text-red-800">Rp ' + formatRupiah(total) + '</span>' +
+            '</div>';
+    } else {
+        totalContainer.innerHTML = '<span class="text-lg font-bold text-red-800">Rp ' + formatRupiah(total) + '</span>';
+    }
+}
+
+// ==================== SUBMIT ====================
+function submitBooking() {
+    var destAddress = document.getElementById('destinationAddress').value.trim();
+    if (!destAddress) return alert('Isi alamat tujuan!');
+    
+    var passengerItems = document.querySelectorAll('.passenger-item');
+    if (passengerItems.length === 0) return alert('Tambahkan minimal 1 penumpang!');
+    
+    var passengers = [];
+    var valid = true;
+    
+    passengerItems.forEach(function(item) {
+        var name = item.querySelector('.passenger-name').value.trim();
+        if (!name) valid = false;
+        passengers.push({
+            name: name,
+            phone: item.querySelector('.passenger-phone').value.trim(),
+            baggage_weight: parseFloat(item.querySelector('.passenger-baggage').value) || 0,
+        });
+    });
+    
+    if (!valid) return alert('Isi nama semua penumpang!');
+    
+    document.getElementById('fOriginStopId').value = selectedPickup.id;
+    document.getElementById('fDestStopId').value = selectedDropoff.id;
+    document.getElementById('fPickupAddress').value = document.getElementById('pickupAddress').value.trim();
+    document.getElementById('fPickupMapsLink').value = document.getElementById('pickupMapsLink').value.trim();
+    document.getElementById('fDestAddress').value = destAddress;
+    document.getElementById('fDestMapsLink').value = document.getElementById('destinationMapsLink').value.trim();
+    document.getElementById('fPromoId').value = selectedPromoId || '';
+    
+    var passengerDiv = document.getElementById('fPassengers');
+    passengerDiv.innerHTML = '';
+    passengers.forEach(function(p, idx) {
+        passengerDiv.innerHTML += '<input type="hidden" name="passengers[' + idx + '][name]" value="' + escapeHtml(p.name) + '">';
+        passengerDiv.innerHTML += '<input type="hidden" name="passengers[' + idx + '][phone]" value="' + escapeHtml(p.phone) + '">';
+        passengerDiv.innerHTML += '<input type="hidden" name="passengers[' + idx + '][baggage_weight]" value="' + p.baggage_weight + '">';
+    });
+    
+    document.getElementById('bookingForm').submit();
+}
+
+// ==================== UTILS ====================
+function showStep(step) {
+    document.querySelectorAll('.step-content').forEach(function(el) { el.style.display = 'none'; });
+    document.getElementById('step' + step).style.display = 'block';
+    document.getElementById('progressBar').style.width = (step * 25) + '%';
+    
+    document.querySelectorAll('.step-indicator').forEach(function(el) {
+        var elStep = parseInt(el.getAttribute('data-step'));
+        el.classList.remove('text-primary', 'text-gray-400', 'text-green-600', 'font-bold');
+        if (elStep < step) el.classList.add('text-green-600');
+        else if (elStep === step) el.classList.add('text-primary', 'font-bold');
+        else el.classList.add('text-gray-400');
+    });
+    
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function formatRupiah(num) { return new Intl.NumberFormat('id-ID').format(num || 0); }
+
+function escapeHtml(text) {
+    if (!text) return '';
+    return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+}
+</script>
+@endpush
