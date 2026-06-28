@@ -16,16 +16,17 @@ ENV LOG_CHANNEL stderr
 
 ENV COMPOSER_ALLOW_SUPERUSER 1
 
-# Install PHP extensions
-RUN apt-get update && apt-get install -y \
+# Install PHP extensions (Alpine - pakai apk)
+RUN apk add --no-cache \
     libpng-dev \
-    libjpeg-dev \
-    libfreetype6-dev \
-    libonig-dev \
+    libjpeg-turbo-dev \
+    freetype-dev \
+    oniguruma-dev \
     libzip-dev \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install gd pdo_mysql bcmath mbstring zip
 
+# Run migrations
 RUN php artisan migrate --force || true
 
 CMD ["/start.sh"]
