@@ -1,4 +1,4 @@
-FROM richarvey/nginx-php-fpm:3.4.1-php84
+FROM richarvey/nginx-php-fpm:php84
 
 COPY . .
 
@@ -16,7 +16,7 @@ ENV LOG_CHANNEL stderr
 
 ENV COMPOSER_ALLOW_SUPERUSER 1
 
-# Install PHP extensions
+# Install PHP extensions (Alpine)
 RUN apk add --no-cache \
     libpng-dev \
     libjpeg-turbo-dev \
