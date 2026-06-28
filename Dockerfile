@@ -39,9 +39,6 @@ RUN mkdir -p storage/framework/cache \
 RUN chown -R www-data:www-data /var/www/html && \
     chmod -R 777 storage bootstrap/cache
 
-# Run migrations (uses environment variables from Render)
-RUN php artisan migrate --force || true
-
 # Laravel optimization
 RUN php artisan config:cache && \
     php artisan route:cache && \
@@ -66,4 +63,5 @@ RUN echo 'server { \
 
 EXPOSE 80
 
-CMD ["sh", "-c", "php-fpm -D && nginx -g 'daemon off;'"]
+# Run migrations then start services
+CMD ["sh", "-c", "php artisan migrate --force && php-fpm -D && nginx -g 'daemon off;'"]
