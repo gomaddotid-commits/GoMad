@@ -62,21 +62,3 @@ RUN echo 'server { \
 }' > /etc/nginx/http.d/default.conf
 
 EXPOSE 80
-
-# Create .env file from environment variables, then run migrations and start services
-CMD ["sh", "-c", "echo \"APP_ENV=${APP_ENV}\" > .env && \
-    echo \"APP_KEY=${APP_KEY}\" >> .env && \
-    echo \"APP_DEBUG=${APP_DEBUG}\" >> .env && \
-    echo \"APP_TIMEZONE=${APP_TIMEZONE}\" >> .env && \
-    echo \"DB_CONNECTION=${DB_CONNECTION}\" >> .env && \
-    echo \"DB_HOST=${DB_HOST}\" >> .env && \
-    echo \"DB_PORT=${DB_PORT}\" >> .env && \
-    echo \"DB_DATABASE=${DB_DATABASE}\" >> .env && \
-    echo \"DB_USERNAME=${DB_USERNAME}\" >> .env && \
-    echo \"DB_PASSWORD=${DB_PASSWORD}\" >> .env && \
-    echo \"DB_OPTIONS=${DB_OPTIONS}\" >> .env && \
-    echo \"SESSION_DRIVER=${SESSION_DRIVER}\" >> .env && \
-    echo \"CACHE_STORE=${CACHE_STORE}\" >> .env && \
-    echo \"QUEUE_CONNECTION=${QUEUE_CONNECTION}\" >> .env && \
-    php artisan migrate --force && \
-    php-fpm -D && nginx -g 'daemon off;'"]
