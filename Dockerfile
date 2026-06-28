@@ -16,7 +16,7 @@ ENV LOG_CHANNEL stderr
 
 ENV COMPOSER_ALLOW_SUPERUSER 1
 
-# Install PHP extensions (Alpine - pakai apk)
+# Install PHP extensions (Alpine)
 RUN apk add --no-cache \
     libpng-dev \
     libjpeg-turbo-dev \
@@ -26,7 +26,15 @@ RUN apk add --no-cache \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install gd pdo_mysql bcmath mbstring zip
 
+# Install composer dependencies
+RUN composer install --no-dev --optimize-autoloader
+
 # Run migrations
 RUN php artisan migrate --force || true
+
+# Laravel optimization
+RUN php artisan config:cache && \
+    php artisan route:cache && \
+    php artisan view:cache
 
 CMD ["/start.sh"]
