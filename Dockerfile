@@ -37,6 +37,15 @@ RUN composer config -g repos.packagist composer https://packagist.org && \
     composer install --no-dev --optimize-autoloader --prefer-dist || \
     composer install --no-dev --optimize-autoloader --prefer-dist
 
+# Create cache directories
+RUN mkdir -p storage/framework/cache \
+    storage/framework/sessions \
+    storage/framework/views \
+    storage/logs
+
+# Fix permissions
+RUN chmod -R 777 storage bootstrap/cache
+
 # Run migrations
 RUN php artisan migrate --force || true
 
@@ -46,9 +55,6 @@ RUN php artisan config:cache && \
 
 # Create storage link
 RUN php artisan storage:link || true
-
-# Debug: cek apakah vendor ada
-RUN ls -la /var/www/html/vendor || echo "vendor not found"
 
 # Configure Nginx
 RUN echo 'server { \
