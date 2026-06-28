@@ -22,13 +22,15 @@ WORKDIR /var/www/html
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 RUN composer install --no-dev --optimize-autoloader
 
-# Run migrations
+# Run migrations (credentials will be passed from Render environment)
 RUN php artisan migrate --force || true
 
 # Laravel optimization
 RUN php artisan config:cache && \
-    php artisan route:cache && \
-    php artisan view:cache
+    php artisan route:cache
+
+# Create storage link
+RUN php artisan storage:link || true
 
 # Configure Nginx
 RUN echo 'server { \
