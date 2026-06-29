@@ -62,3 +62,5 @@ RUN echo 'server { \
 }' > /etc/nginx/http.d/default.conf
 
 EXPOSE 80
+
+ENTRYPOINT ["sh", "-c", "php artisan migrate --force && php-fpm -D && nginx -g 'daemon off;'"]
