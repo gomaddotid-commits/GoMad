@@ -1,12 +1,9 @@
 <?php
-// File: database/seeders/ReviewSeeder.php
-// Deskripsi: Seeder untuk data review customer ke agency
 
 namespace Database\Seeders;
 
 use App\Models\Booking;
 use App\Models\Review;
-use App\Models\User;
 use Illuminate\Database\Seeder;
 
 class ReviewSeeder extends Seeder
@@ -16,7 +13,6 @@ class ReviewSeeder extends Seeder
         echo "⭐ GENERATING REVIEWS...\n";
         echo "═══════════════════════════════════════════\n\n";
 
-        // Ambil booking PAID yang belum direview
         $bookings = Booking::where('status', 'paid')
             ->whereDoesntHave('review')
             ->with(['schedule.agency', 'customer'])
@@ -27,10 +23,9 @@ class ReviewSeeder extends Seeder
             return;
         }
 
-        $reviews = [];
         $customersReviewed = [];
+        $reviewCount = 0;
 
-        // Komentar positif
         $positiveComments = [
             'Pelayanan sangat memuaskan! Sopir ramah dan tepat waktu.',
             'Mobil bersih dan nyaman. Perjalanan menyenangkan.',
@@ -44,7 +39,6 @@ class ReviewSeeder extends Seeder
             'Armada bagus dan terawat. Perjalanan jadi nyaman.',
         ];
 
-        // Komentar netral
         $neutralComments = [
             'Cukup baik, tapi AC kurang dingin.',
             'Perjalanan oke, tapi sedikit terlambat 15 menit.',
@@ -53,7 +47,6 @@ class ReviewSeeder extends Seeder
             'Cukup memuaskan, tapi musik di mobil terlalu keras.',
         ];
 
-        // Komentar negatif
         $negativeComments = [
             'Sopir kurang ramah dan ugal-ugalan.',
             'Mobil kotor dan berbau rokok.',
@@ -62,10 +55,7 @@ class ReviewSeeder extends Seeder
             'Kebersihan mobil perlu ditingkatkan.',
         ];
 
-        $reviewCount = 0;
-
         foreach ($bookings as $booking) {
-            // Skip kalau customer sudah review agency yang sama
             $customerId = $booking->customer_id;
             $agencyId = $booking->schedule->agency_id;
 
@@ -73,18 +63,18 @@ class ReviewSeeder extends Seeder
                 continue;
             }
 
-            // Bobot rating: 60% positif, 25% netral, 15% negatif
+            // 60% positif, 25% netral, 15% negatif
             $ratingRand = rand(1, 100);
-            
+
             if ($ratingRand <= 60) {
                 $rating = rand(4, 5);
-                $comment = fake()->randomElement($positiveComments);
+                $comment = $positiveComments[array_rand($positiveComments)];
             } elseif ($ratingRand <= 85) {
                 $rating = rand(3, 4);
-                $comment = fake()->randomElement($neutralComments);
+                $comment = $neutralComments[array_rand($neutralComments)];
             } else {
                 $rating = rand(1, 2);
-                $comment = fake()->randomElement($negativeComments);
+                $comment = $negativeComments[array_rand($negativeComments)];
             }
 
             Review::create([
@@ -100,7 +90,7 @@ class ReviewSeeder extends Seeder
             $customersReviewed[] = "{$customerId}-{$agencyId}";
             $reviewCount++;
 
-            if ($reviewCount >= 100) break; // Maksimal 100 review
+            if ($reviewCount >= 100) break;
         }
 
         echo "✅ {$reviewCount} Reviews created\n\n";

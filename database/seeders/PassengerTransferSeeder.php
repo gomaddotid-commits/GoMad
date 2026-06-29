@@ -1,10 +1,7 @@
 <?php
-// File: database/seeders/PassengerTransferSeeder.php
-// Deskripsi: Seeder untuk data transfer penumpang antar schedule
 
 namespace Database\Seeders;
 
-use App\Models\Agency;
 use App\Models\Booking;
 use App\Models\PassengerTransfer;
 use App\Models\Schedule;
@@ -18,7 +15,6 @@ class PassengerTransferSeeder extends Seeder
         echo "🔄 GENERATING PASSENGER TRANSFERS...\n";
         echo "═══════════════════════════════════════════\n\n";
 
-        // Ambil schedule yang allow transfer
         $schedules = Schedule::where('allow_passenger_transfer', true)
             ->where('is_active', true)
             ->get();
@@ -31,10 +27,17 @@ class PassengerTransferSeeder extends Seeder
         $transferCount = 0;
         $adminId = \App\Models\User::where('email', 'admin@gomad.id')->first()?->id ?? 1;
 
-        // Grup schedule by route & date
         $groupedSchedules = $schedules->groupBy(function ($schedule) {
             return $schedule->route_id . '-' . $schedule->departure_date;
         });
+
+        $statuses = ['completed', 'completed', 'completed', 'approved', 'pending', 'pending', 'rejected', 'cancelled'];
+        $rejectionMessages = [
+            'Jadwal tujuan sudah penuh.',
+            'Agency tujuan menolak transfer.',
+            'Biaya transfer tidak disetujui.',
+            'Permintaan dibatalkan oleh customer.',
+        ];
 
         foreach ($groupedSchedules as $group) {
             if ($group->count() < 2) continue;
@@ -42,15 +45,10 @@ class PassengerTransferSeeder extends Seeder
             $fromSchedule = $group->first();
             $toSchedule = $group->last();
 
-            // Skip kalau agency sama
             if ($fromSchedule->agency_id === $toSchedule->agency_id) continue;
-
-            // Hanya proses beberapa transfer
             if ($transferCount >= 30) break;
 
-            $statuses = ['completed', 'completed', 'completed', 'approved', 'pending', 'pending', 'rejected', 'cancelled'];
-            $status = fake()->randomElement($statuses);
-
+            $status = $statuses[array_rand($statuses)];
             $totalPassengers = rand(1, 3);
             $transferFeePerPassenger = rand(15000, 30000);
             $totalTransferFee = $totalPassengers * $transferFeePerPassenger;
@@ -66,22 +64,16 @@ class PassengerTransferSeeder extends Seeder
                 'total_transfer_fee' => $totalTransferFee,
                 'total_booking_value' => $totalBookingValue,
                 'status' => $status,
-                'rejection_reason' => in_array($status, ['rejected', 'cancelled']) 
-                    ? fake()->randomElement([
-                        'Jadwal tujuan sudah penuh.',
-                        'Agency tujuan menolak transfer.',
-                        'Biaya transfer tidak disetujui.',
-                        'Permintaan dibatalkan oleh customer.',
-                    ]) 
+                'rejection_reason' => in_array($status, ['rejected', 'cancelled'])
+                    ? $rejectionMessages[array_rand($rejectionMessages)]
                     : null,
                 'approved_by' => in_array($status, ['approved', 'completed']) ? $adminId : null,
                 'approved_at' => in_array($status, ['approved', 'completed']) ? now()->subDays(rand(1, 7)) : null,
                 'completed_at' => $status === 'completed' ? now()->subDays(rand(0, 3)) : null,
-                'notes' => fake()->boolean(50) ? fake()->sentence() : null,
+                'notes' => rand(0, 1) ? 'Transfer penumpang antar agency.' : null,
                 'created_at' => now()->subDays(rand(1, 14)),
             ]);
 
-            // Attach bookings ke transfer
             $bookings = Booking::where('schedule_id', $fromSchedule->id)
                 ->where('status', 'paid')
                 ->take($totalPassengers)
@@ -104,13 +96,9 @@ class PassengerTransferSeeder extends Seeder
         echo "✅ {$transferCount} Passenger Transfers created\n";
         echo "═══════════════════════════════════════════\n\n";
 
-        echo "📊 TRANSFER STATUS BREAKDOWN:\n";
-        echo "──────────────────────────────────────────────\n";
-        $statuses = ['pending', 'approved', 'rejected', 'completed', 'cancelled'];
-        foreach ($statuses as $s) {
-            $count = PassengerTransfer::where('status', $s)->count();
-            echo "  • {$s}: {$count}\n";
+        echo "📊 STATUS BREAKDOWN:\n";
+        foreach (['pending', 'approved', 'rejected', 'completed', 'cancelled'] as $s) {
+            echo "  • {$s}: " . PassengerTransfer::where('status', $s)->count() . "\n";
         }
-        echo "──────────────────────────────────────────────\n";
     }
 }
