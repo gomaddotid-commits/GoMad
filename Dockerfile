@@ -39,11 +39,6 @@ RUN mkdir -p storage/framework/cache \
 RUN chown -R www-data:www-data /var/www/html && \
     chmod -R 777 storage bootstrap/cache
 
-# Laravel optimization (skip jika error)
-RUN php artisan config:cache && \
-    php artisan route:cache && \
-    php artisan view:cache || true
-
 # Nginx configuration
 RUN echo 'server { \
     listen 80; \
@@ -63,4 +58,5 @@ RUN echo 'server { \
 
 EXPOSE 80
 
-ENTRYPOINT ["sh", "-c", "php artisan migrate --force && php-fpm -D && nginx -g 'daemon off;'"]
+# JALANKAN CONFIG CACHE DI RUNTIME, BUKAN SAAT BUILD
+ENTRYPOINT ["sh", "-c", "php artisan config:clear && php artisan config:cache && php artisan route:cache && php artisan view:cache && php artisan migrate --force && php-fpm -D && nginx -g 'daemon off;'"]
