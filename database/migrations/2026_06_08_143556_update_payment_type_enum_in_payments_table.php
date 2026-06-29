@@ -1,5 +1,4 @@
 <?php
-// File: database/migrations/xxxx_xx_xx_update_payment_type_enum_in_payments_table.php
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
@@ -10,22 +9,18 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // SQLite tidak support modify enum, jadi kita perlu recreate
-        // Buat tabel temporary
-        DB::statement('CREATE TABLE payments_temp AS SELECT * FROM payments');
-        
-        // Drop tabel lama
-        Schema::drop('payments');
-        
-        // Buat tabel baru dengan enum yang diupdate
-        Schema::create('payments', function (Blueprint $table) {
-            $table->id();
+        // Matikan foreign key checks dulu
+        DB::statement('SET FOREIGN_KEY_CHECKS=0');
+
+        // 1. Bikin tabel temporary dengan struktur lengkap (ada PRIMARY KEY)
+        Schema::create('payments_temp', function (Blueprint $table) {
+            $table->id(); // PRIMARY KEY — ini yang penting!
             $table->foreignId('booking_id')->unique()->constrained('bookings')->cascadeOnDelete();
             $table->unsignedBigInteger('cash_payment_id')->nullable();
             $table->decimal('amount', 10, 2);
             $table->decimal('commission', 10, 2)->default(0);
             $table->decimal('agency_revenue', 10, 2)->default(0);
-            $table->string('payment_type', 20)->default('midtrans'); // Pakai string instead of enum
+            $table->string('payment_type', 20)->default('midtrans'); // pakai string, bukan enum
             $table->string('status', 30)->default('pending');
             $table->string('payment_method', 50)->nullable();
             $table->string('transaction_id')->nullable();
@@ -34,21 +29,41 @@ return new class extends Migration
             $table->timestamp('expired_at')->nullable();
             $table->json('payment_detail')->nullable();
             $table->timestamps();
-            
+
             $table->index('payment_type');
             $table->index('status');
             $table->index('transaction_id');
         });
-        
-        // Copy data dari tabel temporary
-        DB::statement("INSERT INTO payments SELECT * FROM payments_temp");
-        
-        // Drop tabel temporary
-        Schema::drop('payments_temp');
+
+        // 2. Copy data dari tabel lama ke temporary
+        DB::statement("
+            INSERT INTO payments_temp (
+                id, booking_id, cash_payment_id, amount, commission, 
+                agency_revenue, payment_type, status, payment_method, 
+                transaction_id, payment_channel, paid_at, expired_at, 
+                payment_detail, created_at, updated_at
+            ) 
+            SELECT 
+                id, booking_id, cash_payment_id, amount, commission, 
+                agency_revenue, payment_type, status, payment_method, 
+                transaction_id, payment_channel, paid_at, expired_at, 
+                payment_detail, created_at, updated_at 
+            FROM payments
+        ");
+
+        // 3. Hapus tabel lama
+        Schema::dropIfExists('payments');
+
+        // 4. Rename tabel temporary jadi payments
+        Schema::rename('payments_temp', 'payments');
+
+        // Nyalakan kembali foreign key checks
+        DB::statement('SET FOREIGN_KEY_CHECKS=1');
     }
 
     public function down(): void
     {
-        // Tidak perlu rollback
+        // Rollback tidak diperlukan karena ini cuma mengubah tipe kolom
+        // Data tetap sama
     }
 };
