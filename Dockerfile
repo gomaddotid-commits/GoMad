@@ -1,7 +1,7 @@
 FROM php:8.4-fpm-alpine
 
-# Install Nginx
-RUN apk add --no-cache nginx
+# Install Nginx dan Node.js (untuk build Vite)
+RUN apk add --no-cache nginx nodejs npm
 
 # Install PHP extensions
 RUN apk add --no-cache \
@@ -21,12 +21,15 @@ WORKDIR /var/www/html
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Install dependencies (dengan retry)
+# Install Composer dependencies
 RUN composer config -g repos.packagist composer https://packagist.org && \
     composer config -g github-protocols https && \
     composer install --no-dev --optimize-autoloader --prefer-dist || \
     composer install --no-dev --optimize-autoloader --prefer-dist || \
     composer install --no-dev --optimize-autoloader --prefer-dist
+
+# Build Vite assets
+RUN npm install && npm run build
 
 # Create storage and cache directories
 RUN mkdir -p storage/framework/cache \
@@ -58,5 +61,5 @@ RUN echo 'server { \
 
 EXPOSE 80
 
-# JALANKAN CONFIG CACHE DI RUNTIME, BUKAN SAAT BUILD
+# Run config cache + migrate saat runtime
 ENTRYPOINT ["sh", "-c", "php artisan config:clear && php artisan config:cache && php artisan route:cache && php artisan view:cache && php artisan migrate --force && php-fpm -D && nginx -g 'daemon off;'"]
