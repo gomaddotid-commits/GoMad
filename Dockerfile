@@ -21,9 +21,11 @@ WORKDIR /var/www/html
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Install Composer dependencies (dengan timeout lebih lama)
+# Install Composer dependencies (pakai source/git clone biar gak kena HTTP 400)
 RUN composer config -g process-timeout 1200 && \
-    composer install --no-dev --optimize-autoloader --prefer-dist --no-interaction
+    composer install --no-dev --optimize-autoloader --prefer-source --no-interaction || \
+    composer install --no-dev --optimize-autoloader --prefer-source --no-interaction || \
+    composer install --no-dev --optimize-autoloader --prefer-source --no-interaction
 
 # Install NPM dependencies + Build Vite (dengan timeout + retry)
 RUN npm config set fetch-timeout 120000 && \
