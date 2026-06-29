@@ -21,7 +21,7 @@ WORKDIR /var/www/html
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Install dependencies with retry
+# Install dependencies (dengan retry)
 RUN composer config -g repos.packagist composer https://packagist.org && \
     composer config -g github-protocols https && \
     composer install --no-dev --optimize-autoloader --prefer-dist || \
@@ -39,7 +39,7 @@ RUN mkdir -p storage/framework/cache \
 RUN chown -R www-data:www-data /var/www/html && \
     chmod -R 777 storage bootstrap/cache
 
-# Laravel optimization (skip if no .env)
+# Laravel optimization (skip jika error)
 RUN php artisan config:cache && \
     php artisan route:cache && \
     php artisan view:cache || true
