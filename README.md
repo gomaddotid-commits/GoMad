@@ -1,66 +1,290 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+Saya paham. Anda butuh **README.md** yang profesional untuk repo GitHub GOMAD.
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Saya akan buatkan **README.md lengkap** dengan konten yang sesuai dengan kode yang sudah saya baca (baik website maupun app).
 
-## About Laravel
+---
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## 📄 README.md untuk GOMAD
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+```markdown
+# 🚐 GoMad - Platform Booking Travel Antar Kota di Madura
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+![GoMad Banner](https://via.placeholder.com/1200x400/DC2626/FFFFFF?text=GoMad+-+Mobilitas+or%C3%A8ng+Madhur%C3%A2)
 
-## Learning Laravel
+> **GoMad** adalah platform booking travel antar kota di Madura dengan konsep **door-to-door service**.  
+> Dijemput di rumah, diantar ke tujuan. Tersedia untuk rute antar kota di Madura dan sekitarnya.
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+---
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+## 📱 **Tentang GoMad**
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+GoMad menghubungkan **customer**, **agency travel**, **driver**, dan **payment agent (Warung GoMad)** dalam satu ekosistem digital. Dengan GoMad, customer bisa booking travel dengan mudah, agency bisa mengelola operasional, driver mendapatkan jadwal jelas, dan warung bisa menjadi mitra pembayaran.
 
-## Laravel Sponsors
+### 🎯 **Visi**
+Mobilitas orèng Madhurâ — menjadi platform mobilitas nomor 1 di Madura.
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+### ✨ **Fitur Utama**
 
-### Premium Partners
+| Role | Fitur |
+|------|-------|
+| **Customer** | Cari jadwal, booking tiket, bayar online/cash/COD, e-ticket digital, review |
+| **Agency** | Kelola jadwal, kendaraan, driver, booking, dompet digital, penarikan dana |
+| **Driver** | Lihat jadwal harian, kelola penumpang (jemput/antar/konfirmasi COD) |
+| **Payment Agent** | Konfirmasi pembayaran cash, kelola settlement mingguan |
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[WebReinvent](https://webreinvent.com/)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Jump24](https://jump24.co.uk)**
-- **[Redberry](https://redberry.international/laravel/)**
-- **[Active Logic](https://activelogic.com)**
-- **[byte5](https://byte5.de)**
-- **[OP.GG](https://op.gg)**
+---
 
-## Contributing
+## 🛠️ **Tech Stack**
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+### Backend (Website)
+| Layer | Teknologi |
+|-------|-----------|
+| Framework | Laravel 11 |
+| Database | MySQL |
+| Authentication | Laravel Sanctum (API Token) |
+| Payment Gateway | Midtrans (Snap + IRIS Disbursement) |
+| Notification | WhatsApp (Twilio) + FCM + In-app |
+| Frontend | Blade + Tailwind CSS + Alpine.js |
+| Maps | Leaflet.js (OpenStreetMap) |
 
-## Code of Conduct
+### Mobile App
+| Layer | Teknologi |
+|-------|-----------|
+| Framework | Flutter 3.x |
+| State Management | BLoC |
+| Networking | Dio + Interceptor |
+| Local Storage | SharedPreferences + FlutterSecureStorage |
+| UI | Material 3 + Google Fonts (Poppins) |
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+---
 
-## Security Vulnerabilities
+## 📂 **Struktur Repository**
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+```
+gomad/
+├── website/                      # Laravel Backend + Web Dashboard
+│   ├── app/
+│   │   ├── Console/              # Command scheduler (overload, reminder, settlement)
+│   │   ├── Enums/                # BookingStatus, PaymentStatus, UserRole, etc.
+│   │   ├── Exceptions/           # Custom exceptions
+│   │   ├── Helpers/              # BookingCodeGenerator, PaymentCodeGenerator
+│   │   ├── Http/
+│   │   │   ├── Controllers/      # API + Web Controllers (Admin, Agency, Customer, Driver, PaymentAgent)
+│   │   │   ├── Middleware/       # Role-based middleware (Admin, Agency, Driver, PaymentAgent)
+│   │   │   └── Resources/        # API Resources
+│   │   ├── Models/               # 22+ Models (User, Agency, Booking, Schedule, etc.)
+│   │   ├── Providers/            # Service providers
+│   │   └── Services/             # Business logic (BookingService, WalletService, etc.)
+│   ├── config/                   # Laravel config files
+│   ├── database/
+│   │   ├── migrations/           # 40+ migration files
+│   │   └── seeders/              # Database seeders
+│   ├── resources/
+│   │   └── views/                # Blade views (Admin, Agency, Customer, Driver, PaymentAgent, Public)
+│   ├── routes/
+│   │   ├── api.php               # 118+ API endpoints
+│   │   └── web.php               # Web routes
+│   └── public/                   # Public assets
+│
+├── app/                          # Flutter Mobile App
+│   ├── lib/
+│   │   ├── core/
+│   │   │   ├── constants/        # ApiEndpoints, AppConstants, ColorConstants
+│   │   │   ├── di/               # Dependency Injection (GetIt)
+│   │   │   ├── network/          # DioClient, ApiInterceptor
+│   │   │   ├── storage/          # SecureStorage, AppPreferences
+│   │   │   ├── themes/           # AppTheme, TextStyles
+│   │   │   └── utils/            # CurrencyFormatter, DateFormatter, Logger, Result, Validators
+│   │   ├── data/
+│   │   │   ├── datasources/      # Auth, Booking, Driver, Payment, PaymentAgent, Schedule
+│   │   │   ├── models/           # All API models (Auth, Booking, Driver, Payment, Schedule, etc.)
+│   │   │   └── repositories/     # Repository implementations
+│   │   ├── domain/
+│   │   │   └── repositories/     # Abstract repository interfaces
+│   │   └── presentation/
+│   │       ├── bloc/             # BLoC: Auth, Booking, Driver, Payment, PaymentAgent, Schedule
+│   │       ├── screens/          # All screens (Auth, Customer, Driver, PaymentAgent)
+│   │       └── widgets/          # Reusable widgets (AppButton, AppTextField, etc.)
+│   └── pubspec.yaml              # Flutter dependencies
+│
+├── .env.example                  # Environment variables template
+├── docker-compose.yml            # Docker setup
+└── README.md                     # This file
+```
 
-## License
+---
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+## 🚀 **Quick Start**
+
+### Prerequisites
+- PHP 8.2+
+- Composer
+- MySQL 8.0+
+- Node.js 18+
+- Flutter 3.x
+- Docker (optional)
+
+### 1. Clone Repository
+```bash
+git clone https://github.com/yourusername/gomad.git
+cd gomad
+```
+
+### 2. Backend Setup (Laravel)
+```bash
+cd website
+
+# Install dependencies
+composer install
+npm install
+npm run build
+
+# Environment configuration
+cp .env.example .env
+php artisan key:generate
+
+# Database setup
+php artisan migrate
+php artisan db:seed
+
+# Storage link
+php artisan storage:link
+
+# Run server
+php artisan serve --port=8000
+# API server runs on port 8001
+```
+
+### 3. Mobile App Setup (Flutter)
+```bash
+cd app
+
+# Install dependencies
+flutter pub get
+
+# Run the app
+flutter run
+```
+
+### 4. Environment Variables (.env)
+```env
+APP_NAME=GoMad
+APP_ENV=local
+APP_DEBUG=true
+APP_URL=http://web.gomad.test
+
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=gomad
+DB_USERNAME=root
+DB_PASSWORD=
+
+# Midtrans
+MIDTRANS_SERVER_KEY=your_server_key
+MIDTRANS_CLIENT_KEY=your_client_key
+MIDTRANS_IS_PRODUCTION=false
+
+# Twilio (WhatsApp)
+TWILIO_SID=your_twilio_sid
+TWILIO_AUTH_TOKEN=your_twilio_token
+TWILIO_WHATSAPP_FROM=whatsapp:+14155238886
+
+# FCM (Push Notification)
+FCM_SERVER_KEY=your_fcm_server_key
+```
+
+---
+
+## 📡 **API Documentation**
+
+GoMad menyediakan **118+ API endpoints** dengan 6 role:
+
+| Role | Prefix | Auth |
+|------|--------|------|
+| Public | `/api/v1` | ❌ |
+| Customer | `/api/v1/customer` | ✅ Sanctum |
+| Agency | `/api/v1/agency` | ✅ Sanctum + AgencyMiddleware |
+| Driver | `/api/v1/driver` | ✅ Sanctum + DriverMiddleware |
+| Payment Agent | `/api/v1/payment-agent` | ✅ Sanctum + PaymentAgentMiddleware |
+| Admin | `/api/v1/admin` | ✅ Sanctum + AdminMiddleware |
+
+**Authentication:** Bearer Token (Laravel Sanctum)
+
+```bash
+curl -X POST /api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"user@example.com","password":"password"}'
+```
+
+---
+
+## 🎨 **Screenshots**
+
+| Customer Home | Booking Form | Driver Schedule |
+|---------------|--------------|-----------------|
+| ![Home](https://via.placeholder.com/300x600/DC2626/FFFFFF?text=Customer+Home) | ![Booking](https://via.placeholder.com/300x600/DC2626/FFFFFF?text=Booking+Form) | ![Driver](https://via.placeholder.com/300x600/DC2626/FFFFFF?text=Driver+Schedule) |
+
+| Agency Dashboard | Payment Agent | Admin Panel |
+|------------------|---------------|-------------|
+| ![Agency](https://via.placeholder.com/300x600/DC2626/FFFFFF?text=Agency+Dashboard) | ![Warung](https://via.placeholder.com/300x600/DC2626/FFFFFF?text=Payment+Agent) | ![Admin](https://via.placeholder.com/300x600/DC2626/FFFFFF?text=Admin+Panel) |
+
+---
+
+## 🔗 **Related Repositories**
+
+| Repository | Description |
+|------------|-------------|
+| [gomad-website](https://github.com/yourusername/gomad-website) | Laravel Backend + Web Dashboard |
+| [gomad-app](https://github.com/yourusername/gomad-app) | Flutter Mobile App |
+
+---
+
+## 🧑‍💻 **Contributing**
+
+Kami terbuka untuk kontribusi! Silakan ikuti langkah-langkah berikut:
+
+1. Fork repository
+2. Buat branch fitur (`git checkout -b feature/amazing-feature`)
+3. Commit perubahan (`git commit -m 'Add amazing feature'`)
+4. Push ke branch (`git push origin feature/amazing-feature`)
+5. Buka Pull Request
+
+### Coding Standards
+- **Backend**: PSR-12, Laravel Coding Standard
+- **Frontend**: Flutter Lints, Dart Format
+
+---
+
+## 📄 **License**
+
+Dilindungi hak cipta. Hak penggunaan sepenuhnya milik **GoMad**.
+
+---
+
+## 📞 **Support**
+
+| Channel | Contact |
+|---------|---------|
+| Email | support@gomad.id |
+| WhatsApp | 0812-3456-7890 |
+| Website | [gomad.id](https://gomad.id) |
+
+---
+
+## 🏆 **Credits**
+
+- **Backend Team**: Laravel 11 + MySQL
+- **Mobile Team**: Flutter + BLoC
+- **Design Team**: Figma + Tailwind CSS
+- **Business Team**: GoMad
+
+---
+
+<div align="center">
+  <sub>Built with ❤️ for Madura</sub>
+  <br>
+  <sub>© 2026 GoMad. All rights reserved.</sub>
+</div>
+```
+
