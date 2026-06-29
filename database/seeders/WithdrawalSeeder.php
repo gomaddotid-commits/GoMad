@@ -12,8 +12,6 @@ class WithdrawalSeeder extends Seeder
 {
     public function run(): void
     {
-        $faker = fake('id_ID');
-
         echo "💰 GENERATING WITHDRAWAL DATA...\n";
         echo "═══════════════════════════════════════════\n\n";
 
@@ -27,6 +25,7 @@ class WithdrawalSeeder extends Seeder
 
         $totalWithdrawals = 0;
         $banks = ['BCA', 'BRI', 'BNI', 'Mandiri', 'CIMB Niaga', 'BTN', 'BJB'];
+        $names = ['Budi Santoso', 'Ani Rahmawati', 'Joko Widodo', 'Siti Nurhaliza', 'Ahmad Dhani', 'Rina Nose'];
 
         foreach ($agencies as $index => $agency) {
             $wallet = AgencyWallet::where('agency_id', $agency->id)->first();
@@ -35,28 +34,40 @@ class WithdrawalSeeder extends Seeder
                 continue;
             }
 
-            // Completed
+            // Helper functions
+            $randomBank = function() use ($banks) {
+                return $banks[array_rand($banks)];
+            };
+            $randomName = function() use ($names) {
+                return $names[array_rand($names)];
+            };
+            $randomAccount = function() {
+                return (string) rand(10000000000000, 99999999999999);
+            };
+            $randomTransactionId = function($prefix) {
+                return $prefix . '-' . strtoupper(substr(md5(rand()), 0, 10));
+            };
+
+            // Completed (2x)
             for ($i = 0; $i < 2; $i++) {
-                $bank = $faker->randomElement($banks);
                 $amount = rand(500000, 3000000);
                 $adminFee = 5000;
-                $netAmount = $amount - $adminFee;
 
                 Withdrawal::create([
                     'agency_id' => $agency->id,
                     'amount' => $amount,
                     'admin_fee' => $adminFee,
-                    'net_amount' => $netAmount,
-                    'bank_name' => $bank,
-                    'bank_account_number' => $faker->numerify('##############'),
-                    'bank_account_name' => $agency->contact_person ?? $faker->name(),
+                    'net_amount' => $amount - $adminFee,
+                    'bank_name' => $randomBank(),
+                    'bank_account_number' => $randomAccount(),
+                    'bank_account_name' => $agency->contact_person ?? $randomName(),
                     'status' => 'completed',
                     'approved_by' => $adminId,
                     'approved_at' => now()->subDays(rand(7, 60)),
-                    'transaction_id' => 'WD-' . strtoupper(substr(md5($agency->id . $i . 'completed'), 0, 10)),
+                    'transaction_id' => $randomTransactionId('WD'),
                     'payment_detail' => json_encode([
                         'method' => 'bank_transfer',
-                        'bank' => $bank,
+                        'bank' => $randomBank(),
                         'reference' => 'REF' . rand(100000, 999999),
                         'processed_at' => now()->subDays(rand(6, 59))->toDateTimeString(),
                     ]),
@@ -66,27 +77,25 @@ class WithdrawalSeeder extends Seeder
                 $totalWithdrawals++;
             }
 
-            // Processing
-            $bank = $faker->randomElement($banks);
+            // Processing (1x)
             $amount = rand(300000, 1500000);
             $adminFee = 5000;
-            $netAmount = $amount - $adminFee;
 
             Withdrawal::create([
                 'agency_id' => $agency->id,
                 'amount' => $amount,
                 'admin_fee' => $adminFee,
-                'net_amount' => $netAmount,
-                'bank_name' => $bank,
-                'bank_account_number' => $faker->numerify('##############'),
-                'bank_account_name' => $agency->contact_person ?? $faker->name(),
+                'net_amount' => $amount - $adminFee,
+                'bank_name' => $randomBank(),
+                'bank_account_number' => $randomAccount(),
+                'bank_account_name' => $agency->contact_person ?? $randomName(),
                 'status' => 'processing',
                 'approved_by' => $adminId,
                 'approved_at' => now()->subHours(rand(1, 24)),
-                'transaction_id' => 'WD-' . strtoupper(substr(md5($agency->id . 'processing'), 0, 10)),
+                'transaction_id' => $randomTransactionId('WD'),
                 'payment_detail' => json_encode([
                     'method' => 'bank_transfer',
-                    'bank' => $bank,
+                    'bank' => $randomBank(),
                     'reference' => 'REF' . rand(100000, 999999),
                     'processed_at' => now()->subHours(rand(1, 23))->toDateTimeString(),
                 ]),
@@ -94,31 +103,27 @@ class WithdrawalSeeder extends Seeder
 
             $totalWithdrawals++;
 
-            // Pending
-            $bank = $faker->randomElement($banks);
+            // Pending (1x)
             $amount = rand(200000, 2000000);
             $adminFee = 5000;
-            $netAmount = $amount - $adminFee;
 
             Withdrawal::create([
                 'agency_id' => $agency->id,
                 'amount' => $amount,
                 'admin_fee' => $adminFee,
-                'net_amount' => $netAmount,
-                'bank_name' => $bank,
-                'bank_account_number' => $faker->numerify('##############'),
-                'bank_account_name' => $agency->contact_person ?? $faker->name(),
+                'net_amount' => $amount - $adminFee,
+                'bank_name' => $randomBank(),
+                'bank_account_number' => $randomAccount(),
+                'bank_account_name' => $agency->contact_person ?? $randomName(),
                 'status' => 'pending',
             ]);
 
             $totalWithdrawals++;
 
-            // Rejected
+            // Rejected (1 per 3 agency)
             if ($index % 3 === 0) {
-                $bank = $faker->randomElement($banks);
                 $amount = rand(500000, 2500000);
                 $adminFee = 5000;
-                $netAmount = $amount - $adminFee;
 
                 $rejectedReasons = [
                     'Saldo tidak mencukupi untuk penarikan ini.',
@@ -133,26 +138,24 @@ class WithdrawalSeeder extends Seeder
                     'agency_id' => $agency->id,
                     'amount' => $amount,
                     'admin_fee' => $adminFee,
-                    'net_amount' => $netAmount,
-                    'bank_name' => $bank,
-                    'bank_account_number' => $faker->numerify('##############'),
-                    'bank_account_name' => $agency->contact_person ?? $faker->name(),
+                    'net_amount' => $amount - $adminFee,
+                    'bank_name' => $randomBank(),
+                    'bank_account_number' => $randomAccount(),
+                    'bank_account_name' => $agency->contact_person ?? $randomName(),
                     'status' => 'rejected',
                     'approved_by' => $adminId,
                     'approved_at' => now()->subDays(rand(3, 14)),
-                    'rejected_reason' => $faker->randomElement($rejectedReasons),
-                    'transaction_id' => 'WD-' . strtoupper(substr(md5($agency->id . 'rejected'), 0, 10)),
+                    'rejected_reason' => $rejectedReasons[array_rand($rejectedReasons)],
+                    'transaction_id' => $randomTransactionId('WD'),
                 ]);
 
                 $totalWithdrawals++;
             }
 
-            // Failed
+            // Failed (1 per 5 agency)
             if ($index % 5 === 0) {
-                $bank = $faker->randomElement($banks);
                 $amount = rand(500000, 2000000);
                 $adminFee = 5000;
-                $netAmount = $amount - $adminFee;
 
                 $failedReasons = [
                     'Transfer gagal - rekening tujuan tidak aktif.',
@@ -165,20 +168,20 @@ class WithdrawalSeeder extends Seeder
                     'agency_id' => $agency->id,
                     'amount' => $amount,
                     'admin_fee' => $adminFee,
-                    'net_amount' => $netAmount,
-                    'bank_name' => $bank,
-                    'bank_account_number' => $faker->numerify('##############'),
-                    'bank_account_name' => $agency->contact_person ?? $faker->name(),
+                    'net_amount' => $amount - $adminFee,
+                    'bank_name' => $randomBank(),
+                    'bank_account_number' => $randomAccount(),
+                    'bank_account_name' => $agency->contact_person ?? $randomName(),
                     'status' => 'failed',
                     'approved_by' => $adminId,
                     'approved_at' => now()->subDays(rand(1, 7)),
-                    'rejected_reason' => $faker->randomElement($failedReasons),
-                    'transaction_id' => 'WD-' . strtoupper(substr(md5($agency->id . 'failed'), 0, 10)),
+                    'rejected_reason' => $failedReasons[array_rand($failedReasons)],
+                    'transaction_id' => $randomTransactionId('WD'),
                     'payment_detail' => json_encode([
                         'method' => 'bank_transfer',
-                        'bank' => $bank,
+                        'bank' => $randomBank(),
                         'reference' => 'REF' . rand(100000, 999999),
-                        'error' => $faker->randomElement($failedReasons),
+                        'error' => $failedReasons[array_rand($failedReasons)],
                     ]),
                 ]);
 
