@@ -1,11 +1,3 @@
-Saya paham. Anda butuh **README.md** yang profesional untuk repo GitHub GOMAD.
-
-Saya akan buatkan **README.md lengkap** dengan konten yang sesuai dengan kode yang sudah saya baca (baik website maupun app).
-
----
-
-## 📄 README.md untuk GOMAD
-
 ```markdown
 # 🚐 GoMad - Platform Booking Travel Antar Kota di Madura
 
