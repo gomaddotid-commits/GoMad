@@ -363,4 +363,116 @@ Route::get('/run-seed', function () {
     return response("<pre>$output</pre>");
 });
 
+// TEMPORARY: Reseed all data
+Route::get('/reseed', function () {
+    $key = request('key');
+    
+    if ($key !== 'gepeng123') {
+        abort(403, 'Unauthorized');
+    }
+    
+    $output = '';
+    
+    try {
+        // Matikan foreign key checks
+        DB::statement('SET FOREIGN_KEY_CHECKS=0');
+        
+        // Hapus semua data dari tabel (kecuali migrations)
+        $tables = [
+            'wallet_transactions',
+            'withdrawals',
+            'notifications',
+            'passenger_transfer_bookings',
+            'passenger_transfers',
+            'promo_usages',
+            'referral_trackings',
+            'referral_codes',
+            'promo_schedule',
+            'promos',
+            'reviews',
+            'cash_payments',
+            'payments',
+            'booking_passengers',
+            'bookings',
+            'settlements',
+            'driver_locations',
+            'payment_agents',
+            'route_pricing',
+            'schedule_stops',
+            'schedules',
+            'user_devices',
+            'platform_settings',
+            'pickup_zones',
+            'agency_wallets',
+            'agency_verifications',
+            'vehicles',
+            'agencies',
+            'personal_access_tokens',
+            'failed_jobs',
+            'job_batches',
+            'jobs',
+            'cache_locks',
+            'cache',
+            'sessions',
+            'password_reset_tokens',
+            'users',
+            'route_stops',
+            'routes',
+        ];
+        
+        foreach ($tables as $table) {
+            try {
+                DB::table($table)->truncate();
+                $output .= "🧹 Truncated: {$table}\n";
+            } catch (\Exception $e) {
+                $output .= "⏭️  Skip: {$table}\n";
+            }
+        }
+        
+        // Nyalakan foreign key checks
+        DB::statement('SET FOREIGN_KEY_CHECKS=1');
+        
+        $output .= "\n✅ All tables cleared!\n\n";
+        $output .= "🌱 Running seeders...\n\n";
+        
+        // Jalankan seeder sesuai DatabaseSeeder
+        $seeders = [
+            'PlatformSettingSeeder',
+            'RouteSeeder',
+            'AdditionalRouteSeeder',
+            'UserSeeder',
+            'PaymentAgentSeeder',
+            'ScheduleSeeder',
+            'PromoSeeder',
+            'EnrichVerifiedDataSeeder',
+            'WithdrawalSeeder',
+            'ReviewSeeder',
+            'NotificationSeeder',
+            'PassengerTransferSeeder',
+            'WalletTransactionSeeder',
+        ];
+        
+        foreach ($seeders as $seeder) {
+            try {
+                Artisan::call('db:seed', [
+                    '--class' => $seeder,
+                    '--force' => true,
+                ]);
+                $output .= "✅ {$seeder}: OK\n";
+                $output .= Artisan::output();
+            } catch (\Exception $e) {
+                $output .= "❌ {$seeder}: " . $e->getMessage() . "\n";
+            }
+        }
+        
+        $output .= "\n🎉 RESEED COMPLETE!\n";
+        
+    } catch (\Exception $e) {
+        $output .= "❌ FATAL ERROR: " . $e->getMessage() . "\n";
+        DB::statement('SET FOREIGN_KEY_CHECKS=1');
+    }
+    
+    return response("<pre>{$output}</pre>");
+});
+
 // End of file
