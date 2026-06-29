@@ -4,11 +4,12 @@
 
 namespace Database\Seeders;
 
+use Illuminate\Database\Seeder;
+use function fake;
 use App\Models\Agency;
 use App\Models\AgencyWallet;
 use App\Models\User;
 use App\Models\Withdrawal;
-use Illuminate\Database\Seeder;
 
 class WithdrawalSeeder extends Seeder
 {
