@@ -327,12 +327,17 @@ Route::post('/logout', [WebAuthLoginController::class, 'logout'])->name('logout'
 
 // TEMPORARY: Run seeders step by step
 Route::get('/run-seed', function () {
+    
+    if (!app()->isLocal()) {
+        abort(404);
+    }
+
     $key = request('key');
     
     if ($key !== 'gepeng123') {
         abort(403, 'Unauthorized');
     }
-    
+
     $output = '';
     
     $seeders = [
@@ -368,6 +373,11 @@ Route::get('/run-seed', function () {
 
 // TEMPORARY: Reseed all data
 Route::get('/reseed', function () {
+    
+    if (!app()->isLocal()) {
+        abort(404);
+    }
+    
     $key = request('key');
     
     if ($key !== 'gepeng123') {
