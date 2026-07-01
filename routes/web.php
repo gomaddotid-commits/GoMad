@@ -505,4 +505,22 @@ Route::get('/storage-link', function () {
     ]);
 });
 
+// TEMPORARY: Run migrations only
+Route::get('/migrate', function () {
+    // Hanya untuk local development
+    if (!app()->isLocal()) {
+        abort(404);
+    }
+    
+    $key = request('key');
+    
+    if ($key !== 'gepeng123') {
+        abort(403, 'Unauthorized');
+    }
+    
+    Artisan::call('migrate', ['--force' => true]);
+    
+    return response("<pre>" . Artisan::output() . "</pre>");
+});
+
 // End of file
