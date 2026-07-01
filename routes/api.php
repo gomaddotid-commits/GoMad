@@ -260,6 +260,7 @@ Route::prefix('v1')->group(function () {
             Route::post('/bookings/{booking}/pickup', [ApiDriverBookingController::class, 'pickupBooking']);
             Route::post('/bookings/{booking}/dropoff', [ApiDriverBookingController::class, 'dropoffBooking']);
             Route::post('/bookings/{booking}/complete', [ApiDriverBookingController::class, 'completeBooking']);
+            Route::post('/bookings/{booking}/confirm-cod', [ApiDriverBookingController::class, 'confirmCod']);
 
             Route::post('/location/update', [ApiDriverLocationController::class, 'update']);
             Route::get('/location/current', [ApiDriverLocationController::class, 'current']);

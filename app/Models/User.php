@@ -26,6 +26,7 @@ class User extends Authenticatable
         'role',
         'agency_id',
         'avatar_url',
+        'referred_by',
         'phone_verified_at',
         'last_location',
         'preferences',

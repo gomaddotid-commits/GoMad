@@ -6,34 +6,37 @@
     @if(isset($booking))
     
     {{-- Status Banner --}}
+    {{-- Status Banner --}}
     <div class="rounded-2xl p-4 mb-6 text-center
-        @if(in_array($booking->status, ['paid', 'cod_confirmed'])) bg-green-50 border border-green-200
-        @elseif($booking->status == 'pending') bg-yellow-50 border border-yellow-200
+        @if(in_array($booking->status, ['paid', 'on_going', 'completed'])) bg-green-50 border border-green-200
+        @elseif(in_array($booking->status, ['pending', 'confirmed'])) bg-yellow-50 border border-yellow-200
         @elseif($booking->status == 'cancelled') bg-red-50 border border-red-200
-        @elseif($booking->status == 'completed') bg-blue-50 border border-blue-200
         @else bg-gray-50 border border-gray-200 @endif">
         <div class="text-4xl mb-2">
-            @if(in_array($booking->status, ['paid', 'cod_confirmed'])) ✅
-            @elseif($booking->status == 'pending') ⏳
+            @if(in_array($booking->status, ['paid', 'on_going', 'completed'])) ✅
+            @elseif(in_array($booking->status, ['pending', 'confirmed'])) ⏳
             @elseif($booking->status == 'cancelled') ❌
-            @elseif($booking->status == 'completed') 🎉
             @else 🚗
             @endif
         </div>
-        <h2 class="text-xl font-bold">{{ $booking->status_label }}</h2>
+        <h2 class="text-xl font-bold">
+            @if($booking->status == 'confirmed' && $booking->payment && $booking->payment->payment_type == 'cod')
+                Menunggu Pembayaran COD
+            @else
+                {{ $booking->status_label }}
+            @endif
+        </h2>
         <p class="text-sm mt-1">
             @if($booking->status == 'pending' && !$booking->payment && !$booking->cashPayment)
                 Pilih metode pembayaran dan promo di bawah ini.
-            @elseif($booking->payment && $booking->payment->payment_type == 'cod' && $booking->payment->status == 'cod_pending')
-                Pembayaran COD - Bayar ke sopir saat penjemputan.
+            @elseif($booking->status == 'confirmed' && $booking->payment && $booking->payment->payment_type == 'cod')
+                🚗 Pembayaran COD - Bayar tunai ke sopir saat penjemputan. E-Ticket tersedia setelah sopir konfirmasi.
             @elseif($booking->payment && $booking->payment->payment_type == 'midtrans' && $booking->payment->status == 'pending')
                 Silakan selesaikan pembayaran online.
             @elseif($booking->cashPayment && $booking->cashPayment->status == 'pending')
                 Tunjukkan kode bayar ke Warung GoMad terdekat.
-            @elseif(in_array($booking->status, ['paid', 'cod_confirmed']))
+            @elseif(in_array($booking->status, ['paid', 'on_going', 'completed']))
                 Booking sudah dikonfirmasi. E-Ticket tersedia.
-            @elseif($booking->status == 'completed')
-                Perjalanan selesai. Berikan ulasan!
             @endif
         </p>
     </div>
@@ -105,16 +108,37 @@
     @if($booking->status == 'pending' && !$booking->payment && !$booking->cashPayment)
     
         {{-- Pilih Metode Pembayaran (DROPDOWN) --}}
+        {{-- Pilih Metode Pembayaran --}}
         <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-4">
             <h2 class="text-lg font-bold text-secondary mb-3">Metode Pembayaran</h2>
+            
+            @php
+                // Ambil payment methods dari route
+                $routePaymentMethods = $booking->schedule->route->payment_methods_array;
+            @endphp
+            
             <select id="paymentMethod" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-600 bg-gray-50 text-sm" onchange="updatePaymentInfo()">
                 <option value="">-- Pilih Metode Pembayaran --</option>
+                
+                @if(in_array('midtrans', $routePaymentMethods))
                 <option value="midtrans">💳 Bayar Online (Transfer Bank, VA, QRIS, E-Wallet)</option>
+                @endif
+                
+                @if(in_array('cash', $routePaymentMethods))
                 <option value="cash">🏪 Bayar di Warung GoMad (Cash)</option>
-                @if($booking->schedule->allow_cod && $booking->schedule->route->cod_available)
+                @endif
+                
+                @if(in_array('cod', $routePaymentMethods) && $booking->schedule->allow_cod && $booking->schedule->route->cod_available)
                 <option value="cod">🚗 COD - Bayar ke Sopir saat Penjemputan</option>
                 @endif
             </select>
+            
+            @if(count($routePaymentMethods) < 3)
+            <div class="mt-2 bg-blue-50 rounded-lg p-2 text-xs text-blue-700">
+                ℹ️ Beberapa metode pembayaran tidak tersedia untuk rute ini.
+            </div>
+            @endif
+            
             <div id="paymentInfo" class="mt-3 text-sm text-gray-600 hidden"></div>
         </div>
 
@@ -257,11 +281,12 @@
     {{-- =========================================================== --}}
     {{-- COD: Info Pembayaran ke Sopir --}}
     {{-- =========================================================== --}}
+    {{-- COD: Info Pembayaran ke Sopir --}}
     @if($booking->payment && $booking->payment->payment_type == 'cod')
     <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-6">
         <h2 class="text-lg font-bold text-secondary mb-4">Pembayaran ke Sopir (COD)</h2>
         
-        @if($booking->payment->status == 'cod_pending' || $booking->status == 'paid')
+        @if($booking->payment->status == 'cod_pending')
         <div class="bg-orange-50 border-2 border-orange-300 rounded-2xl p-6 text-center">
             <div class="text-4xl mb-3">🚗</div>
             <p class="font-bold text-orange-800 text-lg mb-2">Bayar ke Sopir saat Penjemputan</p>
@@ -274,9 +299,10 @@
                 <p><strong>Kendaraan:</strong> {{ $booking->schedule->vehicle->plate_number ?? '-' }} ({{ $booking->schedule->vehicle->brand ?? '' }} {{ $booking->schedule->vehicle->model ?? '' }})</p>
                 <p><strong>Jemput:</strong> {{ $booking->schedule->departure_date->format('d M Y') }} {{ $booking->schedule->departure_time }}</p>
                 <p><strong>Alamat:</strong> {{ $booking->pickup_address }}</p>
-                @if($booking->pickup_maps_link)
-                <a href="{{ $booking->pickup_maps_link }}" target="_blank" class="text-primary-600 text-xs hover:underline">🗺️ Lihat di Google Maps</a>
-                @endif
+            </div>
+            {{-- ⚠️ Peringatan: E-Ticket belum tersedia --}}
+            <div class="mt-4 bg-yellow-100 border border-yellow-300 rounded-xl p-3 text-sm text-yellow-800">
+                ⚠️ E-Ticket akan tersedia setelah sopir mengkonfirmasi pembayaran.
             </div>
         </div>
         @elseif($booking->payment->status == 'cod_confirmed')

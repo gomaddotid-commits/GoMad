@@ -18,6 +18,7 @@
             'max_price' => (float) ($route->max_price ?? 0),
             'cod_available' => (bool) $route->cod_available,
             'cod_min_deposit' => (float) ($route->cod_min_deposit ?? 500000),
+            'payment_methods' => $route->payment_methods_array,
             'stops' => $route->stops()->orderBy('stop_order')->get()->map(function($stop, $index) use ($route) {
                 $totalStops = $route->stops->count();
                 return [
@@ -162,32 +163,57 @@
             </div>
         </div>
 
-        {{-- STEP 3: Pengaturan COD --}}
-        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-6" id="codSection" style="display:none;">
-            <h2 class="font-bold text-lg text-secondary mb-4">Pengaturan COD (Bayar ke Sopir)</h2>
+        {{-- STEP 3: Pengaturan Pembayaran --}}
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-6" id="paymentSection" style="display:none;">
+            <h2 class="font-bold text-lg text-secondary mb-4">Pengaturan Pembayaran</h2>
             
-            <div class="bg-orange-50 rounded-xl p-4 mb-4 text-sm text-orange-800">
-                <p class="font-medium mb-1">Tentang COD:</p>
-                <ul class="list-disc list-inside space-y-1">
-                    <li>Customer bisa bayar langsung ke driver saat penjemputan</li>
-                    <li>Butuh saldo deposit minimal: <strong id="codMinDepositLabel">Rp 500.000</strong></li>
-                    <li>Saldo deposit sebagai jaminan jika customer tidak bayar</li>
-                    <li>Saldo Anda saat ini: <strong>Rp {{ number_format($availableDeposit, 0, ',', '.') }}</strong></li>
-                    <li><a href="{{ route('agency.wallet.topup') }}" target="_blank" class="text-primary-600 underline">Top Up Saldo Deposit</a></li>
-                </ul>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="paymentMethodsContainer">
+                {{-- Online (Midtrans) - Selalu tersedia --}}
+                <div id="onlinePaymentCard" class="bg-blue-50 rounded-xl p-4 text-center border border-blue-200" style="display:none;">
+                    <div class="text-2xl mb-2">💳</div>
+                    <p class="font-semibold text-blue-700 text-sm">Online (Midtrans)</p>
+                    <p class="text-xs text-blue-600 mt-1">Selalu tersedia</p>
+                </div>
+                
+                {{-- Warung GoMad - Selalu tersedia --}}
+                <div id="cashPaymentCard" class="bg-green-50 rounded-xl p-4 text-center border border-green-200" style="display:none;">
+                    <div class="text-2xl mb-2">🏪</div>
+                    <p class="font-semibold text-green-700 text-sm">Warung GoMad</p>
+                    <p class="text-xs text-green-600 mt-1">Selalu tersedia</p>
+                </div>
+                
+                {{-- COD - Dinamis --}}
+                <div id="codPaymentCard" class="rounded-xl p-4 text-center border bg-gray-50 border-gray-200" style="display:none;">
+                    <div class="text-2xl mb-2">🚗</div>
+                    <p class="font-semibold text-sm text-gray-700">COD (Bayar ke Sopir)</p>
+                    
+                    <div class="mt-3">
+                        <label class="flex items-center justify-center gap-2 cursor-pointer">
+                            <input type="checkbox" name="allow_cod" value="1" id="allowCod" 
+                                class="w-5 h-5 rounded border-gray-300 text-orange-600 focus:ring-orange-600">
+                            <span class="text-sm font-medium">Aktifkan COD</span>
+                        </label>
+                    </div>
+                    
+                    <div id="codInfo" class="mt-3 bg-orange-100 rounded-lg p-3 text-xs text-orange-800 text-left" style="display:none;">
+                        <p class="font-medium mb-1">ℹ️ Informasi COD:</p>
+                        <ul class="list-disc list-inside space-y-1">
+                            <li>Customer bayar tunai ke sopir saat penjemputan</li>
+                            <li>Butuh saldo deposit: <strong id="codMinDepositLabel">Rp 0</strong></li>
+                            <li>Saldo deposit tersedia: <strong>Rp {{ number_format($availableDeposit, 0, ',', '.') }}</strong></li>
+                        </ul>
+                    </div>
+                    
+                    <div id="codWarning" class="bg-red-50 border border-red-200 rounded-lg p-3 mt-3 text-sm text-red-700 hidden">
+                        ⚠️ Saldo deposit tidak mencukupi. 
+                        <a href="{{ route('agency.wallet.topup') }}" target="_blank" class="text-red-600 underline font-medium">Top Up sekarang</a>
+                    </div>
+                </div>
             </div>
             
-            <div class="flex items-center gap-3">
-                <input type="checkbox" name="allow_cod" value="1" id="allowCod" 
-                       class="w-5 h-5 rounded border-gray-300 text-primary-600 focus:ring-primary-600">
-                <label for="allowCod" class="text-sm font-medium text-secondary">
-                    Aktifkan pembayaran COD (Bayar ke Sopir) untuk jadwal ini
-                </label>
-            </div>
-            
-            <div id="codWarning" class="bg-red-50 border border-red-200 rounded-xl p-3 mt-3 text-sm text-red-700 hidden">
-                ⚠️ Saldo deposit Anda belum mencukupi. 
-                <a href="{{ route('agency.wallet.topup') }}" target="_blank" class="text-red-600 underline font-medium">Top Up sekarang</a>
+            {{-- Info metode yang tidak tersedia --}}
+            <div id="unavailablePaymentsInfo" class="mt-4 bg-gray-50 rounded-xl p-3 text-sm text-gray-500 hidden">
+                <p>ℹ️ Beberapa metode pembayaran tidak tersedia untuk rute ini berdasarkan pengaturan admin.</p>
             </div>
         </div>
 
@@ -220,7 +246,7 @@
 @push('scripts')
 <script>
 var routesData = @json($routesData);
-var depositBalance = {{ $availableDeposit }};
+var availableDeposit = {{ $availableDeposit }};
 var selectedRouteId = null;
 var stops = [];
 var pricingList = [];
@@ -228,7 +254,6 @@ var tempModalPairs = [];
 
 var routeSelect = document.getElementById('routeSelect');
 var stopConfigSection = document.getElementById('stopConfigSection');
-var codSection = document.getElementById('codSection');
 var stopsTableBody = document.getElementById('stopsTableBody');
 var pricingSummary = document.getElementById('pricingSummary');
 var pricingListDiv = document.getElementById('pricingList');
@@ -240,15 +265,12 @@ var modalInfo = document.getElementById('modalInfo');
 var modalPairsDiv = document.getElementById('modalPairs');
 var basePriceInput = document.getElementById('basePrice');
 var maxPriceInfo = document.getElementById('maxPriceInfo');
-var codMinDepositLabel = document.getElementById('codMinDepositLabel');
-var codWarning = document.getElementById('codWarning');
-var allowCod = document.getElementById('allowCod');
 
 routeSelect.addEventListener('change', function() {
     selectedRouteId = parseInt(this.value);
     if (!selectedRouteId) {
         stopConfigSection.style.display = 'none';
-        codSection.style.display = 'none';
+        document.getElementById('paymentSection').style.display = 'none';
         return;
     }
     loadStops(selectedRouteId);
@@ -269,29 +291,91 @@ function loadStops(routeId) {
         basePriceInput.removeAttribute('max');
     }
     
-    // Tampilkan COD section
-    if (route.cod_available) {
-        codSection.style.display = 'block';
+    // ========================================
+    // TAMPILKAN/SEMBUNYIKAN METODE PEMBAYARAN
+    // ========================================
+    var paymentMethods = route.payment_methods || ['midtrans', 'cash', 'cod'];
+    var paymentSection = document.getElementById('paymentSection');
+    var onlineCard = document.getElementById('onlinePaymentCard');
+    var cashCard = document.getElementById('cashPaymentCard');
+    var codCard = document.getElementById('codPaymentCard');
+    var unavailableInfo = document.getElementById('unavailablePaymentsInfo');
+    var codInfo = document.getElementById('codInfo');
+    var codWarning = document.getElementById('codWarning');
+    var allowCod = document.getElementById('allowCod');
+    var codMinDepositLabel = document.getElementById('codMinDepositLabel');
+    
+    // Reset semua
+    onlineCard.style.display = 'none';
+    cashCard.style.display = 'none';
+    codCard.style.display = 'none';
+    allowCod.checked = false;
+    allowCod.disabled = false;
+    codInfo.style.display = 'none';
+    codWarning.classList.add('hidden');
+    unavailableInfo.classList.add('hidden');
+    
+    var hasUnavailable = false;
+    
+    // Online (Midtrans)
+    if (paymentMethods.includes('midtrans')) {
+        onlineCard.style.display = 'block';
+    } else {
+        hasUnavailable = true;
+    }
+    
+    // Warung GoMad (Cash)
+    if (paymentMethods.includes('cash')) {
+        cashCard.style.display = 'block';
+    } else {
+        hasUnavailable = true;
+    }
+    
+    // COD
+    if (paymentMethods.includes('cod') && route.cod_available) {
+        codCard.style.display = 'block';
+        
         var requiredDeposit = route.cod_min_deposit || 500000;
         codMinDepositLabel.textContent = 'Rp ' + formatRupiah(requiredDeposit);
         
-        // Cek saldo tersedia (available deposit = deposit - hold)
-        var availableDeposit = {{ $availableDeposit }};
+        // Tampilkan info COD saat checkbox dicentang
+        allowCod.addEventListener('change', function() {
+            if (this.checked) {
+                codInfo.style.display = 'block';
+            } else {
+                codInfo.style.display = 'none';
+            }
+        });
         
         if (availableDeposit < requiredDeposit) {
             codWarning.classList.remove('hidden');
             codWarning.innerHTML = '⚠️ Saldo deposit tersedia: <strong>Rp ' + formatRupiah(availableDeposit) + '</strong>. Tidak mencukupi (butuh Rp ' + formatRupiah(requiredDeposit) + '). <a href="{{ route("agency.wallet.topup") }}" target="_blank" class="text-red-600 underline font-medium">Top Up sekarang</a>';
             allowCod.disabled = true;
-            allowCod.checked = false;
         } else {
             codWarning.classList.add('hidden');
             allowCod.disabled = false;
         }
-    } else {
-        codSection.style.display = 'none';
-        allowCod.checked = false;
+    } else if (paymentMethods.includes('cod') && !route.cod_available) {
+        hasUnavailable = true;
+    } else if (!paymentMethods.includes('cod')) {
+        hasUnavailable = true;
     }
     
+    // Tampilkan info jika ada metode yang tidak tersedia
+    if (hasUnavailable) {
+        unavailableInfo.classList.remove('hidden');
+        var unavailableList = [];
+        if (!paymentMethods.includes('midtrans')) unavailableList.push('Online (Midtrans)');
+        if (!paymentMethods.includes('cash')) unavailableList.push('Warung GoMad');
+        if (!paymentMethods.includes('cod')) unavailableList.push('COD');
+        unavailableInfo.innerHTML = '<p>ℹ️ Metode tidak tersedia untuk rute ini: <strong>' + unavailableList.join(', ') + '</strong></p>';
+    }
+    
+    paymentSection.style.display = 'block';
+    
+    // ========================================
+    // SETUP STOPS
+    // ========================================
     stops = route.stops.map(function(stop, index) {
         return {
             id: stop.id,

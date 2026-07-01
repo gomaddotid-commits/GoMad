@@ -42,6 +42,8 @@ class RouteController extends Controller
             'max_price' => ['nullable', 'numeric', 'min:0'],
             'cod_min_deposit' => ['nullable', 'numeric', 'min:0'],
             'cod_available' => ['nullable', 'boolean'],
+            'payment_methods' => ['nullable', 'array'],
+            'payment_methods.*' => ['in:midtrans,cash,cod'],
             'description' => ['nullable', 'string', 'max:500'],
             'photo' => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:5120'],
             'stops' => ['required', 'array', 'min:2'],
@@ -57,6 +59,13 @@ class RouteController extends Controller
         // Upload foto
         if ($request->hasFile('photo')) {
             $data['photo'] = $request->file('photo')->store('routes', 'public');
+        }
+
+        // Proses payment_methods
+        if ($request->has('payment_methods') && !empty($request->payment_methods)) {
+            $data['payment_methods'] = implode(',', $request->payment_methods);
+        } else {
+            $data['payment_methods'] = null;
         }
 
         $this->routeService->createRoute($data);
@@ -91,6 +100,8 @@ class RouteController extends Controller
             'max_price' => ['nullable', 'numeric', 'min:0'],
             'cod_min_deposit' => ['nullable', 'numeric', 'min:0'],
             'cod_available' => ['nullable', 'boolean'],
+            'payment_methods' => ['nullable', 'array'],
+            'payment_methods.*' => ['in:midtrans,cash,cod'],
         ]);
 
         $data = $request->except('photo');
@@ -102,6 +113,12 @@ class RouteController extends Controller
                 Storage::disk('public')->delete($route->photo);
             }
             $data['photo'] = $request->file('photo')->store('routes', 'public');
+        }
+
+        if ($request->has('payment_methods')) {
+            $data['payment_methods'] = !empty($request->payment_methods) 
+                ? implode(',', $request->payment_methods) 
+                : null;
         }
 
         $this->routeService->updateRoute($route, $data);

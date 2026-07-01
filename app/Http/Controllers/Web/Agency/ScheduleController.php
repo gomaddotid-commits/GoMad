@@ -63,9 +63,22 @@ class ScheduleController extends Controller
             return back()->with('error', 'Jadwal memiliki booking aktif, tidak dapat dihapus.');
         }
 
+        // Release COD deposit jika ada
+        if ($schedule->allow_cod && $schedule->cod_min_balance > 0) {
+            $walletService = app(\App\Services\WalletService::class);
+            $walletService->releaseCodDeposit(
+                $schedule->agency,
+                $schedule->cod_min_balance,
+                $schedule->id
+            );
+        }
+
         $schedule->update(['is_active' => false]);
         $schedule->delete();
-        return back()->with('success', 'Jadwal berhasil dihapus.');
+        
+        // 👇 UBAH DARI back() KE redirect ke daftar jadwal
+        return redirect()->route('agency.schedules.index')
+            ->with('success', 'Jadwal berhasil dihapus. Saldo deposit COD telah dikembalikan.');
     }
 
     public function assignDriver(Request $request, Schedule $schedule): RedirectResponse

@@ -85,6 +85,39 @@
             </div>
         </div>
 
+        {{-- 👇 TAMBAHKAN SECTION BARU: Metode Pembayaran --}}
+        <div class="border-t border-gray-100 pt-6 mt-6">
+            <h3 class="font-bold text-secondary mb-3">💳 Metode Pembayaran yang Tersedia</h3>
+            <p class="text-xs text-gray-500 mb-4">Pilih metode pembayaran yang bisa digunakan customer di rute ini. Kosongkan semua untuk mengaktifkan semua metode.</p>
+            
+            <div class="grid grid-cols-3 gap-4">
+                <label class="flex items-center gap-3 p-4 border-2 border-gray-200 rounded-xl cursor-pointer hover:border-blue-400 transition has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50">
+                    <input type="checkbox" name="payment_methods[]" value="midtrans" class="w-5 h-5 text-blue-600 rounded" checked>
+                    <div>
+                        <span class="text-sm font-semibold">💳 Online (Midtrans)</span>
+                        <span class="text-xs text-gray-500 block">Transfer Bank, VA, QRIS, E-Wallet</span>
+                    </div>
+                </label>
+                
+                <label class="flex items-center gap-3 p-4 border-2 border-gray-200 rounded-xl cursor-pointer hover:border-green-400 transition has-[:checked]:border-green-500 has-[:checked]:bg-green-50">
+                    <input type="checkbox" name="payment_methods[]" value="cash" class="w-5 h-5 text-green-600 rounded" checked>
+                    <div>
+                        <span class="text-sm font-semibold">🏪 Warung GoMad (Cash)</span>
+                        <span class="text-xs text-gray-500 block">Bayar tunai di warung terdekat</span>
+                    </div>
+                </label>
+                
+                <label class="flex items-center gap-3 p-4 border-2 border-gray-200 rounded-xl cursor-pointer hover:border-orange-400 transition has-[:checked]:border-orange-500 has-[:checked]:bg-orange-50">
+                    <input type="checkbox" name="payment_methods[]" value="cod" class="w-5 h-5 text-orange-600 rounded">
+                    <div>
+                        <span class="text-sm font-semibold">🚗 COD (Bayar ke Sopir)</span>
+                        <span class="text-xs text-gray-500 block">Bayar tunai saat penjemputan</span>
+                    </div>
+                </label>
+            </div>
+            <p class="text-xs text-gray-400 mt-2">Jika tidak ada yang dicentang, semua metode pembayaran akan tersedia.</p>
+        </div>
+
         <div>
             <label class="block text-sm font-medium text-secondary mb-1">Deskripsi Rute</label>
             <textarea name="description" rows="3" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-600 bg-gray-50"

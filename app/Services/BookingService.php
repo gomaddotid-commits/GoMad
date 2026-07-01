@@ -144,6 +144,37 @@ class BookingService
 
             $this->notificationService->bookingCreated($booking);
 
+            $agency = $booking->schedule->agency;
+            if ($agency && $agency->user) {
+                $this->notificationService->createNotification(
+                    $agency->user->id,
+                    '📋 Booking Baru',
+                    "Booking {$booking->booking_code} dari {$booking->customer->name} - " .
+                    "{$booking->originStop->city_name} → {$booking->destinationStop->city_name} - " .
+                    "Rp " . number_format($booking->total_price, 0, ',', '.') . " - Status: Menunggu Pembayaran",
+                    [
+                        'type' => 'new_booking',
+                        'booking_id' => $booking->id,
+                        'booking_code' => $booking->booking_code,
+                    ]
+                );
+                
+                // Kirim WhatsApp ke agency
+                $this->notificationService->sendWhatsApp(
+                    $agency->user->phone,
+                    "📋 *Booking Baru!*\n\n" .
+                    "Kode: *{$booking->booking_code}*\n" .
+                    "Customer: {$booking->customer->name}\n" .
+                    "Rute: {$booking->originStop->city_name} → {$booking->destinationStop->city_name}\n" .
+                    "Tanggal: {$booking->schedule->departure_date->format('d M Y')} {$booking->schedule->departure_time}\n" .
+                    "Penumpang: {$booking->total_passengers} orang\n" .
+                    "Total: Rp " . number_format($booking->total_price, 0, ',', '.') . "\n" .
+                    "Status: *Menunggu Pembayaran*\n\n" .
+                    "Cek dashboard untuk detail."
+                );
+            }
+            // ========================================
+
             return $booking->load(['passengers', 'schedule', 'originStop', 'destinationStop']);
         });
     }
@@ -155,8 +186,13 @@ class BookingService
             throw new \Exception('Jadwal tidak tersedia.');
         }
 
-        if ($schedule->departure_date->isPast()) {
-            throw new \Exception('Jadwal sudah lewat.');
+        // 👇 UBAH: Gunakan kombinasi departure_date + departure_time
+        $departureDateTime = \Carbon\Carbon::parse(
+            $schedule->departure_date->format('Y-m-d') . ' ' . $schedule->departure_time
+        );
+        
+        if ($departureDateTime->isPast()) {
+            throw new \Exception('Jadwal sudah berangkat. Tidak dapat melakukan booking.');
         }
 
         if ($schedule->travel_class === TravelClass::RENTAL->value) {

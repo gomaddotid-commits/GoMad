@@ -144,6 +144,9 @@ Route::middleware(['auth', \App\Http\Middleware\Web\AgencyMiddleware::class])
         Route::delete('/schedules/{schedule}', [WebAgencyScheduleController::class, 'destroy'])->name('schedules.destroy');
         Route::post('/schedules/{schedule}/assign-driver', [WebAgencyScheduleController::class, 'assignDriver'])->name('schedules.assign-driver');
         Route::post('/schedules/{schedule}/start', [WebAgencyScheduleController::class, 'startSchedule'])->name('schedules.start');
+        Route::delete('/schedules/{schedule}', [WebAgencyScheduleController::class, 'destroy'])->name('schedules.destroy');
+// Di dalam grup agency
+        Route::delete('/schedules/{schedule}', [WebAgencyScheduleController::class, 'destroy'])->name('schedules.destroy');
 
         Route::get('/bookings', [WebAgencyBookingController::class, 'index'])->name('bookings.index');
         Route::get('/bookings/{booking}', [WebAgencyBookingController::class, 'show'])->name('bookings.show');

@@ -52,6 +52,29 @@ class ProfileController extends Controller
             'meta' => null,
         ]);
     }
+
+    public function referralCode(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        
+        $referralCode = \App\Models\ReferralCode::where('user_id', $user->id)->first();
+        
+        if (!$referralCode) {
+            $promoService = app(\App\Services\PromoService::class);
+            $referralCode = $promoService->generateReferralCode($user);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Kode referral berhasil diambil.',
+            'data' => [
+                'code' => $referralCode->code,
+                'total_referred' => $referralCode->total_referred,
+                'successful_referrals' => $referralCode->successful_referrals,
+            ],
+            'meta' => null,
+        ]);
+    }
 }
 
 // End of file

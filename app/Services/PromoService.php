@@ -40,6 +40,7 @@ class PromoService
         // Jangan proses jika mereferal diri sendiri
         if ($referral->user_id === $newUser->id) return;
 
+        // 👇 PASTIKAN INI DIJALANKAN
         $newUser->update(['referred_by' => $referral->user_id]);
 
         ReferralTracking::create([
@@ -91,11 +92,11 @@ class PromoService
             default => 15000,
         };
 
-        // Buat promo referral untuk pengajak
+        // Buat promo referral KHUSUS untuk pengajak (referrer)
         $promo = Promo::create([
-            'name' => 'Referral Reward',
+            'name' => 'Referral Reward dari ' . $user->name,
             'type' => 'referral',
-            'description' => "Reward dari referral {$user->name}",
+            'description' => "Reward referral dari {$user->name} - Dapatkan diskon untuk booking berikutnya!",
             'discount_percent' => $discountPercent,
             'max_discount' => $maxDiscount,
             'min_purchase' => 0,
@@ -105,7 +106,7 @@ class PromoService
             'platform_share_percent' => 100,
             'agency_share_percent' => 0,
             'is_active' => true,
-            'created_by' => 1,
+            'created_by' => $tracking->referrer_id, // 👈 Penting: tandai milik siapa promo ini
         ]);
 
         // Update tracking
@@ -120,7 +121,7 @@ class PromoService
             $referralCode->increment('successful_referrals');
         }
 
-        // Notifikasi ke pengajak
+        // Notifikasi ke pengajak (referrer)
         $referrer = User::find($tracking->referrer_id);
         if ($referrer && $referrer->phone) {
             app(NotificationService::class)->sendWhatsApp(
@@ -152,9 +153,15 @@ class PromoService
             ->whereNotIn('id', $usedPromoIds);
 
         // Filter berdasarkan tipe
-        $query->where(function ($q) {
-            $q->where('type', 'general')
-            ->orWhere('type', 'referral');
+        $query->where(function ($q) use ($user) {
+            // Promo general - tersedia untuk semua
+            $q->where('type', 'general');
+            
+            // Promo referral - HANYA yang dibuat untuk user ini
+            $q->orWhere(function ($subQ) use ($user) {
+                $subQ->where('type', 'referral')
+                    ->where('created_by', $user->id);  // 👈 HANYA referral milik user ini
+            });
         });
 
         // Filter metode pembayaran jika ada
@@ -236,6 +243,11 @@ class PromoService
             ->exists();
 
         if ($alreadyUsed) return false;
+        
+        // 👇 TAMBAHKAN: Promo referral hanya untuk pemiliknya
+        if ($promo->type === 'referral' && $promo->created_by !== $user->id) {
+            return false;
+        }
 
         return true;
     }

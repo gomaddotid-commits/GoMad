@@ -36,19 +36,33 @@
             <p class="text-gray-500 text-sm">Jadwal #{{ $schedule->id }}</p>
         </div>
         <div class="flex flex-wrap gap-2">
+            {{-- Tombol Mulai Jadwal --}}
             @if(!$schedule->started_at && $schedule->departure_date->isToday() && $schedule->driver_id)
             <form action="{{ route('agency.schedules.start', $schedule) }}" method="POST">
                 @csrf
                 <button type="submit" class="bg-green-600 text-white px-5 py-2 rounded-xl text-sm font-semibold hover:bg-green-700 transition" onclick="return confirm('Mulai jadwal?')">Mulai Jadwal</button>
             </form>
             @elseif($schedule->started_at && !$schedule->finished_at)
-            <span class="bg-blue-100 text-blue-700 px-4 py-2 rounded-xl text-sm font-semibold">Dalam Perjalanan</span>
+            <span class="bg-blue-100 text-blue-700 px-4 py-2 rounded-xl text-sm font-semibold inline-flex items-center">Dalam Perjalanan</span>
             @elseif($schedule->finished_at)
-            <span class="bg-green-100 text-green-700 px-4 py-2 rounded-xl text-sm font-semibold">Selesai {{ $schedule->finished_at->format('d M H:i') }}</span>
+            <span class="bg-green-100 text-green-700 px-4 py-2 rounded-xl text-sm font-semibold inline-flex items-center">Selesai {{ $schedule->finished_at->format('d M H:i') }}</span>
             @endif
 
+            {{-- Tombol Transfer --}}
             @if($canTransfer && !$schedule->started_at)
-            <a href="{{ route('agency.schedules.transfer', $schedule) }}" class="bg-orange-500 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-orange-600 transition">Transfer</a>
+            <a href="{{ route('agency.schedules.transfer', $schedule) }}" class="bg-orange-500 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-orange-600 transition inline-flex items-center">Transfer</a>
+            @endif
+
+            {{-- Tombol Hapus Jadwal --}}
+            @if(!$schedule->started_at)
+            <button type="button" onclick="confirmDeleteSchedule()" 
+                    class="bg-red-500 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-red-600 transition inline-flex items-center">
+                🗑️ Hapus Jadwal
+            </button>
+            <form id="deleteScheduleForm" action="{{ route('agency.schedules.destroy', $schedule) }}" method="POST" style="display:none;">
+                @csrf
+                @method('DELETE')
+            </form>
             @endif
         </div>
     </div>
@@ -212,8 +226,27 @@
 
 @push('scripts')
 <script>
-function openAssignDriverModal() { document.getElementById('assignDriverModal').style.display = 'flex'; }
-function closeAssignDriverModal() { document.getElementById('assignDriverModal').style.display = 'none'; }
+function openAssignDriverModal() { 
+    document.getElementById('assignDriverModal').style.display = 'flex'; 
+}
+
+function closeAssignDriverModal() { 
+    document.getElementById('assignDriverModal').style.display = 'none'; 
+}
+
+// 👇 Fungsi untuk konfirmasi dan submit form hapus
+function confirmDeleteSchedule() {
+    if (confirm('Hapus jadwal ini?\n\nData tidak bisa dikembalikan.\nJika jadwal menggunakan COD, saldo deposit akan dikembalikan.')) {
+        document.getElementById('deleteScheduleForm').submit();
+    }
+}
+
+// Tutup modal assign driver saat klik di luar
+document.getElementById('assignDriverModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeAssignDriverModal();
+    }
+});
 </script>
 @endpush
 @endif

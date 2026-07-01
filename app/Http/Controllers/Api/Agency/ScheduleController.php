@@ -109,12 +109,22 @@ class ScheduleController extends Controller
             ], 422);
         }
 
+        // Release COD deposit jika ada
+        if ($schedule->allow_cod && $schedule->cod_min_balance > 0) {
+            $walletService = app(\App\Services\WalletService::class);
+            $walletService->releaseCodDeposit(
+                $schedule->agency,
+                $schedule->cod_min_balance,
+                $schedule->id
+            );
+        }
+
         $schedule->update(['is_active' => false]);
         $schedule->delete();
 
         return response()->json([
             'success' => true,
-            'message' => 'Jadwal berhasil dihapus.',
+            'message' => 'Jadwal berhasil dihapus. Saldo deposit COD telah dikembalikan.',
             'data' => null,
             'meta' => null,
         ]);

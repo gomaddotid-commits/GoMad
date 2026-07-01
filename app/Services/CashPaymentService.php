@@ -14,6 +14,7 @@ use App\Models\PaymentAgent;
 use App\Models\PlatformSetting;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 
 class CashPaymentService
 {
@@ -130,6 +131,18 @@ class CashPaymentService
                 "Warung: {$agent->agent_name}\n" .
                 "Terima kasih telah menggunakan GoMad!"
             );
+
+            try {
+                $promoService = app(\App\Services\PromoService::class);
+                $promoService->processReferralReward($booking);
+                Log::info('Referral reward processed for booking: ' . $booking->booking_code);
+            } catch (\Exception $e) {
+                Log::error('Referral reward processing failed: ' . $e->getMessage(), [
+                    'booking_id' => $booking->id,
+                    'error' => $e->getMessage(),
+                ]);
+                // Jangan throw error - jangan ganggu flow pembayaran utama
+            }
 
             return $cashPayment;
         });

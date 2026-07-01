@@ -179,8 +179,8 @@ class BookingController extends Controller
             'paid_at' => now(),
         ]);
 
-        // Update booking status
-        $booking->update(['status' => 'paid']);
+        // 👇 PASTIKAN booking jadi paid
+        $booking->update(['status' => \App\Enums\BookingStatus::PAID->value]);
 
         // Tandai semua penumpang sudah bayar COD
         \App\Models\BookingPassenger::where('booking_id', $booking->id)

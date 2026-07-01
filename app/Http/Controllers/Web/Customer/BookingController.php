@@ -79,6 +79,21 @@ class BookingController extends Controller
             'payment_method.required' => 'Silakan pilih metode pembayaran terlebih dahulu.',
             'payment_method.in' => 'Metode pembayaran tidak valid.',
         ]);
+        // 👇 TAMBAHKAN: Validasi metode pembayaran sesuai rute
+        $routePaymentMethods = $booking->schedule->route->payment_methods_array;
+        if (!in_array($request->payment_method, $routePaymentMethods)) {
+            return back()->with('error', 'Metode pembayaran ini tidak tersedia untuk rute ini.');
+        }
+        
+        // Validasi khusus COD
+        if ($request->payment_method === 'cod') {
+            if (!$booking->schedule->route->cod_available) {
+                return back()->with('error', 'Rute ini tidak mendukung pembayaran COD.');
+            }
+            if (!$booking->schedule->allow_cod) {
+                return back()->with('error', 'Jadwal ini tidak menyediakan opsi COD.');
+            }
+        }
 
         // Validasi promo dengan metode pembayaran
         if ($request->filled('promo_id')) {
@@ -148,7 +163,10 @@ class BookingController extends Controller
                 'payment_type' => 'cod',
                 'status' => \App\Enums\PaymentStatus::COD_PENDING->value,
             ]);
-            $booking->update(['status' => 'paid']);
+            
+            // 👇 UBAH: paid → confirmed
+            $booking->update(['status' => \App\Enums\BookingStatus::CONFIRMED->value]);
+            
             $walletService->holdCodBalance($booking);
         } catch (\Exception $e) {
             return back()->with('error', 'Gagal memproses COD: ' . $e->getMessage());
@@ -243,7 +261,15 @@ class BookingController extends Controller
     public function changePayment(Request $request, Booking $booking): RedirectResponse
     {
         if ($booking->customer_id !== auth()->id()) abort(403);
-        $canChange = $booking->status === 'pending' || ($booking->status === 'paid' && $booking->payment && $booking->payment->payment_type === 'cod' && $booking->payment->status === 'cod_pending');
+        
+        // 👇 UBAH: tambah 'confirmed' ke kondisi canChange
+        $canChange = $booking->status === 'pending' 
+            || $booking->status === 'confirmed'  // 👈 TAMBAHKAN
+            || ($booking->status === 'paid' 
+                && $booking->payment 
+                && $booking->payment->payment_type === 'cod' 
+                && $booking->payment->status === 'cod_pending');
+                
         if (!$canChange) return back()->with('error', 'Metode pembayaran tidak dapat diubah.');
         $request->validate(['new_method' => ['required', 'in:midtrans,cash,cod']]);
         $this->cleanupOldPayments($booking);

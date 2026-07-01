@@ -148,6 +148,7 @@ class RouteService
             'max_price' => $data['max_price'] ?? null,
             'cod_min_deposit' => $data['cod_min_deposit'] ?? null,
             'cod_available' => $data['cod_available'] ?? null,
+            'payment_methods' => $data['payment_methods'] ?? null,  // 👈 TAMBAHKAN
             'description' => $data['description'] ?? null,
             'photo' => $data['photo'] ?? null,
             'is_active' => true,
@@ -180,6 +181,7 @@ class RouteService
             'max_price' => $data['max_price'] ?? $route->max_price,
             'cod_min_deposit' => $data['cod_min_deposit'] ?? $route->cod_min_deposit,
             'cod_available' => $data['cod_available'] ?? $route->cod_available,
+            'payment_methods' => $data['payment_methods'] ?? $route->payment_methods,  // 👈 TAMBAHKAN
             'description' => $data['description'] ?? $route->description,
             'photo' => $data['photo'] ?? $route->photo,           // 👈 Tambahkan
             'is_active' => $data['is_active'] ?? $route->is_active,

@@ -18,6 +18,7 @@ class Route extends Model
         'destination_city',
         'distance_km',
         'estimated_duration',
+        'payment_methods',    // 👈 TAMBAHKAN
         'max_price',        // 👈 Tambahkan
         'cod_min_deposit',  // 👈 Tambahkan
         'cod_available',    // 👈 Tambahkan
@@ -66,6 +67,42 @@ class Route extends Model
               ->where('destination_city', $destination);
         });
     }
+
+    // 👇 TAMBAHKAN ACCESSOR
+    public function getPaymentMethodsArrayAttribute(): array
+    {
+        $value = $this->attributes['payment_methods'] ?? null;
+        
+        if (empty($value)) {
+            return ['midtrans', 'cash', 'cod']; // Default: semua tersedia
+        }
+        
+        if (is_array($value)) {
+            return $value;
+        }
+        
+        return explode(',', $value);
+    }
+
+    // 👇 TAMBAHKAN METHOD UNTUK CEK
+    public function isPaymentMethodAvailable(string $method): bool
+    {
+        return in_array($method, $this->payment_methods_array);
+    }
+
+    // 👇 TAMBAHKAN MUTATOR
+    public function setPaymentMethodsAttribute($value): void
+    {
+        if (is_array($value)) {
+            $value = array_filter($value);
+            $this->attributes['payment_methods'] = !empty($value) ? implode(',', $value) : null;
+        } elseif (is_string($value)) {
+            $this->attributes['payment_methods'] = !empty($value) ? $value : null;
+        } else {
+            $this->attributes['payment_methods'] = null;
+        }
+    }
+
 }
 
 // End of file

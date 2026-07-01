@@ -51,6 +51,30 @@ class ExpirePendingPayments extends Command
             $this->info("Cash payment #{$cashPayment->id} - {$cashPayment->payment_code} expired.");
         }
 
+        // ========================================
+        // 👇 TAMBAHKAN INI - RELEASE COD DEPOSIT UNTUK JADWAL EXPIRED
+        // ========================================
+        $expiredSchedules = Schedule::where('allow_cod', true)
+            ->where('cod_min_balance', '>', 0)
+            ->where('departure_date', '<', now()->subDay()->toDateString())
+            ->where('is_active', true)
+            ->get();
+
+        $codReleaseCount = 0;
+        foreach ($expiredSchedules as $schedule) {
+            $walletService = app(\App\Services\WalletService::class);
+            $walletService->releaseCodDeposit(
+                $schedule->agency,
+                $schedule->cod_min_balance,
+                $schedule->id
+            );
+            $codReleaseCount++;
+            $this->info("COD deposit released for schedule #{$schedule->id} - {$schedule->route->route_name}");
+        }
+        $this->info("COD deposits released: {$codReleaseCount}");
+        // ========================================
+
+
         $this->info("Expired Midtrans payments: {$midtransCount}");
         $this->info("Expired Cash payments: {$cashCount}");
 

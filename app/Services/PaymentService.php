@@ -168,6 +168,18 @@ class PaymentService
                 $booking->update(['status' => BookingStatus::PAID->value]);
                 $this->walletService->addPendingBalance($booking);
                 $this->notificationService->paymentConfirmed($booking);
+
+                try {
+                    $promoService = app(\App\Services\PromoService::class);
+                    $promoService->processReferralReward($booking);
+                    Log::info('Referral reward processed for booking: ' . $booking->booking_code);
+                } catch (\Exception $e) {
+                    Log::error('Referral reward processing failed: ' . $e->getMessage(), [
+                        'booking_id' => $booking->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                    // Jangan throw error - jangan ganggu flow pembayaran utama
+                }
             } elseif ($newStatus === PaymentStatus::FAILED) {
                 $booking->update(['status' => BookingStatus::CANCELLED->value, 'cancelled_at' => now()]);
                 $this->notificationService->bookingCancelled($booking, 'Pembayaran gagal');
