@@ -240,27 +240,91 @@ class BookingService
     {
         return DB::transaction(function () use ($booking) {
             if (!$booking->can_cancel) {
-                throw new \Exception('Booking tidak dapat dibatalkan.');
+                // Cek kenapa tidak bisa cancel
+                if ($booking->status === 'paid') {
+                    $departureDateTime = \Carbon\Carbon::parse(
+                        $booking->schedule->departure_date->format('Y-m-d') . ' ' . $booking->schedule->departure_time
+                    );
+                    $hoursUntilDeparture = now()->diffInHours($departureDateTime, false);
+                    
+                    if ($hoursUntilDeparture <= 24) {
+                        throw new \Exception(
+                            'Booking tidak dapat dibatalkan karena kurang dari 24 jam sebelum keberangkatan. ' .
+                            'Hubungi agency untuk bantuan.'
+                        );
+                    }
+                }
+                
+                throw new \Exception('Booking tidak dapat dibatalkan pada status ini.');
             }
+
+            $oldStatus = $booking->status;
 
             $booking->update([
                 'status' => BookingStatus::CANCELLED->value,
                 'cancelled_at' => now(),
             ]);
 
-            if ($booking->payment) {
-                $booking->payment->update([
-                    'status' => PaymentStatus::REFUNDED->value,
-                ]);
+            // Jika sudah paid, proses refund
+            if ($oldStatus === BookingStatus::PAID->value && $booking->payment) {
+                $paymentService = app(\App\Services\PaymentService::class);
+                
+                if ($booking->payment->payment_type === 'midtrans') {
+                    // Refund via Midtrans API
+                    $refundAmount = $booking->cancellation_refund; // 75% dari total
+                    
+                    $result = $paymentService->refundPayment($booking, $refundAmount);
+                    
+                    \Log::info('Cancel booking with refund', [
+                        'booking_code' => $booking->booking_code,
+                        'total_price' => $booking->total_price,
+                        'cancellation_fee' => $booking->cancellation_fee,
+                        'refund_amount' => $refundAmount,
+                        'refund_result' => $result,
+                    ]);
+                } elseif ($booking->payment->payment_type === 'cash' && $booking->cashPayment) {
+                    // Cash payment: tidak ada refund otomatis
+                    if ($booking->cashPayment->status === 'confirmed') {
+                        // Hanya update status, customer harus ke warung untuk refund
+                        $booking->cashPayment->update(['status' => 'refund_pending']);
+                        
+                        \Log::info('Cash refund pending - customer must visit warung', [
+                            'booking_code' => $booking->booking_code,
+                        ]);
+                    } else {
+                        $booking->cashPayment->update(['status' => 'expired']);
+                    }
+                } elseif ($booking->payment->payment_type === 'cod') {
+                    // COD: release hold balance
+                    app(\App\Services\WalletService::class)->releaseCodBalance($booking);
+                    $booking->payment->update(['status' => PaymentStatus::EXPIRED->value]);
+                }
+                
+                // Kurangi pending_balance agency
+                $agency = $booking->schedule->agency;
+                if ($agency && (float) $booking->payment->agency_revenue > 0) {
+                    $walletService = app(\App\Services\WalletService::class);
+                    $wallet = $walletService->getOrCreateWallet($agency);
+                    $wallet->update([
+                        'pending_balance' => max(0, (float) $wallet->pending_balance - (float) $booking->payment->agency_revenue),
+                    ]);
+                }
+            } else {
+                // Pending/confirmed — tidak ada refund
+                if ($booking->cashPayment) {
+                    $booking->cashPayment->update(['status' => 'expired']);
+                }
+                if ($booking->payment && $booking->payment->payment_type === 'cod') {
+                    $booking->payment->update(['status' => PaymentStatus::EXPIRED->value]);
+                    app(\App\Services\WalletService::class)->releaseCodBalance($booking);
+                }
             }
 
-            if ($booking->cashPayment) {
-                $booking->cashPayment->update([
-                    'status' => 'expired',
-                ]);
-            }
+            $this->notificationService->bookingCancelled(
+                $booking, 
+                'Dibatalkan oleh customer'
+            );
 
-            $this->notificationService->bookingCancelled($booking, 'Dibatalkan oleh customer');
 
             return true;
         });

@@ -349,13 +349,59 @@
         </a>
         @endif
 
-        @if($booking->can_cancel)
-        <form action="{{ route('customer.booking.cancel', $booking) }}" method="POST" onsubmit="return confirm('Batalkan booking ini?')">
-            @csrf
-            <button type="submit" class="w-full border border-red-500 text-red-500 py-3 rounded-xl font-bold hover:bg-red-50 transition">
-                ❌ Batalkan Booking
-            </button>
-        </form>
+        {{-- Tombol Batalkan Booking --}}
+        @php
+            $canCancel = $booking->can_cancel;
+            $cancellationFee = $booking->cancellation_fee ?? 0;
+            $cancellationRefund = $booking->cancellation_refund ?? 0;
+            
+            // Hitung jam sampai keberangkatan
+            if ($booking->schedule) {
+                $departureDateTime = \Carbon\Carbon::parse(
+                    $booking->schedule->departure_date->format('Y-m-d') . ' ' . $booking->schedule->departure_time
+                );
+                $hoursUntilDeparture = now()->diffInHours($departureDateTime, false);
+            } else {
+                $hoursUntilDeparture = 999;
+            }
+        @endphp
+
+        @if($canCancel)
+            @if($booking->status === 'paid')
+            {{-- Info biaya pembatalan untuk booking paid --}}
+            <div class="bg-red-50 border border-red-200 rounded-xl p-4 mb-3">
+                <h4 class="font-semibold text-red-800 text-sm mb-2">⚠️ Kebijakan Pembatalan</h4>
+                <div class="text-sm text-red-700 space-y-1">
+                    <p>• Biaya pembatalan: <strong>Rp {{ number_format($cancellationFee, 0, ',', '.') }}</strong> (25% dari total)</p>
+                    <p>• Dana dikembalikan: <strong>Rp {{ number_format($cancellationRefund, 0, ',', '.') }}</strong></p>
+                    @if($hoursUntilDeparture > 24 && $hoursUntilDeparture < 48)
+                    <p>• ⏰ Batas pembatalan: <strong>{{ round($hoursUntilDeparture) }} jam lagi</strong></p>
+                    @endif
+                </div>
+            </div>
+            @endif
+
+            <form action="{{ route('customer.booking.cancel', $booking) }}" method="POST" onsubmit="return confirmCancel()">
+                @csrf
+                <button type="submit" class="w-full border border-red-500 text-red-600 py-3 rounded-xl font-semibold hover:bg-red-50 transition">
+                    @if($booking->status === 'paid')
+                        ❌ Batalkan Booking (Biaya Rp {{ number_format($cancellationFee, 0, ',', '.') }})
+                    @else
+                        ❌ Batalkan Booking
+                    @endif
+                </button>
+            </form>
+        @elseif($booking->status === 'paid' && $hoursUntilDeparture <= 24)
+            {{-- Tidak bisa cancel karena sudah H-24 --}}
+            <div class="bg-gray-100 border border-gray-300 rounded-xl p-4 text-center">
+                <p class="text-gray-600 text-sm font-medium">🔒 Pembatalan tidak tersedia</p>
+                <p class="text-gray-500 text-xs mt-1">Kurang dari 24 jam sebelum keberangkatan. Hubungi agency untuk bantuan.</p>
+                @if($booking->schedule && $booking->schedule->agency)
+                <p class="text-gray-500 text-xs mt-1">
+                    📞 {{ $booking->schedule->agency->contact_alternate ?? $booking->schedule->agency->user->phone ?? '-' }}
+                </p>
+                @endif
+            </div>
         @endif
 
         <a href="{{ route('customer.bookings') }}" 
@@ -594,3 +640,20 @@ function copyPaymentCode() {
 @endif
 
 @endsection
+
+@push('scripts')
+<script>
+function confirmCancel() {
+    @if($booking->status === 'paid')
+    return confirm(
+        '⚠️ KONFIRMASI PEMBATALAN\n\n' +
+        'Biaya pembatalan: Rp {{ number_format($cancellationFee, 0, ',', '.') }} (25%)\n' +
+        'Dana dikembalikan: Rp {{ number_format($cancellationRefund, 0, ',', '.') }}\n\n' +
+        'Apakah Anda yakin ingin membatalkan booking ini?'
+    );
+    @else
+    return confirm('Apakah Anda yakin ingin membatalkan booking ini?');
+    @endif
+}
+</script>
+@endpush

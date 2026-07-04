@@ -1,23 +1,22 @@
 <?php
 // File: app/Http/Controllers/Web/Agency/DriverController.php
-// Deskripsi: Web Controller untuk manajemen driver agency (Cloudinary)
+// Deskripsi: Web Controller untuk manajemen driver agency (FULL)
 
 namespace App\Http\Controllers\Web\Agency;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
-use App\Services\CloudinaryService;
 use App\Services\DriverService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 
 class DriverController extends Controller
 {
     public function __construct(
         private readonly DriverService $driverService,
-        private readonly CloudinaryService $cloudinaryService,
     ) {}
 
     public function index(): View
@@ -47,10 +46,9 @@ class DriverController extends Controller
         $data['agency_id'] = auth()->user()->agency->id;
         $data['is_active'] = true;
 
-        // Upload foto driver via Cloudinary
+        // Upload foto driver
         if ($request->hasFile('avatar')) {
-            $result = $this->cloudinaryService->upload($request->file('avatar'), 'drivers');
-            $data['avatar_url'] = $result['url'];
+            $data['avatar_url'] = $request->file('avatar')->store('drivers', 'public');
         }
 
         User::create($data);
@@ -79,21 +77,17 @@ class DriverController extends Controller
         ]);
 
         $data = $request->only(['name', 'email', 'phone', 'is_active']);
-
+        
         if ($request->filled('password')) {
             $data['password'] = Hash::make($request->password);
         }
 
-        // Upload foto baru via Cloudinary
+        // Upload foto baru
         if ($request->hasFile('avatar')) {
-            // Hapus avatar lama dari Cloudinary
-            if ($user->avatar_url && str_starts_with($user->avatar_url, 'http')) {
-                $publicId = $this->extractCloudinaryPublicId($user->avatar_url);
-                if ($publicId) $this->cloudinaryService->delete($publicId);
+            if ($user->avatar_url && Storage::disk('public')->exists($user->avatar_url)) {
+                Storage::disk('public')->delete($user->avatar_url);
             }
-            
-            $result = $this->cloudinaryService->upload($request->file('avatar'), 'drivers');
-            $data['avatar_url'] = $result['url'];
+            $data['avatar_url'] = $request->file('avatar')->store('drivers', 'public');
         }
 
         $user->update($data);
@@ -107,28 +101,12 @@ class DriverController extends Controller
         if ($user->role !== 'driver' || $user->agency_id !== auth()->user()->agency->id) abort(403);
 
         try {
-            // Hapus avatar dari Cloudinary
-            if ($user->avatar_url && str_starts_with($user->avatar_url, 'http')) {
-                $publicId = $this->extractCloudinaryPublicId($user->avatar_url);
-                if ($publicId) $this->cloudinaryService->delete($publicId);
-            }
-            
             $this->driverService->deleteDriver($user);
             return back()->with('success', 'Driver berhasil dihapus.');
         } catch (\Exception $e) {
             return back()->with('error', $e->getMessage());
         }
     }
-
-    /**
-     * Extract public_id dari Cloudinary URL
-     */
-    private function extractCloudinaryPublicId(string $url): ?string
-    {
-        $pattern = '/\/upload\/(?:v\d+\/)?(.+?)\.\w+$/';
-        if (preg_match($pattern, $url, $matches)) {
-            return $matches[1];
-        }
-        return null;
-    }
 }
+
+// End of file

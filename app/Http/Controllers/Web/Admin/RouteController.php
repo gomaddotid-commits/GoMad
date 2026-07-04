@@ -12,11 +12,13 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 use Illuminate\Support\Facades\Storage;
+use App\Services\CloudinaryService;
 
 class RouteController extends Controller
 {
     public function __construct(
         private readonly RouteService $routeService,
+        private readonly CloudinaryService $cloudinaryService,
     ) {}
 
     public function index(): View
@@ -57,8 +59,14 @@ class RouteController extends Controller
         $data = $request->except('photo');
         
         // Upload foto
+        //if ($request->hasFile('photo')) {
+          //  $data['photo'] = $request->file('photo')->store('routes', 'public');
+        //}
+
+        // Upload foto via Cloudinary
         if ($request->hasFile('photo')) {
-            $data['photo'] = $request->file('photo')->store('routes', 'public');
+            $result = $this->cloudinaryService->upload($request->file('photo'), 'routes');
+            $data['photo'] = $result['url'];
         }
 
         // Proses payment_methods
@@ -107,12 +115,21 @@ class RouteController extends Controller
         $data = $request->except('photo');
 
         // Upload foto baru jika ada
-        if ($request->hasFile('photo')) {
+//        if ($request->hasFile('photo')) {
             // Hapus foto lama
-            if ($route->photo && Storage::disk('public')->exists($route->photo)) {
-                Storage::disk('public')->delete($route->photo);
+  //          if ($route->photo && Storage::disk('public')->exists($route->photo)) {
+    //            Storage::disk('public')->delete($route->photo);
+      //      }
+        //    $data['photo'] = $request->file('photo')->store('routes', 'public');
+        //}
+
+        if ($request->hasFile('photo')) {
+            // Hapus foto lama dari Cloudinary
+            if ($route->photo && str_starts_with($route->photo, 'http')) {
+                // Extract & delete (optional)
             }
-            $data['photo'] = $request->file('photo')->store('routes', 'public');
+            $result = $this->cloudinaryService->upload($request->file('photo'), 'routes');
+            $data['photo'] = $result['url'];
         }
 
         if ($request->has('payment_methods')) {

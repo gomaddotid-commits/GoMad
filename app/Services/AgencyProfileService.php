@@ -1,173 +1,107 @@
 <?php
-// File: app/Services/AgencyProfileService.php
-// Deskripsi: Service untuk manajemen profil agency
 
 namespace App\Services;
 
 use App\Models\Agency;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class AgencyProfileService
 {
+    public function __construct(
+        private readonly CloudinaryService $cloudinaryService,
+    ) {}
+
+    public function generateSlug(string $name): string
+    {
+        return Str::slug($name) . '-' . Str::random(6);
+    }
+
     public function updateProfile(Agency $agency, array $data): Agency
     {
-        $updateData = [];
-        
-        $allowedFields = [
-            'agency_name', 'address', 'description', 'founded_year',
-            'contact_person', 'contact_alternate', 'email_alternate',
-            'services', 'social_media', 'business_hours', 'zone_coverage',
-        ];
-        
-        foreach ($allowedFields as $field) {
-            if (isset($data[$field])) {
-                $updateData[$field] = $data[$field];
-            }
-        }
-        
-        if (isset($data['agency_name']) && $data['agency_name'] !== $agency->agency_name) {
-            $updateData['slug'] = $this->generateSlug($data['agency_name'], $agency->id);
-        }
-        
-        if (!empty($updateData)) {
-            $agency->update($updateData);
-        }
-        
-        return $agency->fresh();
+        $agency->update($data);
+        return $agency;
     }
 
     public function uploadLogo(Agency $agency, UploadedFile $file): string
     {
-        $this->deleteOldFile($agency->logo);
-        
-        $path = $file->store('agencies/' . $agency->id . '/logo', 'public');
-        $agency->update(['logo' => $path]);
-        
-        return Storage::url($path);
+        // Hapus logo lama dari Cloudinary
+        if ($agency->logo && str_starts_with($agency->logo, 'http')) {
+            $publicId = $this->extractPublicId($agency->logo);
+            if ($publicId) $this->cloudinaryService->delete($publicId);
+        }
+
+        $result = $this->cloudinaryService->upload($file, 'agencies/logos');
+        $agency->update(['logo' => $result['url']]);
+        return $result['url'];
     }
 
     public function uploadCover(Agency $agency, UploadedFile $file): string
     {
-        $this->deleteOldFile($agency->cover_image);
-        
-        $path = $file->store('agencies/' . $agency->id . '/cover', 'public');
-        $agency->update(['cover_image' => $path]);
-        
-        return Storage::url($path);
+        if ($agency->cover_image && str_starts_with($agency->cover_image, 'http')) {
+            $publicId = $this->extractPublicId($agency->cover_image);
+            if ($publicId) $this->cloudinaryService->delete($publicId);
+        }
+
+        $result = $this->cloudinaryService->upload($file, 'agencies/covers');
+        $agency->update(['cover_image' => $result['url']]);
+        return $result['url'];
     }
 
     public function uploadBusinessLicense(Agency $agency, UploadedFile $file): string
     {
-        $this->deleteOldFile($agency->business_license);
-        
-        $path = $file->store('agencies/' . $agency->id . '/license', 'public');
-        $agency->update(['business_license' => $path]);
-        
-        return Storage::url($path);
+        if ($agency->business_license && str_starts_with($agency->business_license, 'http')) {
+            $publicId = $this->extractPublicId($agency->business_license);
+            if ($publicId) $this->cloudinaryService->delete($publicId);
+        }
+
+        $result = $this->cloudinaryService->upload($file, 'agencies/licenses');
+        $agency->update(['business_license' => $result['url']]);
+        return $result['url'];
     }
 
     public function addGalleryPhoto(Agency $agency, UploadedFile $file): array
     {
         $gallery = $agency->gallery ?? [];
-        
+        if (is_string($gallery)) $gallery = json_decode($gallery, true) ?? [];
+
         if (count($gallery) >= 10) {
-            throw new \Exception('Maksimal 10 foto dalam galeri.');
+            throw new \Exception('Maksimal 10 foto di galeri.');
         }
-        
-        $path = $file->store('agencies/' . $agency->id . '/gallery', 'public');
-        $gallery[] = $path;
-        
+
+        $result = $this->cloudinaryService->upload($file, 'agencies/gallery');
+        $gallery[] = $result['url'];
         $agency->update(['gallery' => $gallery]);
-        
         return $gallery;
     }
 
     public function removeGalleryPhoto(Agency $agency, int $index): array
     {
         $gallery = $agency->gallery ?? [];
-        
-        if (!isset($gallery[$index])) {
-            throw new \Exception('Foto galeri tidak ditemukan.');
+        if (is_string($gallery)) $gallery = json_decode($gallery, true) ?? [];
+
+        if (isset($gallery[$index])) {
+            $url = $gallery[$index];
+            if (str_starts_with($url, 'http')) {
+                $publicId = $this->extractPublicId($url);
+                if ($publicId) $this->cloudinaryService->delete($publicId);
+            }
+            unset($gallery[$index]);
+            $gallery = array_values($gallery);
         }
-        
-        $this->deleteOldFile($gallery[$index]);
-        unset($gallery[$index]);
-        
-        $gallery = array_values($gallery);
+
         $agency->update(['gallery' => $gallery]);
-        
         return $gallery;
     }
 
-    public function generateSlug(string $name, ?int $excludeId = null): string
+    private function extractPublicId(string $url): ?string
     {
-        $slug = Str::slug($name);
-        $originalSlug = $slug;
-        $counter = 1;
-        
-        while (true) {
-            $query = Agency::where('slug', $slug);
-            
-            if ($excludeId) {
-                $query->where('id', '!=', $excludeId);
-            }
-            
-            if (!$query->exists()) {
-                break;
-            }
-            
-            $slug = $originalSlug . '-' . $counter;
-            $counter++;
+        // Extract public_id dari Cloudinary URL
+        // https://res.cloudinary.com/CLOUD_NAME/image/upload/v1234567890/folder/filename.jpg
+        $pattern = '/\/upload\/(?:v\d+\/)?(.+?)\.\w+$/';
+        if (preg_match($pattern, $url, $matches)) {
+            return $matches[1];
         }
-        
-        return $slug;
-    }
-
-    public function getProfileCompletionPercentage(Agency $agency): int
-    {
-        return $agency->profile_complete_percentage;
-    }
-
-    public function getPublicProfile(Agency $agency): array
-    {
-        $agency->load([
-            'user',
-            'vehicles' => function ($query) {
-                $query->where('is_active', true);
-            },
-            'reviews' => function ($query) {
-                $query->latest()->limit(5)->with('customer');
-            },
-        ]);
-        
-        $activeSchedules = $agency->schedules()
-            ->where('departure_date', '>=', now()->toDateString())
-            ->where('is_active', true)
-            ->with(['route', 'vehicle'])
-            ->limit(5)
-            ->get();
-        
-        return [
-            'agency' => $agency,
-            'active_schedules' => $activeSchedules,
-            'total_reviews' => $agency->reviews()->count(),
-            'average_rating' => $agency->rating,
-            'total_vehicles' => $agency->vehicles()->where('is_active', true)->count(),
-            'gallery' => $agency->gallery ?? [],
-            'services' => $agency->services ?? [],
-            'social_media' => $agency->social_media ?? [],
-            'business_hours' => $agency->business_hours ?? [],
-        ];
-    }
-
-    private function deleteOldFile(?string $path): void
-    {
-        if ($path && Storage::disk('public')->exists($path)) {
-            Storage::disk('public')->delete($path);
-        }
+        return null;
     }
 }
-
-// End of file

@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Booking;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
+use App\Models\User;
 
 class BookingController extends Controller
 {
@@ -46,6 +47,39 @@ class BookingController extends Controller
 
         return view('admin.bookings.show', compact('booking'));
     }
+
+    public function approveRefund(Booking $booking): RedirectResponse
+    {
+        try {
+            $paymentService = app(\App\Services\PaymentService::class);
+            $result = $paymentService->approveRefund($booking, auth()->user());
+            
+            if ($result['success']) {
+                return back()->with('success', 'Refund berhasil disetujui dan diproses.');
+            }
+            
+            return back()->with('error', $result['message']);
+        } catch (\Exception $e) {
+            return back()->with('error', 'Gagal memproses refund: ' . $e->getMessage());
+        }
+    }
+
+    public function rejectRefund(Request $request, Booking $booking): RedirectResponse
+    {
+        $request->validate([
+            'reason' => ['required', 'string', 'max:500'],
+        ]);
+        
+        try {
+            $paymentService = app(\App\Services\PaymentService::class);
+            $paymentService->rejectRefund($booking, auth()->user(), $request->reason);
+            
+            return back()->with('success', 'Refund ditolak.');
+        } catch (\Exception $e) {
+            return back()->with('error', 'Gagal: ' . $e->getMessage());
+        }
+    }
+
 }
 
 // End of file

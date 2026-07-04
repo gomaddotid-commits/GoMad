@@ -259,6 +259,199 @@ class PaymentService
             }
         }
     }
+
+    /**
+     * Refund pembayaran Midtrans
+     */
+    public function refundPayment(Booking $booking, ?float $amount = null): array
+    {
+        $payment = $booking->payment;
+        
+        if (!$payment) {
+            return ['success' => false, 'message' => 'Tidak ada data pembayaran.'];
+        }
+        
+        if ($payment->payment_type !== 'midtrans') {
+            return ['success' => false, 'message' => 'Hanya pembayaran Midtrans yang bisa direfund via API.'];
+        }
+        
+        if (!in_array($payment->status, [PaymentStatus::PAID->value, PaymentStatus::COD_CONFIRMED->value, PaymentStatus::REFUND_PENDING->value])) {
+            return ['success' => false, 'message' => 'Pembayaran tidak dalam status yang bisa direfund.'];
+        }
+        
+        $refundAmount = $amount ?? (float) $payment->amount;
+        $isProduction = config('gomad.midtrans.is_production', false);
+        $serverKey = config('gomad.midtrans.server_key');
+        
+        if (empty($serverKey)) {
+            return $this->simulateRefund($payment, $refundAmount, $booking);
+        }
+        
+        $transactionId = $payment->transaction_id;
+        
+        if (!$transactionId) {
+            $transactionId = $booking->booking_code;
+        }
+        
+        $baseUrl = $isProduction 
+            ? 'https://api.midtrans.com/v2' 
+            : 'https://api.sandbox.midtrans.com/v2';
+        
+        try {
+            \Log::info('Processing refund', [
+                'booking_code' => $booking->booking_code,
+                'transaction_id' => $transactionId,
+                'refund_amount' => $refundAmount,
+            ]);
+            
+            $response = \Illuminate\Support\Facades\Http::withBasicAuth($serverKey, '')
+                ->withHeaders(['Content-Type' => 'application/json'])
+                ->post($baseUrl . '/' . $transactionId . '/refund', [
+                    'amount' => (int) $refundAmount,
+                    'reason' => 'Pembatalan booking ' . $booking->booking_code,
+                ]);
+            
+            $result = $response->json();
+            $httpCode = $response->status();
+            
+            if ($httpCode === 200 && in_array($result['status_code'] ?? '', ['200', '201'])) {
+                $payment->update([
+                    'status' => PaymentStatus::REFUNDED->value,
+                    'payment_detail' => array_merge($payment->payment_detail ?? [], [
+                        'refund' => array_merge($result, [
+                            'refund_amount' => $refundAmount,
+                            'refunded_at' => now()->toIso8601String(),
+                            'status' => 'refunded',
+                        ]),
+                    ]),
+                ]);
+                
+                return [
+                    'success' => true,
+                    'message' => 'Refund berhasil diproses.',
+                    'data' => ['refund_amount' => $refundAmount, 'status' => 'refunded'],
+                ];
+            }
+            
+            // Refund API gagal → perlu manual
+            $payment->update([
+                'status' => PaymentStatus::REFUNDED->value,
+                'payment_detail' => array_merge($payment->payment_detail ?? [], [
+                    'refund' => [
+                        'refund_amount' => $refundAmount,
+                        'refunded_at' => now()->toIso8601String(),
+                        'needs_manual_refund' => true,
+                        'api_response' => $result,
+                        'status' => 'needs_manual_refund',
+                    ],
+                ]),
+            ]);
+            
+            return [
+                'success' => true,
+                'message' => 'Refund akan diproses manual oleh admin.',
+                'data' => ['refund_amount' => $refundAmount, 'status' => 'pending_manual'],
+            ];
+        } catch (\Exception $e) {
+            \Log::error('Refund exception', ['booking_code' => $booking->booking_code, 'error' => $e->getMessage()]);
+            
+            $payment->update([
+                'status' => PaymentStatus::REFUNDED->value,
+                'payment_detail' => array_merge($payment->payment_detail ?? [], [
+                    'refund' => [
+                        'refund_amount' => $refundAmount,
+                        'refunded_at' => now()->toIso8601String(),
+                        'needs_manual_refund' => true,
+                        'error' => $e->getMessage(),
+                        'status' => 'error_manual_refund',
+                    ],
+                ]),
+            ]);
+            
+            return [
+                'success' => true,
+                'message' => 'Refund akan diproses manual oleh admin.',
+                'data' => ['refund_amount' => $refundAmount, 'status' => 'pending_manual'],
+            ];
+        }
+    }
+
+    private function simulateRefund(Payment $payment, float $refundAmount, Booking $booking): array
+    {
+        $payment->update([
+            'status' => PaymentStatus::REFUNDED->value,
+            'payment_detail' => array_merge($payment->payment_detail ?? [], [
+                'refund' => [
+                    'refund_amount' => $refundAmount,
+                    'refunded_at' => now()->toIso8601String(),
+                    'mode' => 'simulation',
+                    'status' => 'refunded_simulated',
+                ],
+            ]),
+        ]);
+        
+        return [
+            'success' => true,
+            'message' => 'Refund berhasil (simulasi).',
+            'data' => ['refund_amount' => $refundAmount, 'status' => 'refunded'],
+        ];
+    }
+
+    public function approveRefund(Booking $booking, User $admin): array
+    {
+        $payment = $booking->payment;
+        
+        if ($payment->status !== PaymentStatus::REFUND_PENDING->value) {
+            return ['success' => false, 'message' => 'Refund tidak dalam status menunggu approval.'];
+        }
+        
+        $refundData = $payment->payment_detail['refund'] ?? [];
+        $refundAmount = $refundData['amount'] ?? (float) $payment->amount;
+        
+        $result = $this->refundPayment($booking, $refundAmount);
+        
+        if ($result['success']) {
+            $payment->update([
+                'status' => PaymentStatus::REFUNDED->value,
+                'payment_detail' => array_merge($payment->payment_detail ?? [], [
+                    'refund' => array_merge($refundData, [
+                        'approved_at' => now()->toIso8601String(),
+                        'approved_by' => $admin->id,
+                        'approved_by_name' => $admin->name,
+                        'status' => 'approved_and_refunded',
+                    ]),
+                ]),
+            ]);
+        }
+        
+        return $result;
+    }
+
+    public function rejectRefund(Booking $booking, User $admin, string $reason): array
+    {
+        $payment = $booking->payment;
+        
+        if ($payment->status !== PaymentStatus::REFUND_PENDING->value) {
+            return ['success' => false, 'message' => 'Refund tidak dalam status menunggu approval.'];
+        }
+        
+        $payment->update([
+            'status' => PaymentStatus::REFUND_REJECTED->value,
+            'payment_detail' => array_merge($payment->payment_detail ?? [], [
+                'refund' => array_merge($payment->payment_detail['refund'] ?? [], [
+                    'rejected_at' => now()->toIso8601String(),
+                    'rejected_by' => $admin->id,
+                    'rejected_by_name' => $admin->name,
+                    'rejection_reason' => $reason,
+                    'status' => 'rejected',
+                ]),
+            ]),
+        ]);
+        
+        return ['success' => true, 'message' => 'Refund ditolak.'];
+    }
+
+    
 }
 
 // End of file

@@ -281,7 +281,9 @@ Route::middleware(['auth', \App\Http\Middleware\Web\AdminMiddleware::class])
 
         Route::get('/bookings', [WebAdminBookingController::class, 'index'])->name('bookings.index');
         Route::get('/bookings/{booking}', [WebAdminBookingController::class, 'show'])->name('bookings.show');
-        
+        Route::post('/bookings/{booking}/refund-approve', [WebAdminBookingController::class, 'approveRefund'])->name('admin.refund.approve');
+        Route::post('/bookings/{booking}/refund-reject', [WebAdminBookingController::class, 'rejectRefund'])->name('admin.refund.reject');
+
         Route::get('/promos', [WebAdminPromoController::class, 'index'])->name('promos.index');
         Route::get('/promos/create', [WebAdminPromoController::class, 'create'])->name('promos.create');
         Route::post('/promos', [WebAdminPromoController::class, 'store'])->name('promos.store');

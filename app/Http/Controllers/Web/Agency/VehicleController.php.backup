@@ -1,22 +1,18 @@
 <?php
 // File: app/Http/Controllers/Web/Agency/VehicleController.php
-// Deskripsi: Web Controller untuk manajemen kendaraan agency (Cloudinary)
+// Deskripsi: Web Controller untuk manajemen kendaraan agency (FULL)
 
 namespace App\Http\Controllers\Web\Agency;
 
 use App\Http\Controllers\Controller;
 use App\Models\Vehicle;
-use App\Services\CloudinaryService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
+use Illuminate\Support\Facades\Storage;
 
 class VehicleController extends Controller
 {
-    public function __construct(
-        private readonly CloudinaryService $cloudinaryService,
-    ) {}
-
     public function index(): View
     {
         $vehicles = Vehicle::where('agency_id', auth()->user()->agency->id)
@@ -46,10 +42,10 @@ class VehicleController extends Controller
         $data['agency_id'] = auth()->user()->agency->id;
         $data['is_active'] = true;
 
-        // Upload foto kendaraan via Cloudinary
+        // Upload foto kendaraan
         if ($request->hasFile('vehicle_image')) {
-            $result = $this->cloudinaryService->upload($request->file('vehicle_image'), 'vehicles');
-            $data['vehicle_image'] = $result['url'];
+            $path = $request->file('vehicle_image')->store('vehicles', 'public');
+            $data['vehicle_image'] = $path;
         }
 
         Vehicle::create($data);
@@ -81,16 +77,13 @@ class VehicleController extends Controller
 
         $data = $request->only(['plate_number', 'brand', 'model', 'year', 'capacity', 'type']);
 
-        // Upload foto baru via Cloudinary
+        // Upload foto baru jika ada
         if ($request->hasFile('vehicle_image')) {
-            // Hapus foto lama dari Cloudinary
-            if ($vehicle->vehicle_image && str_starts_with($vehicle->vehicle_image, 'http')) {
-                $publicId = $this->extractCloudinaryPublicId($vehicle->vehicle_image);
-                if ($publicId) $this->cloudinaryService->delete($publicId);
+            // Hapus foto lama
+            if ($vehicle->vehicle_image && Storage::disk('public')->exists($vehicle->vehicle_image)) {
+                Storage::disk('public')->delete($vehicle->vehicle_image);
             }
-            
-            $result = $this->cloudinaryService->upload($request->file('vehicle_image'), 'vehicles');
-            $data['vehicle_image'] = $result['url'];
+            $data['vehicle_image'] = $request->file('vehicle_image')->store('vehicles', 'public');
         }
 
         $vehicle->update($data);
@@ -112,10 +105,9 @@ class VehicleController extends Controller
             return back()->with('error', 'Kendaraan masih memiliki jadwal aktif.');
         }
 
-        // Hapus foto dari Cloudinary
-        if ($vehicle->vehicle_image && str_starts_with($vehicle->vehicle_image, 'http')) {
-            $publicId = $this->extractCloudinaryPublicId($vehicle->vehicle_image);
-            if ($publicId) $this->cloudinaryService->delete($publicId);
+        // Hapus foto
+        if ($vehicle->vehicle_image && Storage::disk('public')->exists($vehicle->vehicle_image)) {
+            Storage::disk('public')->delete($vehicle->vehicle_image);
         }
 
         $vehicle->update(['is_active' => false]);
@@ -124,16 +116,6 @@ class VehicleController extends Controller
 
         return back()->with('success', 'Kendaraan berhasil dihapus.');
     }
-
-    /**
-     * Extract public_id dari Cloudinary URL
-     */
-    private function extractCloudinaryPublicId(string $url): ?string
-    {
-        $pattern = '/\/upload\/(?:v\d+\/)?(.+?)\.\w+$/';
-        if (preg_match($pattern, $url, $matches)) {
-            return $matches[1];
-        }
-        return null;
-    }
 }
+
+// End of file

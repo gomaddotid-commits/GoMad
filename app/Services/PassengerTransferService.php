@@ -151,13 +151,16 @@ class PassengerTransferService
             $transfer->bookings()->attach($bookings->pluck('id'));
 
             // Jika internal transfer, langsung pindahkan booking
+            // 🔥 INTERNAL TRANSFER: Langsung pindahkan booking + adjust wallet
             if ($isInternalTransfer) {
                 foreach ($transfer->bookings as $booking) {
-                    $booking->update([
-                        'schedule_id' => $toSchedule->id,
-                    ]);
+                    $oldScheduleId = $booking->schedule_id;
+                    $booking->update(['schedule_id' => $toSchedule->id]);
+                    
+                    // 👇 TAMBAHKAN: Adjust wallet jika booking sudah paid
+                    $this->adjustWalletForTransfer($booking, $fromSchedule->agency, $toSchedule->agency, $transfer);
                 }
-
+                
                 // Update counter
                 $transfer->fromSchedule->increment('transferred_out_count', $transfer->total_passengers);
                 $transfer->toSchedule->increment('transferred_in_count', $transfer->total_passengers);
@@ -215,9 +218,10 @@ class PassengerTransferService
             // Pindahkan booking ke jadwal baru
             $toSchedule = $transfer->toSchedule;
             foreach ($transfer->bookings as $booking) {
-                $booking->update([
-                    'schedule_id' => $toSchedule->id,
-                ]);
+                $booking->update(['schedule_id' => $toSchedule->id]);
+                
+                // 👇 TAMBAHKAN: Adjust wallet jika booking sudah paid
+                $this->adjustWalletForTransfer($booking, $transfer->fromAgency, $transfer->toAgency, $transfer);
             }
 
             // Update counter
@@ -340,6 +344,80 @@ class PassengerTransferService
         $availableSchedules = $this->findAvailableSchedules($schedule);
         
         return $availableSchedules->isNotEmpty();
+    }
+
+    /**
+     * Adjust wallet balances saat booking ditransfer antar agency
+     * 
+     * @param Booking $booking  Booking yang ditransfer
+     * @param Agency $fromAgency Agency pengirim
+     * @param Agency $toAgency   Agency penerima
+     * @param PassengerTransfer $transfer  Data transfer
+     */
+    private function adjustWalletForTransfer(Booking $booking, Agency $fromAgency, Agency $toAgency, PassengerTransfer $transfer): void
+    {
+        // Hanya adjust jika booking sudah paid dan ada payment dengan agency_revenue
+        if (!in_array($booking->status, ['paid', 'on_going'])) {
+            return;
+        }
+        
+        $payment = $booking->payment;
+        if (!$payment || (float) $payment->agency_revenue <= 0) {
+            return;
+        }
+        
+        $revenue = (float) $payment->agency_revenue;
+        $walletService = app(\App\Services\WalletService::class);
+        
+        // 1. Kurangi pending_balance agency PENGIRIM
+        $fromWallet = $walletService->getOrCreateWallet($fromAgency);
+        $fromPendingBefore = (float) $fromWallet->pending_balance;
+        $fromPendingAfter = max(0, $fromPendingBefore - $revenue);
+        
+        $fromWallet->update([
+            'pending_balance' => $fromPendingAfter,
+        ]);
+        
+        \App\Models\WalletTransaction::create([
+            'agency_id' => $fromAgency->id,
+            'type' => 'debit',
+            'amount' => $revenue,
+            'balance_before' => $fromPendingBefore,
+            'balance_after' => $fromPendingAfter,
+            'description' => "Transfer keluar booking {$booking->booking_code} → {$toAgency->agency_name} (Transfer #{$transfer->id})",
+            'reference_type' => 'transfer_out',
+            'reference_id' => $transfer->id,
+            'created_at' => now(),
+        ]);
+        
+        // 2. Tambah pending_balance agency PENERIMA
+        $toWallet = $walletService->getOrCreateWallet($toAgency);
+        $toPendingBefore = (float) $toWallet->pending_balance;
+        $toPendingAfter = $toPendingBefore + $revenue;
+        
+        $toWallet->update([
+            'pending_balance' => $toPendingAfter,
+        ]);
+        
+        \App\Models\WalletTransaction::create([
+            'agency_id' => $toAgency->id,
+            'type' => 'credit',
+            'amount' => $revenue,
+            'balance_before' => $toPendingBefore,
+            'balance_after' => $toPendingAfter,
+            'description' => "Transfer masuk booking {$booking->booking_code} dari {$fromAgency->agency_name} (Transfer #{$transfer->id})",
+            'reference_type' => 'transfer_in',
+            'reference_id' => $transfer->id,
+            'created_at' => now(),
+        ]);
+        
+        \Log::info('Wallet adjusted for transfer', [
+            'transfer_id' => $transfer->id,
+            'booking_code' => $booking->booking_code,
+            'from_agency' => $fromAgency->agency_name,
+            'to_agency' => $toAgency->agency_name,
+            'amount' => $revenue,
+        ]);
     }
 }
 

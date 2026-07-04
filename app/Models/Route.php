@@ -42,7 +42,15 @@ class Route extends Model
     // Accessor untuk URL foto
     public function getPhotoUrlAttribute(): ?string
     {
-        return $this->photo ? asset('storage/' . $this->photo) : null;
+        if (!$this->photo) return null;
+        
+        // Cloudinary URL
+        if (str_starts_with($this->photo, 'http')) {
+            return $this->photo;
+        }
+        
+        // Local storage fallback
+        return asset('storage/' . $this->photo);
     }
 
     public function stops(): HasMany

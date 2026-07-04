@@ -67,7 +67,85 @@ class Booking extends Model
     protected function canCancel(): Attribute
     {
         return Attribute::make(
-            get: fn () => in_array($this->status, ['pending', 'confirmed', 'paid']),
+            get: function () {
+                // Jika sudah cancelled/completed/on_going → tidak bisa
+                if (in_array($this->status, ['cancelled', 'completed', 'on_going'])) {
+                    return false;
+                }
+                
+                // Pending & confirmed → masih bisa cancel
+                if (in_array($this->status, ['pending', 'confirmed'])) {
+                    return true;
+                }
+                
+                // Jika paid → cek waktu keberangkatan
+                if ($this->status === 'paid') {
+                    // Hitung mundur ke keberangkatan
+                    $departureDateTime = \Carbon\Carbon::parse(
+                        $this->schedule->departure_date->format('Y-m-d') . ' ' . $this->schedule->departure_time
+                    );
+                    
+                    $hoursUntilDeparture = now()->diffInHours($departureDateTime, false);
+                    
+                    // Hanya bisa cancel jika > 24 jam sebelum keberangkatan
+                    return $hoursUntilDeparture > 24;
+                }
+                
+                return false;
+            },
+        );
+    }
+
+    protected function cancellationFee(): Attribute
+    {
+        return Attribute::make(
+            get: function () {
+                if ($this->status !== 'paid') {
+                    return 0;
+                }
+                return (int) round($this->total_price * 0.25);
+            },
+        );
+    }
+
+    protected function cancellationRefund(): Attribute
+    {
+        return Attribute::make(
+            get: function () {
+                if ($this->status !== 'paid') {
+                    return 0;
+                }
+                return max(0, (int) $this->total_price - $this->cancellation_fee);
+            },
+        );
+    }
+
+    protected function needsRefundApproval(): Attribute
+    {
+        return Attribute::make(
+            get: function () {
+                if ($this->cancellation_refund < 100000) {
+                    return false;
+                }
+                
+                $hoursSinceBooking = $this->created_at->diffInHours(now());
+                if ($hoursSinceBooking < 1) {
+                    return false;
+                }
+                
+                return true;
+            },
+        );
+    }
+
+    protected function refundStatus(): Attribute
+    {
+        return Attribute::make(
+            get: function () {
+                if (!$this->payment) return null;
+                $paymentDetail = $this->payment->payment_detail ?? [];
+                return $paymentDetail['refund']['status'] ?? null;
+            },
         );
     }
 
