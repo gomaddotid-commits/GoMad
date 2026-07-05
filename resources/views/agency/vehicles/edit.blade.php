@@ -14,7 +14,7 @@
             <div class="flex items-center gap-4">
                 <div class="w-32 h-24 rounded-lg flex items-center justify-center text-3xl overflow-hidden" id="previewContainer">
                     @if($vehicle->vehicle_image)
-                    <img src="{{ asset('storage/' . $vehicle->vehicle_image) }}" class="w-full h-full object-cover">
+                    <img src="{{  $vehicle->vehicle_image }}" class="w-full h-full object-cover">
                     @else
                     <div class="w-full h-full bg-gray-100 flex items-center justify-center">🚐</div>
                     @endif

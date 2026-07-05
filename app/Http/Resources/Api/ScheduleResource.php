@@ -17,7 +17,7 @@ class ScheduleResource extends JsonResource
                 'id' => $this->agency?->id,
                 'name' => $this->agency?->agency_name,
                 'slug' => $this->agency?->slug,
-                'logo' => $this->agency?->logo ? asset('storage/' . $this->agency->logo) : null,
+                'logo' => $this->agency?->logo ?? null,
                 'is_verified' => $this->agency?->is_verified,
                 'rating' => (float) ($this->agency?->rating ?? 0),
             ],

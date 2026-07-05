@@ -103,7 +103,7 @@
                     <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 hover:shadow-md transition">
                         <div class="flex items-center gap-3 mb-3">
                             <div class="w-10 h-10 rounded-full bg-primary-50 flex items-center justify-center overflow-hidden flex-shrink-0">
-                                @if($s->agency->logo)<img src="{{ asset('storage/'.$s->agency->logo) }}" class="w-full h-full object-cover">@else🏢@endif
+                                @if($s->agency->logo)<img src="{{  $s->agency->logo }}" class="w-full h-full object-cover">@else🏢@endif
                             </div>
                             <div>
                                 <p class="font-semibold text-sm">{{ $s->agency->agency_name }}</p>
@@ -134,7 +134,7 @@
                     <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
                         <div class="flex items-center gap-3">
                             <div class="w-12 h-12 rounded-full bg-primary-50 flex items-center justify-center overflow-hidden flex-shrink-0">
-                                @if($s->agency->logo)<img src="{{ asset('storage/'.$s->agency->logo) }}" class="w-full h-full object-cover">@else🏢@endif
+                                @if($s->agency->logo)<img src="{{  $s->agency->logo }}" class="w-full h-full object-cover">@else🏢@endif
                             </div>
                             <div>
                                 <p class="font-bold">{{ $s->agency->agency_name }}</p>

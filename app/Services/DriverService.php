@@ -25,7 +25,7 @@ class DriverService
                 'name' => $data['name'],
                 'email' => $data['email'],
                 'phone' => $data['phone'] ?? null,
-                'password' => Hash::make($data['password'] ?? 'password123'),
+                'password' => Hash::make($data['password']),
                 'role' => 'driver',
                 'agency_id' => $agency->id,
                 'is_active' => true,

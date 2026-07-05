@@ -12,7 +12,8 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
-        //
+        $middleware->alias([
+            'midtrans.webhook' => \App\Http\Middleware\MidtransWebhookMiddleware::class,        ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //

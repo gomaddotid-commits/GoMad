@@ -14,7 +14,7 @@
             <div class="flex items-center gap-4">
                 <div class="w-40 h-32 bg-gray-100 rounded-xl flex items-center justify-center text-4xl overflow-hidden" id="photoPreview">
                     @if($route->photo)
-                    <img src="{{ asset('storage/' . $route->photo) }}" alt="{{ $route->route_name }}" class="w-full h-full object-cover">
+                    <img src="{{  $route->photo }}" alt="{{ $route->route_name }}" class="w-full h-full object-cover">
                     @else
                     <span>🗺️</span>
                     @endif

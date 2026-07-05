@@ -79,7 +79,7 @@
         <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden group hover:shadow-md transition">
             @if($route->photo)
             <div class="h-32 overflow-hidden">
-                <img src="{{ asset('storage/' . $route->photo) }}" alt="" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                <img src="{{  $route->photo }}" alt="" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
             </div>
             @else
             <div class="h-32 bg-gradient-to-br from-primary-100 to-primary-50 flex items-center justify-center">

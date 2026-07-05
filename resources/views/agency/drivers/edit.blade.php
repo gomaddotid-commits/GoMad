@@ -14,7 +14,7 @@
             <div class="flex items-center gap-4">
                 <div class="w-24 h-24 rounded-full overflow-hidden flex items-center justify-center text-3xl" id="previewContainer">
                     @if($user->avatar_url)
-                    <img src="{{ asset('storage/' . $user->avatar_url) }}" class="w-full h-full object-cover">
+                    <img src="{{  $user->avatar_url }}" class="w-full h-full object-cover">
                     @else
                     <div class="w-full h-full bg-gray-100 flex items-center justify-center">👨‍✈️</div>
                     @endif

@@ -10,6 +10,7 @@
         "cloudinary-labs/cloudinary-laravel": "^3.0",
         "laravel/framework": "^11.31",
         "laravel/sanctum": "^4.0",
+        "laravel/socialite": "^5.28",
         "laravel/tinker": "^2.9"
     },
     "require-dev": {
@@ -59,7 +60,9 @@
     },
     "extra": {
         "laravel": {
-            "dont-discover": []
+            "dont-discover": [
+                "cloudinary-labs/cloudinary-laravel"
+            ]
         }
     },
     "config": {

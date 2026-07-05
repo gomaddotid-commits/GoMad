@@ -16,7 +16,7 @@
         <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition group">
             <div class="h-40 bg-gray-100 flex items-center justify-center overflow-hidden">
                 @if($route->photo)
-                <img src="{{ asset('storage/' . $route->photo) }}" alt="{{ $route->route_name }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                <img src="{{  $route->photo }}" alt="{{ $route->route_name }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
                 @else
                 <div class="text-center text-gray-400"><span class="text-5xl block mb-2">🗺️</span><span class="text-sm">Belum ada foto</span></div>
                 @endif

@@ -2,7 +2,7 @@
 
 @section('title', $agency->agency_name ?? 'Profil Agency')
 @section('meta_description', $agency->description ?? 'Profil agency travel ' . $agency->agency_name)
-@section('og_image', $agency->logo ? asset('storage/' . $agency->logo) : asset('images/og-default.jpg'))
+@section('og_image', $agency->logo ?  $agency->logo : asset('images/og-default.jpg'))
 
 @section('content')
 @php
@@ -21,7 +21,7 @@
 
 {{-- COVER --}}
 <div class="h-48 md:h-64 bg-gradient-to-br from-primary-100 to-primary-50 relative overflow-hidden">
-    @if($agency->cover_image)<img src="{{ asset('storage/' . $agency->cover_image) }}" alt="" class="w-full h-full object-cover">@endif
+    @if($agency->cover_image)<img src="{{  $agency->cover_image }}" alt="" class="w-full h-full object-cover">@endif
 </div>
 
 {{-- STICKY PROFILE --}}
@@ -29,7 +29,7 @@
     <div class="container-custom">
         <div class="flex items-center gap-4 py-3">
             <div class="w-16 h-16 md:w-20 md:h-20 rounded-xl border-4 border-white -mt-10 bg-white shadow-lg overflow-hidden flex-shrink-0">
-                @if($agency->logo)<img src="{{ asset('storage/' . $agency->logo) }}" alt="" class="w-full h-full object-cover">
+                @if($agency->logo)<img src="{{  $agency->logo }}" alt="" class="w-full h-full object-cover">
                 @else <div class="w-full h-full bg-primary-50 flex items-center justify-center text-2xl">🏢</div> @endif
             </div>
             <div class="flex-1 min-w-0">
@@ -122,7 +122,7 @@
             <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
                 @foreach($vehicles as $v)
                 <div class="card p-5 text-center">
-                    @if($v->vehicle_image)<img src="{{ asset('storage/' . $v->vehicle_image) }}" alt="" class="w-full h-32 object-cover rounded-xl mb-3">
+                    @if($v->vehicle_image)<img src="{{  $v->vehicle_image }}" alt="" class="w-full h-32 object-cover rounded-xl mb-3">
                     @else <div class="w-full h-32 bg-gray-100 rounded-xl flex items-center justify-center text-4xl mb-3">🚐</div>@endif
                     <p class="font-bold text-secondary">{{ $v->plate_number }}</p>
                     <p class="text-sm text-gray-500">{{ $v->brand }} {{ $v->model }} ({{ $v->year }})</p>
@@ -137,7 +137,7 @@
                 @foreach($drivers as $d)
                 <div class="card p-5 text-center">
                     <div class="w-20 h-20 rounded-full bg-primary-50 mx-auto mb-3 flex items-center justify-center text-3xl overflow-hidden">
-                        @if($d->avatar_url)<img src="{{ asset('storage/' . $d->avatar_url) }}" alt="" class="w-full h-full object-cover">@else 👤@endif
+                        @if($d->avatar_url)<img src="{{  $d->avatar_url }}" alt="" class="w-full h-full object-cover">@else 👤@endif
                     </div>
                     <p class="font-bold text-secondary">{{ $d->name }}</p>
                     <p class="text-sm text-gray-500">{{ $d->phone ?? '-' }}</p>
@@ -174,7 +174,7 @@
             <h2 class="text-xl font-bold text-secondary mb-6">Galeri</h2>
             @if(!empty($gallery))
             <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                @foreach($gallery as $photo)<img src="{{ asset('storage/' . $photo) }}" alt="" class="w-full h-48 object-cover rounded-xl hover:shadow-lg transition">@endforeach
+                @foreach($gallery as $photo)<img src="{{  $photo }}" alt="" class="w-full h-48 object-cover rounded-xl hover:shadow-lg transition">@endforeach
             </div>
             @else<p class="text-gray-500">Belum ada foto.</p>@endif
         </div>

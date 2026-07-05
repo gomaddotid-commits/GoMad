@@ -101,12 +101,13 @@ Route::prefix('v1')->group(function () {
     Route::post('/e-ticket/check', [ApiPublicETicketController::class, 'check']);
     Route::post('/e-ticket/send', [ApiPublicETicketController::class, 'send']);
 
-    // Midtrans Callback (No Auth)
-    Route::post('/midtrans/callback', [ApiCustomerPaymentController::class, 'midtransCallback']);
-    Route::post('/midtrans/disbursement-callback', [ApiAdminWithdrawalController::class, 'disbursementCallback']);
-    Route::post('/midtrans/settlement-callback', [ApiPaymentAgentSettlementController::class, 'settlementCallback']);
-    Route::post('/midtrans/topup-callback', [ApiAgencyWalletController::class, 'topUpCallback']);
-
+    // Midtrans Callback (No Auth) — rate limit + IP whitelist
+    Route::middleware(['throttle:60,1', 'midtrans.webhook'])->group(function () {
+        Route::post('/midtrans/callback', [ApiCustomerPaymentController::class, 'midtransCallback']);
+        Route::post('/midtrans/disbursement-callback', [ApiAdminWithdrawalController::class, 'disbursementCallback']);
+        Route::post('/midtrans/settlement-callback', [ApiPaymentAgentSettlementController::class, 'settlementCallback']);
+        Route::post('/midtrans/topup-callback', [ApiAgencyWalletController::class, 'topUpCallback']);
+    });
     /*
     |--------------------------------------------------------------------------
     | Authenticated Routes

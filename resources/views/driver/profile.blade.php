@@ -14,7 +14,7 @@
         <div class="flex items-center gap-3">
             <div class="w-12 h-12 rounded-full bg-primary-50 flex items-center justify-center overflow-hidden">
                 @if($user->agency->logo)
-                <img src="{{ asset('storage/' . $user->agency->logo) }}" alt="" class="w-full h-full object-cover">
+                <img src="{{  $user->agency->logo }}" alt="" class="w-full h-full object-cover">
                 @else
                 <span class="text-xl">🏢</span>
                 @endif

@@ -56,7 +56,7 @@ class HomeController extends Controller
                         'id' => $agency->id,
                         'agency_name' => $agency->agency_name,
                         'slug' => $agency->slug,
-                        'logo' => $agency->logo ? asset('storage/' . $agency->logo) : null,
+                        'logo' => $agency->logo ?? null,
                         'rating' => (float) $agency->rating,
                         'total_bookings' => $agency->total_bookings,
                         'is_verified' => $agency->is_verified,

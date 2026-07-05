@@ -172,7 +172,7 @@
                             <div class="flex items-center gap-3 mb-3">
                                 <div class="w-10 h-10 rounded-full bg-primary-50 flex items-center justify-center overflow-hidden flex-shrink-0">
                                     @if($schedule->agency->logo)
-                                    <img src="{{ asset('storage/' . $schedule->agency->logo) }}" alt="{{ $schedule->agency->agency_name }}" class="w-full h-full object-cover">
+                                    <img src="{{ $schedule->agency->logo }}" alt="{{ $schedule->agency->agency_name }}" class="w-full h-full object-cover">
                                     @else
                                     <span class="text-lg">🏢</span>
                                     @endif
@@ -248,7 +248,7 @@
                             <div class="flex items-center gap-4">
                                 <div class="w-12 h-12 rounded-full bg-primary-50 flex items-center justify-center overflow-hidden flex-shrink-0">
                                     @if($schedule->agency->logo)
-                                    <img src="{{ asset('storage/' . $schedule->agency->logo) }}" alt="" class="w-full h-full object-cover">
+                                    <img src="{{ $schedule->agency->logo }}" alt="" class="w-full h-full object-cover">
                                     @else
                                     <span class="text-xl">🏢</span>
                                     @endif

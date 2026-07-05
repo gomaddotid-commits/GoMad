@@ -92,7 +92,7 @@
             <h3 class="font-bold text-secondary mb-3">🖼️ Logo Agency</h3>
             <div class="mb-3">
                 @if($agency->logo)
-                <img src="{{ asset('storage/' . $agency->logo) }}" alt="Logo" class="w-32 h-32 object-cover rounded-xl border border-gray-200">
+                <img src="{{  $agency->logo }}" alt="Logo" class="w-32 h-32 object-cover rounded-xl border border-gray-200">
                 @else
                 <div class="w-32 h-32 bg-gray-100 rounded-xl flex items-center justify-center text-4xl text-gray-400">🏢</div>
                 @endif
@@ -108,7 +108,7 @@
             <h3 class="font-bold text-secondary mb-3">🌄 Cover Image</h3>
             <div class="mb-3">
                 @if($agency->cover_image)
-                <img src="{{ asset('storage/' . $agency->cover_image) }}" alt="Cover" class="w-full h-24 object-cover rounded-xl border border-gray-200">
+                <img src="{{  $agency->cover_image }}" alt="Cover" class="w-full h-24 object-cover rounded-xl border border-gray-200">
                 @else
                 <div class="w-full h-24 bg-gradient-to-r from-primary-600 to-primary-800 rounded-xl"></div>
                 @endif
@@ -181,7 +181,7 @@
         <div class="grid grid-cols-4 gap-3 mb-4">
             @foreach($gallery as $index => $photo)
             <div class="relative group">
-                <img src="{{ asset('storage/' . $photo) }}" alt="Gallery" class="w-full h-24 object-cover rounded-xl border border-gray-200">
+                <img src="{{  $photo }}" alt="Gallery" class="w-full h-24 object-cover rounded-xl border border-gray-200">
                 <form action="{{ route('agency.profile.gallery.remove', $index) }}" method="POST" class="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition">
                     @csrf @method('DELETE')
                     <button type="submit" class="bg-red-500 text-white rounded-full w-6 h-6 text-xs flex items-center justify-center hover:bg-red-600">✕</button>

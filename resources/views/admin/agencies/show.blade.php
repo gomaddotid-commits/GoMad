@@ -38,7 +38,7 @@
 
         @if($agency->business_license)
         <div class="mt-4 p-4 bg-blue-50 rounded-xl">
-            <a href="{{ asset('storage/' . $agency->business_license) }}" target="_blank" class="text-blue-600 text-sm hover:underline">Lihat Dokumen PDF</a>
+            <a href="{{  $agency->business_license }}" target="_blank" class="text-blue-600 text-sm hover:underline">Lihat Dokumen PDF</a>
         </div>
         @endif
 

@@ -38,7 +38,7 @@ class VehicleController extends Controller
                     'year' => $vehicle->year,
                     'capacity' => $vehicle->capacity,
                     'type' => $vehicle->type,
-                    'vehicle_image' => $vehicle->vehicle_image ? asset('storage/' . $vehicle->vehicle_image) : null,
+                    'vehicle_image' => $vehicle->vehicle_image ?? null,
                     'is_active' => $vehicle->is_active,
                     'created_at' => $vehicle->created_at->format('Y-m-d H:i:s'),
                 ];
@@ -94,7 +94,7 @@ class VehicleController extends Controller
                 'year' => $vehicle->year,
                 'capacity' => $vehicle->capacity,
                 'type' => $vehicle->type,
-                'vehicle_image' => $vehicle->vehicle_image ? asset('storage/' . $vehicle->vehicle_image) : null,
+                'vehicle_image' => $vehicle->vehicle_image ?? null,
                 'is_active' => $vehicle->is_active,
                 'created_at' => $vehicle->created_at->format('Y-m-d H:i:s'),
                 'updated_at' => $vehicle->updated_at->format('Y-m-d H:i:s'),

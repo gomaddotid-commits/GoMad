@@ -16,7 +16,7 @@
         <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition">
             <div class="h-40 bg-gray-100 flex items-center justify-center overflow-hidden">
                 @if($vehicle->vehicle_image)
-                <img src="{{ asset('storage/' . $vehicle->vehicle_image) }}" alt="{{ $vehicle->plate_number }}" class="w-full h-full object-cover">
+                <img src="{{  $vehicle->vehicle_image }}" alt="{{ $vehicle->plate_number }}" class="w-full h-full object-cover">
                 @else
                 <span class="text-5xl">🚐</span>
                 @endif

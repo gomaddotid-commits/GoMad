@@ -154,7 +154,7 @@ class SearchController extends Controller
         $request->validate([
             'latitude' => ['required', 'numeric', 'between:-90,90'],
             'longitude' => ['required', 'numeric', 'between:-180,180'],
-            'radius' => ['nullable', 'numeric', 'min:1', 'max:50'],
+            'radius' => ['nullable', 'numeric', 'min:1', 'max:9999'],
         ]);
 
         $agentService = app(\App\Services\PaymentAgentService::class);

@@ -92,7 +92,7 @@ class LoginController extends Controller
                 'agency_name' => $user->agency->agency_name,
                 'slug' => $user->agency->slug,
                 'is_verified' => $user->agency->is_verified,
-                'logo' => $user->agency->logo ? asset('storage/' . $user->agency->logo) : null,
+                'logo' => $user->agency->logo ?? null,
             ];
         }
 

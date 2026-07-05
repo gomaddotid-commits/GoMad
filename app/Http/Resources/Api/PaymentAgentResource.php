@@ -22,7 +22,7 @@ class PaymentAgentResource extends JsonResource
             'maps_link' => $this->maps_link,
             'latitude' => $this->latitude ? (float) $this->latitude : null,
             'longitude' => $this->longitude ? (float) $this->longitude : null,
-            'photo_warung' => $this->photo_warung ? asset('storage/' . $this->photo_warung) : null,
+            'photo_warung' => $this->photo_warung ?? null,
             'is_active' => $this->is_active,
             'is_verified' => $this->is_verified,
             'commission_rate' => (float) $this->commission_rate,

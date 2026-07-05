@@ -71,7 +71,7 @@ class ETicketController extends Controller
                 ],
                 'agency' => [
                     'name' => $booking->schedule->agency->agency_name,
-                    'logo' => $booking->schedule->agency->logo ? asset('storage/' . $booking->schedule->agency->logo) : null,
+                    'logo' => $booking->schedule->agency->logo ?? null,
                 ],
                 'vehicle' => [
                     'plate_number' => $booking->schedule->vehicle->plate_number,

@@ -16,9 +16,9 @@ class AgencyDetailResource extends JsonResource
             'user_id' => $this->user_id,
             'agency_name' => $this->agency_name,
             'slug' => $this->slug,
-            'logo' => $this->logo ? asset('storage/' . $this->logo) : null,
-            'cover_image' => $this->cover_image ? asset('storage/' . $this->cover_image) : null,
-            'business_license' => $this->business_license ? asset('storage/' . $this->business_license) : null,
+            'logo' => $this->logo ?? null,
+            'cover_image' => $this->cover_image ?? null,
+            'business_license' => $this->business_license ?? null,
             'address' => $this->address,
             'description' => $this->description,
             'founded_year' => $this->founded_year,
@@ -34,7 +34,7 @@ class AgencyDetailResource extends JsonResource
             'contact_alternate' => $this->contact_alternate,
             'email_alternate' => $this->email_alternate,
             'gallery' => $this->when($this->gallery, function () {
-                return collect($this->gallery)->map(fn($item) => asset('storage/' . $item))->toArray();
+                return collect($this->gallery)->map(fn($item) => $item)->toArray();
             }),
             'profile_complete_percentage' => $this->profile_complete_percentage,
             'wallet' => new WalletResource($this->whenLoaded('wallet')),

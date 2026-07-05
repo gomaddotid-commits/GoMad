@@ -58,6 +58,32 @@ class WalletController extends Controller
             ],
         ]);
     }
+
+    /**
+     * Callback dari Midtrans untuk top up saldo
+     */
+    public function topUpCallback(Request $request): JsonResponse
+    {
+        try {
+            $this->walletService->processTopUpCallback($request->all());
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Top up callback diproses.',
+                'data' => null,
+                'meta' => null,
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('TopUp callback error: ' . $e->getMessage(), $request->all());
+            
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+                'data' => null,
+                'meta' => null,
+            ], 400);
+        }
+    }
 }
 
 // End of file

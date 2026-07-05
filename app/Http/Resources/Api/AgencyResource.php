@@ -15,8 +15,8 @@ class AgencyResource extends JsonResource
             'id' => $this->id,
             'agency_name' => $this->agency_name,
             'slug' => $this->slug,
-            'logo' => $this->logo ? asset('storage/' . $this->logo) : null,
-            'cover_image' => $this->cover_image ? asset('storage/' . $this->cover_image) : null,
+            'logo' => $this->logo ?? null,
+            'cover_image' => $this->cover_image ?? null,
             'address' => $this->address,
             'description' => $this->description,
             'founded_year' => $this->founded_year,
@@ -31,7 +31,7 @@ class AgencyResource extends JsonResource
             'contact_alternate' => $this->contact_alternate,
             'email_alternate' => $this->email_alternate,
             'gallery' => $this->when($this->gallery, function () {
-                return collect($this->gallery)->map(fn($item) => asset('storage/' . $item))->toArray();
+                return collect($this->gallery)->map(fn($item) => $item)->toArray();
             }),
             'created_at' => $this->created_at->format('Y-m-d H:i:s'),
         ];

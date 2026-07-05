@@ -48,13 +48,13 @@
                 <a href="{{ route('agency.profile', $agency->slug) }}" class="card overflow-hidden group block">
                     <div class="h-32 bg-gradient-to-br from-primary-100 to-primary-50 flex items-center justify-center overflow-hidden">
                         @if($agency->cover_image)
-                        <img src="{{ asset('storage/' . $agency->cover_image) }}" alt="" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                        <img src="{{  $agency->cover_image }}" alt="" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
                         @else <span class="text-4xl">🏢</span> @endif
                     </div>
                     <div class="p-5">
                         <div class="flex items-center gap-3 mb-3">
                             <div class="w-12 h-12 rounded-full border-2 border-white -mt-10 bg-white shadow overflow-hidden">
-                                @if($agency->logo)<img src="{{ asset('storage/' . $agency->logo) }}" alt="" class="w-full h-full object-cover">
+                                @if($agency->logo)<img src="{{  $agency->logo }}" alt="" class="w-full h-full object-cover">
                                 @else <div class="w-full h-full bg-primary-50 flex items-center justify-center text-lg">🏢</div> @endif
                             </div>
                             <div>
@@ -76,7 +76,7 @@
                 @foreach($agencies as $agency)
                 <a href="{{ route('agency.profile', $agency->slug) }}" class="card p-5 flex flex-col sm:flex-row items-start gap-4 group">
                     <div class="w-16 h-16 rounded-xl bg-primary-50 flex items-center justify-center text-2xl overflow-hidden flex-shrink-0">
-                        @if($agency->logo)<img src="{{ asset('storage/' . $agency->logo) }}" alt="" class="w-full h-full object-cover">@else 🏢 @endif
+                        @if($agency->logo)<img src="{{  $agency->logo }}" alt="" class="w-full h-full object-cover">@else 🏢 @endif
                     </div>
                     <div class="flex-1">
                         <div class="flex items-center gap-2">

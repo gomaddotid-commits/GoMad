@@ -17,7 +17,7 @@
             <div class="bg-gradient-to-b from-primary-50 to-white p-6 text-center">
                 <div class="w-24 h-24 rounded-full mx-auto overflow-hidden border-4 border-white shadow-lg">
                     @if($driver->avatar_url)
-                    <img src="{{ asset('storage/' . $driver->avatar_url) }}" alt="{{ $driver->name }}" class="w-full h-full object-cover">
+                    <img src="{{  $driver->avatar_url }}" alt="{{ $driver->name }}" class="w-full h-full object-cover">
                     @else
                     <div class="w-full h-full bg-gray-200 flex items-center justify-center text-3xl">👨‍✈️</div>
                     @endif

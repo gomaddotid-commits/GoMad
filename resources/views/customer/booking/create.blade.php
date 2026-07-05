@@ -21,7 +21,7 @@
     $scheduleData = [
         'id' => $schedule->id,
         'agency_name' => $schedule->agency->agency_name ?? 'Agency',
-        'agency_logo' => $schedule->agency->logo ? asset('storage/' . $schedule->agency->logo) : null,
+        'agency_logo' => $schedule->agency->logo ?  $schedule->agency->logo : null,
         'agency_rating' => (float) ($schedule->agency->rating ?? 0),
         'route_name' => $schedule->route->route_name ?? 'Rute',
         'vehicle' => ($schedule->vehicle->plate_number ?? '-') . ' - ' . ($schedule->vehicle->brand ?? '') . ' ' . ($schedule->vehicle->model ?? ''),
@@ -43,7 +43,7 @@
         <div class="flex items-center gap-4">
             <div class="w-12 h-12 rounded-full bg-primary-50 flex items-center justify-center text-xl overflow-hidden flex-shrink-0">
                 @if($schedule->agency && $schedule->agency->logo)
-                <img src="{{ asset('storage/' . $schedule->agency->logo) }}" alt="Logo" class="w-full h-full object-cover">
+                <img src="{{  $schedule->agency->logo }}" alt="Logo" class="w-full h-full object-cover">
                 @else
                 <span>🏢</span>
                 @endif
@@ -89,6 +89,7 @@
     </div>
 
     {{-- STEP 2: Alamat Penjemputan --}}
+    {{-- STEP 2: Alamat Penjemputan --}}
     <div id="step2" class="step-content" style="display:none;">
         <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-6">
             <h2 class="text-xl font-bold text-secondary mb-2">Alamat Penjemputan</h2>
@@ -97,12 +98,22 @@
                 <div>
                     <label class="block text-sm font-medium text-secondary mb-1">Alamat Lengkap <span class="text-red-500">*</span></label>
                     <textarea id="pickupAddress" rows="3" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-600 bg-gray-50" 
-                              placeholder="Jl. Trunojoyo No. 10, RT/RW, Kelurahan, Kecamatan, Kabupaten"></textarea>
+                            placeholder="Jl. Trunojoyo No. 10, RT/RW, Kelurahan, Kecamatan, Kabupaten"></textarea>
+                    <button type="button" onclick="getCurrentLocation('pickup')"
+                            class="mt-2 text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1 transition">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        </svg>
+                        Gunakan Lokasi Saat Ini
+                    </button>
+                    <p id="pickupLocationStatus" class="text-xs mt-1 hidden"></p>
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-secondary mb-1">Link Google Maps</label>
                     <input type="url" id="pickupMapsLink" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-600 bg-gray-50" 
-                           placeholder="https://maps.google.com/?q=...">
+                        placeholder="https://maps.google.com/?q=..." readonly>
+                    <p class="text-xs text-gray-400 mt-1">Terisi otomatis saat menggunakan lokasi saat ini</p>
                 </div>
             </div>
             <div class="mt-6 flex gap-4 justify-center">
@@ -140,12 +151,23 @@
             <p class="text-gray-500 mb-6">Isi data penumpang untuk perjalanan ini</p>
             
             {{-- Alamat Tujuan --}}
+           {{-- Alamat Tujuan --}}
             <div class="mb-6">
                 <h3 class="font-semibold text-secondary mb-2">Alamat Tujuan di <strong id="dropoffCityName4">-</strong></h3>
                 <textarea id="destinationAddress" rows="2" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-600 bg-gray-50 mb-2" 
-                          placeholder="Alamat lengkap tujuan"></textarea>
+                        placeholder="Alamat lengkap tujuan"></textarea>
+                <button type="button" onclick="getCurrentLocation('destination')"
+                        class="mb-2 text-sm text-red-600 hover:text-red-800 font-medium flex items-center gap-1 transition">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                    </svg>
+                    Gunakan Lokasi Saat Ini
+                </button>
+                <p id="destinationLocationStatus" class="text-xs mt-1 hidden"></p>
                 <input type="url" id="destinationMapsLink" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-600 bg-gray-50" 
-                       placeholder="Link Google Maps tujuan (opsional)">
+                    placeholder="Link Google Maps tujuan (opsional)" readonly>
+                <p class="text-xs text-gray-400 mt-1">Terisi otomatis saat menggunakan lokasi saat ini</p>
             </div>
 
             {{-- Data Penumpang --}}
@@ -404,5 +426,147 @@ function showStep(step) {
 
 function formatRupiah(num) { return new Intl.NumberFormat('id-ID').format(num || 0); }
 function escapeHtml(text) { if (!text) return ''; return text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;'); }
+// ═══════════════════════════════════════════════════════
+// GEOLOCATION — Gunakan Lokasi Saat Ini
+// ═══════════════════════════════════════════════════════
+
+/**
+ * Ambil lokasi GPS saat ini via browser Geolocation API
+ * @param {string} type - 'pickup' atau 'destination'
+ */
+function getCurrentLocation(type) {
+    if (!navigator.geolocation) {
+        alert('Browser Anda tidak mendukung geolocation.');
+        return;
+    }
+
+    var statusEl = document.getElementById(type + 'LocationStatus');
+    if (statusEl) {
+        statusEl.textContent = '⏳ Mengambil lokasi...';
+        statusEl.classList.remove('hidden', 'text-green-600', 'text-red-600', 'text-yellow-600');
+        statusEl.classList.add('text-blue-600');
+    }
+
+    navigator.geolocation.getCurrentPosition(
+        function(position) {
+            var lat = position.coords.latitude;
+            var lng = position.coords.longitude;
+            reverseGeocode(lat, lng, type);
+        },
+        function(error) {
+            var msg = '';
+            switch(error.code) {
+                case error.PERMISSION_DENIED:
+                    msg = 'Akses lokasi ditolak. Izinkan di pengaturan browser.';
+                    break;
+                case error.POSITION_UNAVAILABLE:
+                    msg = 'Lokasi tidak tersedia.';
+                    break;
+                case error.TIMEOUT:
+                    msg = 'Timeout mengambil lokasi.';
+                    break;
+                default:
+                    msg = 'Gagal mengambil lokasi.';
+            }
+
+            if (statusEl) {
+                statusEl.textContent = '❌ ' + msg;
+                statusEl.classList.remove('hidden', 'text-blue-600', 'text-green-600', 'text-yellow-600');
+                statusEl.classList.add('text-red-600');
+            }
+        },
+        {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 60000,
+        }
+    );
+}
+
+/**
+ * Reverse geocode — ubah koordinat jadi alamat
+ * Pakai OpenStreetMap Nominatim (GRATIS, no API key)
+ */
+function reverseGeocode(lat, lng, type) {
+    var statusEl = document.getElementById(type + 'LocationStatus');
+
+    fetch('https://nominatim.openstreetmap.org/reverse?format=json&lat=' + lat + '&lon=' + lng + '&accept-language=id')
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+            var address = data.display_name || '';
+
+            if (type === 'pickup') {
+                // Isi alamat
+                var addressField = document.getElementById('pickupAddress');
+                if (addressField) addressField.value = address;
+
+                // Isi link Google Maps
+                var mapsField = document.getElementById('pickupMapsLink');
+                if (mapsField) mapsField.value = 'https://www.google.com/maps?q=' + lat + ',' + lng;
+
+                // ⭐ BARU: Simpan koordinat untuk dikirim ke backend
+                // Kita tambahkan hidden input di form
+                updateOrCreateHiddenInput('pickup_latitude', lat);
+                updateOrCreateHiddenInput('pickup_longitude', lng);
+            } else {
+                var addressField = document.getElementById('destinationAddress');
+                if (addressField) addressField.value = address;
+
+                var mapsField = document.getElementById('destinationMapsLink');
+                if (mapsField) mapsField.value = 'https://www.google.com/maps?q=' + lat + ',' + lng;
+
+                // ⭐ BARU: Simpan koordinat untuk dikirim ke backend
+                updateOrCreateHiddenInput('destination_latitude', lat);
+                updateOrCreateHiddenInput('destination_longitude', lng);
+            }
+
+            if (statusEl) {
+                statusEl.textContent = '✅ Lokasi berhasil: ' + lat.toFixed(6) + ', ' + lng.toFixed(6);
+                statusEl.classList.remove('hidden', 'text-blue-600', 'text-red-600', 'text-yellow-600');
+                statusEl.classList.add('text-green-600');
+            }
+        })
+        .catch(function() {
+            // Fallback tetap simpan koordinat
+            var mapsLink = 'https://www.google.com/maps?q=' + lat + ',' + lng;
+
+            if (type === 'pickup') {
+                var addressField = document.getElementById('pickupAddress');
+                if (addressField) addressField.value = 'Lat: ' + lat.toFixed(6) + ', Lng: ' + lng.toFixed(6) + ' (isi alamat lengkap)';
+                var mapsField = document.getElementById('pickupMapsLink');
+                if (mapsField) mapsField.value = mapsLink;
+                updateOrCreateHiddenInput('pickup_latitude', lat);
+                updateOrCreateHiddenInput('pickup_longitude', lng);
+            } else {
+                var addressField = document.getElementById('destinationAddress');
+                if (addressField) addressField.value = 'Lat: ' + lat.toFixed(6) + ', Lng: ' + lng.toFixed(6) + ' (isi alamat lengkap)';
+                var mapsField = document.getElementById('destinationMapsLink');
+                if (mapsField) mapsField.value = mapsLink;
+                updateOrCreateHiddenInput('destination_latitude', lat);
+                updateOrCreateHiddenInput('destination_longitude', lng);
+            }
+
+            if (statusEl) {
+                statusEl.textContent = '⚠️ Koordinat didapat, gagal mendapatkan alamat. Silakan isi manual.';
+                statusEl.classList.remove('hidden', 'text-blue-600', 'text-green-600', 'text-red-600');
+                statusEl.classList.add('text-yellow-600');
+            }
+        });
+}
+
+/**
+ * Update atau buat hidden input untuk koordinat
+ */
+function updateOrCreateHiddenInput(name, value) {
+    var input = document.getElementById('f' + name);
+    if (!input) {
+        input = document.createElement('input');
+        input.type = 'hidden';
+        input.id = 'f' + name;
+        input.name = name;
+        document.getElementById('bookingForm').appendChild(input);
+    }
+    input.value = value;
+}
 </script>
 @endpush

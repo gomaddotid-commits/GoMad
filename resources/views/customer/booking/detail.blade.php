@@ -270,9 +270,10 @@
         <div>
             <h3 class="font-bold text-secondary mb-3">Warung GoMad Terdekat</h3>
             <p class="text-sm text-gray-500 mb-4">Kunjungi salah satu Warung GoMad di bawah ini untuk melakukan pembayaran</p>
-            <div id="warungMap" style="height: 400px;" class="rounded-xl border border-gray-200 mb-4"></div>
+            <div id="warungMap" style="height: 350px; z-index: 1;" class="rounded-xl border border-gray-200 mb-3 w-full"></div>
+            <div id="warungInfo" class="text-center mb-3"></div>
             <div id="warungList" class="space-y-3">
-                <p class="text-sm text-gray-500 text-center">Memuat data warung...</p>
+                <p class="text-sm text-gray-500 text-center">⏳ Memuat data warung...</p>
             </div>
         </div>
     </div>
@@ -551,63 +552,153 @@ function formatRupiah(num) { return new Intl.NumberFormat('id-ID').format(num ||
 @if($booking->cashPayment && $booking->cashPayment->status == 'pending')
 @push('scripts')
 <script>
+// Leaflet Map untuk Cash Payment
 document.addEventListener('DOMContentLoaded', function() {
+    var mapEl = document.getElementById('warungMap');
+    if (!mapEl) return;
+
     var map = L.map('warungMap').setView([-7.0051, 113.8586], 12);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap', maxZoom: 18 }).addTo(map);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { 
+        attribution: '&copy; OpenStreetMap', 
+        maxZoom: 18 
+    }).addTo(map);
 
     var pickupLat = {{ $booking->pickup_latitude ?? -7.0051 }};
     var pickupLng = {{ $booking->pickup_longitude ?? 113.8586 }};
-    
+    var radius = 50; // km
+
+    // Marker lokasi customer
     var customerIcon = L.divIcon({
         html: '<div style="background:#DC2626;color:white;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);">📍</div>',
         className: '', iconSize: [30, 30], iconAnchor: [15, 15],
     });
-    L.marker([pickupLat, pickupLng], { icon: customerIcon }).addTo(map).bindPopup('<strong>Lokasi Anda</strong>');
+    L.marker([pickupLat, pickupLng], { icon: customerIcon })
+        .addTo(map)
+        .bindPopup('<strong>Lokasi Penjemputan</strong>');
 
-    fetch('/api/v1/nearby-warungs?latitude=' + pickupLat + '&longitude=' + pickupLng + '&radius=300')
-        .then(res => res.json())
-        .then(data => {
-            var warungs = data.data || [];
-            var warungList = document.getElementById('warungList');
-            if (!warungs.length) {
-                warungList.innerHTML = '<p class="text-gray-500 text-center py-4">Tidak ada Warung GoMad terdekat.</p>';
-                return;
+    // Fungsi untuk render warung
+    function renderWarungs(warungs, showAll) {
+        var warungList = document.getElementById('warungList');
+        
+        if (!warungs || !warungs.length) {
+            warungList.innerHTML = `
+                <div class="text-center py-6">
+                    <div class="text-4xl mb-3">🏪</div>
+                    <p class="text-gray-600 font-medium mb-2">Tidak ada Warung GoMad terdekat</p>
+                    <p class="text-sm text-gray-500 mb-4">Tidak ditemukan warung dalam radius ${radius} km dari lokasi penjemputan</p>
+                    <button onclick="loadAllWarungs()" class="bg-primary-600 text-white px-6 py-3 rounded-xl text-sm font-semibold hover:bg-primary-700 transition">
+                        🔍 Lihat Semua Warung Tersedia
+                    </button>
+                </div>`;
+            return;
+        }
+
+        var listHtml = '';
+        var bounds = L.latLngBounds();
+
+        warungs.forEach(function(w) {
+            if (w.latitude && w.longitude) {
+                var lat = parseFloat(w.latitude);
+                var lng = parseFloat(w.longitude);
+
+                var warungIcon = L.divIcon({
+                    html: '<div style="background:#16a34a;color:white;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);">🏪</div>',
+                    className: '', iconSize: [32, 32], iconAnchor: [16, 16],
+                });
+
+                L.marker([lat, lng], { icon: warungIcon })
+                    .addTo(map)
+                    .bindPopup(`
+                        <div style="min-width:180px;">
+                            <strong>${w.agent_name}</strong><br>
+                            <span style="font-size:12px;color:#666;">${w.address || ''}</span><br>
+                            <span style="font-size:12px;">📞 ${w.owner_phone || '-'}</span><br>
+                            ${w.distance_km ? '<span style="font-size:11px;color:#16a34a;">📍 ' + w.distance_km.toFixed(1) + ' km</span><br>' : ''}
+                            <a href="${w.maps_link || 'https://www.google.com/maps?q=' + lat + ',' + lng}" target="_blank" style="display:inline-block;margin-top:6px;background:#DC2626;color:white;padding:6px 12px;border-radius:8px;text-decoration:none;font-size:12px;font-weight:600;">🗺️ Google Maps</a>
+                        </div>
+                    `);
+
+                bounds.extend([lat, lng]);
             }
-            var listHtml = '', bounds = L.latLngBounds();
-            warungs.forEach(function(w) {
-                if (w.latitude && w.longitude) {
-                    var icon = L.divIcon({
-                        html: '<div style="background:#16a34a;color:white;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);">🏪</div>',
-                        className: '', iconSize: [32, 32], iconAnchor: [16, 16],
-                    });
-                    L.marker([w.latitude, w.longitude], { icon: icon }).addTo(map).bindPopup(
-                        '<div style="min-width:180px;"><strong>' + w.agent_name + '</strong><br>' +
-                        (w.address || '') + '<br>📞 ' + (w.owner_phone || '-') + '<br>' +
-                        '<a href="' + (w.maps_link || 'https://www.google.com/maps?q=' + w.latitude + ',' + w.longitude) + '" target="_blank" style="display:inline-block;margin-top:6px;background:#DC2626;color:white;padding:6px 12px;border-radius:8px;text-decoration:none;font-size:12px;font-weight:600;">🗺️ Google Maps</a></div>'
-                    );
-                    bounds.extend([w.latitude, w.longitude]);
-                }
-                listHtml += '<div class="bg-white rounded-xl border p-4 hover:shadow-md">' +
-                    '<div class="flex items-start gap-3"><div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center text-lg">🏪</div>' +
-                    '<div><h4 class="font-bold text-sm">' + w.agent_name + '</h4><p class="text-xs text-gray-500">' + (w.address || '') + '</p>' +
-                    '<div class="flex gap-2 mt-2">' +
-                    '<button onclick="event.stopPropagation();map.setView([' + w.latitude + ',' + w.longitude + '],16)" class="text-xs bg-green-100 text-green-700 px-3 py-1.5 rounded-lg">Lihat Peta</button>' +
-                    '<a href="' + (w.maps_link || 'https://www.google.com/maps?q=' + w.latitude + ',' + w.longitude) + '" target="_blank" class="text-xs bg-red-100 text-red-700 px-3 py-1.5 rounded-lg">🗺️ Maps</a>' +
-                    '</div></div></div></div>';
-            });
-            warungList.innerHTML = listHtml;
+
+            var distanceText = w.distance_km ? w.distance_km.toFixed(1) + ' km' : '';
+            listHtml += `
+                <div class="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md transition">
+                    <div class="flex items-start gap-3">
+                        <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center text-lg flex-shrink-0">🏪</div>
+                        <div class="flex-1">
+                            <h4 class="font-bold text-secondary text-sm">${w.agent_name}</h4>
+                            <p class="text-xs text-gray-500 mt-1">${w.address || ''}</p>
+                            <div class="flex items-center gap-3 mt-2 text-xs">
+                                <span class="text-gray-500">📞 ${w.owner_phone || '-'}</span>
+                                ${distanceText ? '<span class="text-primary-600 font-medium">📍 ' + distanceText + '</span>' : ''}
+                            </div>
+                            <div class="flex gap-2 mt-2">
+                                <button onclick="event.stopPropagation();map.setView([' + lat + ', ' + lng + '], 16)" class="text-xs bg-green-100 text-green-700 px-3 py-1.5 rounded-lg hover:bg-green-200 transition font-medium">Lihat Peta</button>
+                                <a href="${w.maps_link || 'https://www.google.com/maps?q=' + lat + ',' + lng}" target="_blank" onclick="event.stopPropagation();" class="text-xs bg-red-100 text-red-700 px-3 py-1.5 rounded-lg hover:bg-red-200 transition font-medium">🗺️ Google Maps</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+        });
+
+        warungList.innerHTML = listHtml;
+
+        if (!showAll) {
             bounds.extend([pickupLat, pickupLng]);
-            if (warungs.length) map.fitBounds(bounds, { padding: [50, 50], maxZoom: 14 });
+            map.fitBounds(bounds, { padding: [50, 50], maxZoom: 14 });
+        } else {
+            map.fitBounds(bounds, { padding: [30, 30], maxZoom: 8 });
+        }
+
+        // Tampilkan info jumlah warung
+        var infoEl = document.getElementById('warungInfo');
+        if (infoEl) {
+            infoEl.innerHTML = showAll 
+                ? `<span class="text-xs text-gray-500">📋 Menampilkan semua <strong>${warungs.length}</strong> warung tersedia</span>`
+                : `<span class="text-xs text-gray-500">📍 <strong>${warungs.length}</strong> warung dalam radius ${radius} km</span>`;
+        }
+    }
+
+    // Load warung terdekat (default)
+    function loadNearbyWarungs() {
+        document.getElementById('warungList').innerHTML = '<p class="text-sm text-gray-500 text-center py-4">⏳ Mencari warung terdekat...</p>';
+
+        fetch('/api/v1/nearby-warungs?latitude=' + pickupLat + '&longitude=' + pickupLng + '&radius=' + radius, {
+            headers: { 'Accept': 'application/json' }
+        })
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+            renderWarungs(data.data || [], false);
+        })
+        .catch(function() {
+            document.getElementById('warungList').innerHTML = `
+                <div class="text-center py-6">
+                    <p class="text-red-500 mb-2">⚠️ Gagal menghubungi server</p>
+                    <button onclick="loadNearbyWarungs()" class="text-primary-600 hover:underline text-sm">Coba Lagi</button>
+                </div>`;
+        });
+    }
+
+    // Load semua warung (tanpa filter radius)
+    window.loadAllWarungs = function() {
+        document.getElementById('warungList').innerHTML = '<p class="text-sm text-gray-500 text-center py-4">⏳ Memuat semua warung...</p>';
+
+        fetch('/api/v1/nearby-warungs?latitude=' + pickupLat + '&longitude=' + pickupLng + '&radius=9999', {
+            headers: { 'Accept': 'application/json' }
+        })
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+            renderWarungs(data.data || [], true);
         })
         .catch(function() {
             document.getElementById('warungList').innerHTML = '<p class="text-red-500 text-center py-4">Gagal memuat data warung.</p>';
         });
-});
+    };
 
-function copyPaymentCode() {
-    navigator.clipboard.writeText('{{ $booking->cashPayment->payment_code }}');
-    alert('Kode bayar berhasil disalin!');
-}
+    // Load awal
+    loadNearbyWarungs();
+});
 </script>
 @endpush
 @endif

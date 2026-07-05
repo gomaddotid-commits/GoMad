@@ -95,7 +95,7 @@ class ProfileController extends Controller
                 'success' => true,
                 'message' => 'Foto galeri berhasil ditambahkan.',
                 'data' => [
-                    'gallery' => collect($gallery)->map(fn($item) => asset('storage/' . $item))->toArray(),
+                    'gallery' => collect($gallery)->map(fn($item) => $item)->toArray(),
                 ],
                 'meta' => null,
             ]);
@@ -120,7 +120,7 @@ class ProfileController extends Controller
                 'success' => true,
                 'message' => 'Foto galeri berhasil dihapus.',
                 'data' => [
-                    'gallery' => collect($gallery)->map(fn($item) => asset('storage/' . $item))->toArray(),
+                    'gallery' => collect($gallery)->map(fn($item) => $item)->toArray(),
                 ],
                 'meta' => null,
             ]);

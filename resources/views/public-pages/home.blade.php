@@ -117,7 +117,7 @@
             @forelse($popularRoutes ?? [] as $route)
             <div class="card overflow-hidden group cursor-pointer">
                 @if($route->photo)
-                <div class="h-40 overflow-hidden"><img src="{{ asset('storage/' . $route->photo) }}" alt="{{ $route->route_name }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"></div>
+                <div class="h-40 overflow-hidden"><img src="{{  $route->photo }}" alt="{{ $route->route_name }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"></div>
                 @else
                 <div class="h-40 bg-gradient-to-br from-primary-100 to-primary-50 flex items-center justify-center"><span class="text-4xl">🗺️</span></div>
                 @endif
