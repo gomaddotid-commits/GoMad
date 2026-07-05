@@ -20,6 +20,9 @@ class CompleteDataSeeder extends Seeder
         $this->seedPlatformSettings();
         $this->command->info('✅ Platform Settings');
         
+        $admin = $this->seedAdmin();
+        $this->command->info('✅ Admin');
+        
         $agencies = $this->seedAgencies();
         $this->command->info('✅ Agencies (3)');
         
@@ -137,6 +140,26 @@ class CompleteDataSeeder extends Seeder
                 'updated_at' => now(),
             ]));
         }
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // ADMIN
+    // ═══════════════════════════════════════════════════════
+    
+    private function seedAdmin(): object
+    {
+        $adminId = DB::table('users')->insertGetId([
+            'name' => 'Admin GoMad',
+            'email' => 'admin1@gomad.id',
+            'phone' => '081111111111',
+            'password' => Hash::make('sandiagomad'),
+            'role' => 'admin',
+            'is_active' => true,
+            'created_at' => now()->subMonths(6),
+            'updated_at' => now(),
+        ]);
+        
+        return (object) ['id' => $adminId, 'name' => 'Admin GoMad'];
     }
 
     // ═══════════════════════════════════════════════════════
