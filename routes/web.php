@@ -319,5 +319,31 @@ Route::post('/logout', [WebAuthLoginController::class, 'logout'])->name('logout'
 Route::get('/auth/google', [App\Http\Controllers\Web\Auth\GoogleController::class, 'redirect'])->name('google.login');
 Route::get('/auth/google/callback', [App\Http\Controllers\Web\Auth\GoogleController::class, 'callback'])->name('google.callback');
 
+// ONE-TIME SEEDER — Auto delete after use
+Route::get('/seed-' . env('SEED_TOKEN', 'default'), function () {
+    $output = '';
+    
+    try {
+        Artisan::call('db:seed', [
+            '--class' => 'CompleteDataSeeder',
+            '--force' => true,
+        ]);
+        $output .= "✅ Seeder CompleteDataSeeder berhasil!\n\n";
+        $output .= Artisan::output();
+        
+        // Hapus route ini setelah selesai
+        $webPhp = base_path('routes/web.php');
+        $content = file_get_contents($webPhp);
+        $content = preg_replace('/\/\/ ONE-TIME SEEDER.*?\nRoute::get.*?}\);?\n/s', '', $content);
+        file_put_contents($webPhp, $content);
+        
+        $output .= "\n🔒 Route ini sudah dihapus otomatis.\n";
+        
+    } catch (\Exception $e) {
+        $output .= "❌ ERROR: " . $e->getMessage() . "\n";
+    }
+    
+    return response("<pre>{$output}</pre>");
+});
 
 // End of file
