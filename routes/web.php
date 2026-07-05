@@ -320,30 +320,42 @@ Route::get('/auth/google', [App\Http\Controllers\Web\Auth\GoogleController::clas
 Route::get('/auth/google/callback', [App\Http\Controllers\Web\Auth\GoogleController::class, 'callback'])->name('google.callback');
 
 // ONE-TIME SEEDER — Auto delete after use
+// ONE-TIME SEEDER — Batch processing (no timeout)
 Route::get('/seed-' . env('SEED_TOKEN', 'default'), function () {
+    set_time_limit(0); // No timeout
+    
     $output = '';
     
-    try {
-        Artisan::call('db:seed', [
-            '--class' => 'CompleteDataSeeder',
-            '--force' => true,
-        ]);
-        $output .= "✅ Seeder CompleteDataSeeder berhasil!\n\n";
-        $output .= Artisan::output();
-        
-        // Hapus route ini setelah selesai
-        $webPhp = base_path('routes/web.php');
-        $content = file_get_contents($webPhp);
-        $content = preg_replace('/\/\/ ONE-TIME SEEDER.*?\nRoute::get.*?}\);?\n/s', '', $content);
-        file_put_contents($webPhp, $content);
-        
-        $output .= "\n🔒 Route ini sudah dihapus otomatis.\n";
-        
-    } catch (\Exception $e) {
-        $output .= "❌ ERROR: " . $e->getMessage() . "\n";
+    $seeders = [
+        'PlatformSettingSeeder',
+        'RouteSeeder',
+        'AdditionalRouteSeeder',
+        'UserSeeder',
+        'PaymentAgentSeeder',
+        'ScheduleSeeder',
+        'PromoSeeder',
+        'EnrichVerifiedDataSeeder',
+        'WithdrawalSeeder',
+        'ReviewSeeder',
+        'NotificationSeeder',
+        'PassengerTransferSeeder',
+        'WalletTransactionSeeder',
+    ];
+    
+    foreach ($seeders as $seeder) {
+        try {
+            Artisan::call('db:seed', [
+                '--class' => $seeder,
+                '--force' => true,
+            ]);
+            $output .= "✅ {$seeder}: OK\n";
+        } catch (\Exception $e) {
+            $output .= "❌ {$seeder}: " . $e->getMessage() . "\n";
+        }
     }
+    
+    $output .= "\n🎉 All seeders completed!\n";
     
     return response("<pre>{$output}</pre>");
 });
-
 // End of file
