@@ -319,12 +319,52 @@ Route::post('/logout', [WebAuthLoginController::class, 'logout'])->name('logout'
 Route::get('/auth/google', [App\Http\Controllers\Web\Auth\GoogleController::class, 'redirect'])->name('google.login');
 Route::get('/auth/google/callback', [App\Http\Controllers\Web\Auth\GoogleController::class, 'callback'])->name('google.callback');
 
-// ONE-TIME SEEDER — Auto delete after use
-// ONE-TIME SEEDER — Batch processing (no timeout)
+// ONE-TIME SEEDER — Auto delete after first use
 Route::get('/seed-' . env('SEED_TOKEN', 'default'), function () {
-    set_time_limit(0); // No timeout
+    set_time_limit(0);
     
+    $fresh = request('fresh') === '1';
     $output = '';
+    
+    // ============================================
+    // FRESH MODE: Hapus semua data dulu
+    // ============================================
+    if ($fresh) {
+        DB::statement('SET FOREIGN_KEY_CHECKS=0');
+        
+        $tables = [
+            'wallet_transactions', 'withdrawals', 'notifications',
+            'passenger_transfer_bookings', 'passenger_transfers',
+            'promo_usages', 'referral_trackings', 'referral_codes',
+            'promo_schedule', 'promos', 'reviews',
+            'cash_payments', 'payments', 'booking_passengers', 'bookings',
+            'settlements', 'driver_locations',
+            'route_pricing', 'schedule_stops', 'schedules',
+            'user_devices', 'platform_settings', 'pickup_zones',
+            'agency_wallets', 'agency_verifications', 'vehicles',
+            'agencies', 'payment_agents',
+            'personal_access_tokens', 'failed_jobs', 'job_batches', 'jobs',
+            'cache_locks', 'cache', 'sessions', 'password_reset_tokens',
+            'users', 'route_stops', 'routes',
+        ];
+        
+        foreach ($tables as $table) {
+            try {
+                DB::table($table)->truncate();
+                $output .= "🧹 Truncated: {$table}\n";
+            } catch (\Exception $e) {
+                $output .= "⏭️  Skip: {$table}\n";
+            }
+        }
+        
+        DB::statement('SET FOREIGN_KEY_CHECKS=1');
+        $output .= "\n✅ SEMUA TABEL DIKOSONGKAN!\n\n";
+    }
+    
+    // ============================================
+    // RUN SEEDERS
+    // ============================================
+    $output .= "🌱 Menjalankan seeders...\n\n";
     
     $seeders = [
         'PlatformSettingSeeder',
@@ -354,7 +394,25 @@ Route::get('/seed-' . env('SEED_TOKEN', 'default'), function () {
         }
     }
     
-    $output .= "\n🎉 All seeders completed!\n";
+    // ============================================
+    // AUTO-DELETE ROUTE
+    // ============================================
+    try {
+        $webPhp = base_path('routes/web.php');
+        $content = file_get_contents($webPhp);
+        // Hapus route ini dari file
+        $content = preg_replace(
+            '/\/\/ ONE-TIME SEEDER.*?→\n/s',
+            '// ONE-TIME SEEDER — Telah dijalankan dan dihapus otomatis',
+            $content
+        );
+        file_put_contents($webPhp, $content);
+        $output .= "\n🔒 Route ini telah dihapus otomatis dari web.php\n";
+    } catch (\Exception $e) {
+        $output .= "\n⚠️  Gagal hapus route: " . $e->getMessage() . "\n";
+    }
+    
+    $output .= "\n🎉 SELESAI!\n";
     
     return response("<pre>{$output}</pre>");
 });
