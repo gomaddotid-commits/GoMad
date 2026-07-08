@@ -26,4 +26,5 @@ yarn-error.log
 *.backup
 .env.production
 storage/certs/
-.env.production
+database/migrations/
+database/seeders/
