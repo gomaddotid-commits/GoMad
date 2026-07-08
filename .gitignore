@@ -24,3 +24,6 @@ yarn-error.log
 *output.txt
 *.back
 *.backup
+.env.production
+storage/certs/
+.env.production

@@ -393,5 +393,10 @@ Route::get('/seed3-' . env('SEED_TOKEN', 'default'), function () {
     return response("<pre>{$output}</pre>");
 });
 
+// routes/web.php
+Route::get('/health', function () {
+    return response()->json(['status' => 'ok', 'time' => now()]);
+});
+
 
 // End of file
