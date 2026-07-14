@@ -16,8 +16,9 @@ class Promo extends Model
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
-        'name', 'type', 'description',
+        'name', 'type', 'module', 'description',
         'discount_percent', 'max_discount', 'min_purchase',
+        'rental_discount_type', 'rental_discount_amount', 'rental_max_discount',
         'route_id', 'travel_class',
         'applicable_payment_methods',
         'start_date', 'end_date',
@@ -31,6 +32,8 @@ class Promo extends Model
             'discount_percent' => 'decimal:2',
             'max_discount' => 'decimal:2',
             'min_purchase' => 'decimal:2',
+            'rental_discount_amount' => 'decimal:2',
+            'rental_max_discount' => 'decimal:2',
             'start_date' => 'date',
             'end_date' => 'date',
             'is_active' => 'boolean',
@@ -163,6 +166,51 @@ class Promo extends Model
             $this->attributes['applicable_payment_methods'] = null;
         }
     }
+
+    // 👇 TAMBAHKAN SCOPE
+    public function scopeForModule($query, string $module)
+    {
+        return $query->where(function ($q) use ($module) {
+            $q->where('module', $module)
+              ->orWhere('module', 'all');
+        });
+    }
+
+    public function scopeForTravel($query)
+    {
+        return $this->scopeForModule($query, 'travel');
+    }
+
+    public function scopeForRental($query)
+    {
+        return $this->scopeForModule($query, 'rental');
+    }
+
+    // 👇 TAMBAHKAN ACCESSOR
+    public function getModuleLabelAttribute(): string
+    {
+        return match($this->module) {
+            'travel' => '🚐 Travel',
+            'rental' => '🚗 Rental',
+            'all' => '🌍 Semua Modul',
+            default => $this->module,
+        };
+    }
+
+    /**
+     * Cek apakah promo berlaku untuk modul tertentu
+     */
+    public function isForModule(string $module): bool
+    {
+        return $this->module === 'all' || $this->module === $module;
+    }
+
+    // Relasi ke kendaraan rental
+    public function rentalVehicles(): BelongsToMany
+    {
+        return $this->belongsToMany(Vehicle::class, 'promo_rental_vehicle')->withTimestamps();
+    }
+
 }
 
 // End of file

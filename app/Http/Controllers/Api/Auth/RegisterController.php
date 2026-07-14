@@ -42,6 +42,12 @@ class RegisterController extends Controller
 
         $token = $user->createToken('register-token')->plainTextToken;
 
+        try {
+            app(\App\Services\NotificationService::class)->welcomeCustomer($user);
+        } catch (\Exception $e) {
+            \Log::error('Welcome WhatsApp failed: ' . $e->getMessage());
+        }
+
         return response()->json([
             'success' => true,
             'message' => 'Registrasi berhasil.',
@@ -99,6 +105,13 @@ class RegisterController extends Controller
                 'is_verified' => false,
             ]);
 
+            // 👇 KIRIM WHATSAPP WELCOME
+            try {
+                app(\App\Services\NotificationService::class)->welcomeAgency($result['user'], $result['agency']);
+            } catch (\Exception $e) {
+                \Log::error('Welcome WhatsApp failed: ' . $e->getMessage());
+            }
+
             return ['user' => $user, 'agency' => $agency];
         });
 
@@ -138,6 +151,12 @@ class RegisterController extends Controller
         ]);
 
         $agent = $this->paymentAgentService->registerAgent($request->all());
+        
+        try {
+            app(\App\Services\NotificationService::class)->welcomePaymentAgent($agent->user, $agent);
+        } catch (\Exception $e) {
+            \Log::error('Welcome WhatsApp failed: ' . $e->getMessage());
+        }
         
         $token = $agent->user->createToken('payment-agent-token')->plainTextToken;
 

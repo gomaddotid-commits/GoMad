@@ -25,6 +25,9 @@ return [
         'https://gomad.id',
         'https://web.gomad.id',
         'https://api.gomad.id',
+        'https://gomad.cloud',
+        'https://www.gomad.cloud',
+        'http://www.gomad.cloud',
     ],
 
     'allowed_origins_patterns' => [

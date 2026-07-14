@@ -186,17 +186,12 @@ class BookingService
             throw new \Exception('Jadwal tidak tersedia.');
         }
 
-        // 👇 UBAH: Gunakan kombinasi departure_date + departure_time
         $departureDateTime = \Carbon\Carbon::parse(
             $schedule->departure_date->format('Y-m-d') . ' ' . $schedule->departure_time
         );
         
         if ($departureDateTime->isPast()) {
             throw new \Exception('Jadwal sudah berangkat. Tidak dapat melakukan booking.');
-        }
-
-        if ($schedule->travel_class === TravelClass::RENTAL->value) {
-            throw new \Exception('Kelas rental tidak bisa dibooking melalui sistem.');
         }
 
         $originStop = RouteStop::findOrFail($data['origin_stop_id']);

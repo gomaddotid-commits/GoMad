@@ -36,27 +36,47 @@ class DriverController extends Controller
         $request->validate([
             'name' => ['required', 'string', 'max:100'],
             'email' => ['required', 'email', 'unique:users,email'],
-            'phone' => ['required', 'string', 'max:20', 'unique:users,phone'],
+            'phone' => ['required', 'string', 'max:20'],
             'password' => ['required', 'string', 'min:8'],
             'avatar' => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:2048'],
+        ], [
+            'name.required' => 'Nama driver harus diisi.',
+            'email.required' => 'Email harus diisi.',
+            'email.unique' => 'Email sudah terdaftar.',
+            'phone.required' => 'Nomor HP harus diisi.',
+            'password.required' => 'Password harus diisi.',
+            'password.min' => 'Password minimal 8 karakter.',
         ]);
 
-        $data = $request->only(['name', 'email', 'phone']);
-        $data['password'] = Hash::make($request->password);
-        $data['role'] = 'driver';
-        $data['agency_id'] = auth()->user()->agency->id;
-        $data['is_active'] = true;
+        try {
+            $data = $request->only(['name', 'email', 'phone']);
+            $data['password'] = Hash::make($request->password);
+            $data['role'] = 'driver';
+            $data['agency_id'] = auth()->user()->agency->id;
+            $data['is_active'] = true;
 
-        // Upload foto driver via Cloudinary
-        if ($request->hasFile('avatar')) {
-            $result = $this->cloudinaryService->upload($request->file('avatar'), 'drivers');
-            $data['avatar_url'] = $result['url'];
+            // Upload foto driver via Cloudinary
+            if ($request->hasFile('avatar')) {
+                $result = app(\App\Services\CloudinaryService::class)->upload($request->file('avatar'), 'drivers');
+                $data['avatar_url'] = $result['url'];
+            }
+
+            $driver = User::create($data);
+
+            // Kirim WhatsApp welcome
+            try {
+                app(\App\Services\NotificationService::class)->welcomeDriver($driver);
+            } catch (\Exception $e) {
+                \Log::error('Welcome WhatsApp to driver failed: ' . $e->getMessage());
+            }
+
+            return redirect()->route('agency.drivers.index')
+                ->with('success', 'Driver berhasil ditambahkan!');
+                
+        } catch (\Exception $e) {
+            \Log::error('Create driver error: ' . $e->getMessage());
+            return back()->with('error', 'Gagal menambahkan driver: ' . $e->getMessage())->withInput();
         }
-
-        User::create($data);
-
-        return redirect()->route('agency.drivers.index')
-            ->with('success', 'Driver berhasil ditambahkan!');
     }
 
     public function edit(User $user): View

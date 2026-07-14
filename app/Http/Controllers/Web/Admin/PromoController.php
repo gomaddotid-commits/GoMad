@@ -27,24 +27,48 @@ class PromoController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        $request->validate([
+        $rules = [
             'name' => ['required', 'string', 'max:100'],
             'type' => ['required', 'in:general,selective'],
+            'module' => ['required', 'in:travel,rental,all'],
             'description' => ['nullable', 'string', 'max:500'],
-            'discount_percent' => ['required', 'numeric', 'min:1', 'max:100'],
-            'max_discount' => ['required', 'numeric', 'min:0'],
-            'min_purchase' => ['nullable', 'numeric', 'min:0'],
-            'route_id' => ['nullable', 'integer', 'exists:routes,id'],
-            'travel_class' => ['nullable', 'in:economy,premium,charter'],
-            'applicable_payment_methods' => ['nullable', 'array'],
             'start_date' => ['required', 'date', 'after_or_equal:today'],
             'end_date' => ['required', 'date', 'after:start_date'],
             'cost_bearer' => ['required', 'in:platform,agency,shared'],
-        ]);
+        ];
+
+        $module = $request->module;
+
+        // Travel discount fields
+        if ($module === 'travel' || $module === 'all') {
+            $rules['discount_percent'] = ['required', 'numeric', 'min:1', 'max:100'];
+            $rules['max_discount'] = ['required', 'numeric', 'min:0'];
+            $rules['min_purchase'] = ['nullable', 'numeric', 'min:0'];
+        }
+
+        // Rental discount fields
+        if ($module === 'rental' || $module === 'all') {
+            $rules['rental_discount_type'] = ['required', 'in:percent,fixed'];
+            $rules['rental_discount_amount'] = ['required', 'numeric', 'min:0'];
+            $rules['rental_max_discount'] = ['nullable', 'numeric', 'min:0'];
+        }
+
+        $request->validate($rules);
 
         $data = $request->all();
         $data['created_by'] = auth()->id();
         $data['is_active'] = true;
+
+        // 👇 SET DEFAULT UNTUK FIELD YANG TIDAK DIKIRIM
+        if (!isset($data['discount_percent']) || $data['discount_percent'] === null || $data['discount_percent'] === '') {
+            $data['discount_percent'] = 0;
+        }
+        if (!isset($data['max_discount']) || $data['max_discount'] === null || $data['max_discount'] === '') {
+            $data['max_discount'] = 0;
+        }
+        if (!isset($data['min_purchase']) || $data['min_purchase'] === null || $data['min_purchase'] === '') {
+            $data['min_purchase'] = 0;
+        }
 
         // Proses applicable_payment_methods
         if ($request->has('applicable_payment_methods') && !empty($request->applicable_payment_methods)) {
@@ -73,19 +97,42 @@ class PromoController extends Controller
 
     public function update(Request $request, Promo $promo): RedirectResponse
     {
-        $request->validate([
+        $rules = [
             'name' => ['required', 'string', 'max:100'],
             'description' => ['nullable', 'string', 'max:500'],
-            'discount_percent' => ['required', 'numeric', 'min:1', 'max:100'],
-            'max_discount' => ['required', 'numeric', 'min:0'],
-            'min_purchase' => ['nullable', 'numeric', 'min:0'],
-            'applicable_payment_methods' => ['nullable', 'array'],
             'start_date' => ['required', 'date'],
             'end_date' => ['required', 'date', 'after:start_date'],
             'is_active' => ['nullable', 'boolean'],
-        ]);
+        ];
+
+        $module = $request->module ?? $promo->module;
+
+        if ($module === 'travel' || $module === 'all') {
+            $rules['discount_percent'] = ['required', 'numeric', 'min:1', 'max:100'];
+            $rules['max_discount'] = ['required', 'numeric', 'min:0'];
+            $rules['min_purchase'] = ['nullable', 'numeric', 'min:0'];
+        }
+
+        if ($module === 'rental' || $module === 'all') {
+            $rules['rental_discount_type'] = ['required', 'in:percent,fixed'];
+            $rules['rental_discount_amount'] = ['required', 'numeric', 'min:0'];
+            $rules['rental_max_discount'] = ['nullable', 'numeric', 'min:0'];
+        }
+
+        $request->validate($rules);
 
         $data = $request->all();
+
+        // 👇 SET DEFAULT
+        if (!isset($data['discount_percent']) || $data['discount_percent'] === null || $data['discount_percent'] === '') {
+            $data['discount_percent'] = $promo->discount_percent ?? 0;
+        }
+        if (!isset($data['max_discount']) || $data['max_discount'] === null || $data['max_discount'] === '') {
+            $data['max_discount'] = $promo->max_discount ?? 0;
+        }
+        if (!isset($data['min_purchase']) || $data['min_purchase'] === null || $data['min_purchase'] === '') {
+            $data['min_purchase'] = $promo->min_purchase ?? 0;
+        }
 
         // Proses applicable_payment_methods
         if ($request->has('applicable_payment_methods') && !empty($request->applicable_payment_methods)) {

@@ -49,6 +49,17 @@ class RegisterController extends Controller
             // Logout dulu, lalu login dengan user yang sudah diupdate
         }
 
+        try {
+            match ($user->role) {
+                'customer' => app(\App\Services\NotificationService::class)->welcomeCustomer($user),
+                'agency' => app(\App\Services\NotificationService::class)->welcomeAgency($user, $user->agency),
+                'payment_agent' => app(\App\Services\NotificationService::class)->welcomePaymentAgent($user, $user->paymentAgent),
+                default => null,
+            };
+        } catch (\Exception $e) {
+            \Log::error('Welcome WhatsApp failed: ' . $e->getMessage());
+        }
+
         Auth::login($user);
 
         // Redirect ke setup profile

@@ -30,6 +30,7 @@ class Payment extends Model
         'paid_at',
         'expired_at',
         'payment_detail',
+        'rental_id',
     ];
 
     protected function casts(): array
@@ -89,6 +90,11 @@ class Payment extends Model
     public function scopeByType(Builder $query, string $type): Builder
     {
         return $query->where('payment_type', $type);
+    }
+
+    public function rental(): BelongsTo
+    {
+        return $this->belongsTo(Rental::class);
     }
 }
 

@@ -11,7 +11,7 @@ return [
     */
     'name' => env('APP_NAME', 'GoMad'),
     'tagline' => 'Mobilitas orèng Madhurâ',
-    'description' => 'Platform booking travel antar kota di Madura. Door-to-door service.',
+    'description' => 'Platform booking tiket travel online antar kota. Door-to-door service.',
 
     /*
     |--------------------------------------------------------------------------
@@ -47,9 +47,6 @@ return [
         'charter' => [
             'max_overload' => 0,
         ],
-        'rental' => [
-            'max_overload' => 0,
-        ],
     ],
 
     /*
@@ -61,7 +58,6 @@ return [
         'economy' => 15.00,
         'premium' => 20.00,
         'charter' => 25.00,
-        'rental' => 0,
     ],
 
     /*
@@ -126,13 +122,44 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Twilio Configuration (WhatsApp)
+    | WhatsApp Notification Configuration (Multi-Driver)
     |--------------------------------------------------------------------------
+    |
+    | Driver yang didukung: log, fonnte, meta, twilio
+    | Bisa diubah via .env atau Admin Settings (PlatformSettings)
+    |
     */
-    'twilio' => [
-        'sid' => env('TWILIO_SID'),
-        'auth_token' => env('TWILIO_AUTH_TOKEN'),
-        'whatsapp_from' => env('TWILIO_WHATSAPP_FROM'),
+    'whatsapp' => [
+        // Driver aktif: fonnte, meta, twilio, log
+        'driver' => env('WHATSAPP_DRIVER', 'log'),
+
+        // Baileys WhatsApp Service (Microservice)
+        'baileys' => [
+            'api_url' => env('BAILEYS_API_URL'),
+            'api_key' => env('BAILEYS_API_KEY'),
+        ],
+        
+        // Fonnte - Recommended untuk Indonesia
+        // Daftar: https://fonnte.com
+        'fonnte' => [
+            'api_url' => env('FONNTE_API_URL', 'https://api.fonnte.com'),
+            'token' => env('FONNTE_TOKEN'),
+        ],
+        
+        // Meta WhatsApp Cloud API - Gratis 1000 percakapan/bulan
+        // Setup: https://developers.facebook.com/docs/whatsapp/cloud-api
+        'meta' => [
+            'api_url' => env('WHATSAPP_META_API_URL', 'https://graph.facebook.com/v20.0'),
+            'phone_number_id' => env('WHATSAPP_META_PHONE_NUMBER_ID'),
+            'access_token' => env('WHATSAPP_META_ACCESS_TOKEN'),
+        ],
+        
+        // Twilio - Enterprise (Legacy)
+        'twilio' => [
+            'sid' => env('TWILIO_SID'),
+            'auth_token' => env('TWILIO_AUTH_TOKEN'),
+            'from' => env('TWILIO_WHATSAPP_FROM'),
+        ],
     ],
 
     /*

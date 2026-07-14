@@ -57,7 +57,12 @@ class BookingController extends Controller
         ]);
         $snapToken = null;
         if ($booking->payment && $booking->payment->status === 'pending' && $booking->payment->payment_type === 'midtrans') {
-            try { $snapToken = $this->paymentService->getSnapToken($booking); } catch (\Exception $e) {}
+            try { 
+                // Selalu generate Snap Token baru, jangan andalkan session
+                $snapToken = $this->paymentService->getSnapToken($booking); 
+            } catch (\Exception $e) {
+                \Log::error('Snap Token generation failed: ' . $e->getMessage());
+            }
         }
         return view('customer.booking.detail', compact('booking', 'snapToken'));
     }

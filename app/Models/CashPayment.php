@@ -26,6 +26,7 @@ class CashPayment extends Model
         'confirmed_at',
         'expired_at',
         'settled_at',
+        'rental_id',   
     ];
 
     protected function casts(): array
@@ -73,6 +74,11 @@ class CashPayment extends Model
     public function scopePending($query)
     {
         return $query->where('status', 'pending');
+    }
+
+    public function rental(): BelongsTo
+    {
+        return $this->belongsTo(Rental::class);
     }
 }
 

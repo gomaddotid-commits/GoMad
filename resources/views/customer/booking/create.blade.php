@@ -196,10 +196,58 @@
                 </div>
             </div>
 
+            {{-- ═══════════════════════════════════ --}}
+            {{-- PERSETUJUAN SYARAT & KETENTUAN TRAVEL --}}
+            {{-- ═══════════════════════════════════ --}}
+            <div class="bg-white border border-[#E5E5E5] rounded-[12px] p-4 mb-6 shadow-sm">
+                {{-- Checkbox 1: Syarat & Ketentuan --}}
+                <label class="flex items-start gap-3 cursor-pointer mb-3">
+                    <input type="checkbox" 
+                           id="agreeTerms" 
+                           class="mt-0.5 w-5 h-5 rounded border-[#E5E5E5] text-[#C1121F] focus:ring-[#C1121F]"
+                           onchange="toggleSubmitButton()">
+                    <div class="flex-1">
+                        <span class="text-sm font-medium text-[#111111]">
+                            Saya telah membaca dan menyetujui 
+                        </span>
+                        <button type="button" 
+                                onclick="openTermsModal()" 
+                                class="text-[#C1121F] underline font-medium text-sm hover:text-[#8A0F18] transition">
+                            Syarat & Ketentuan
+                        </button>
+                        <span class="text-sm font-medium text-[#111111]"> perjalanan travel</span>
+                    </div>
+                </label>
+
+                {{-- Checkbox 2: Kebijakan Pembatalan --}}
+                <label class="flex items-start gap-3 cursor-pointer">
+                    <input type="checkbox" 
+                           id="agreeRefund" 
+                           class="mt-0.5 w-5 h-5 rounded border-[#E5E5E5] text-[#C1121F] focus:ring-[#C1121F]"
+                           onchange="toggleSubmitButton()">
+                    <div class="flex-1">
+                        <span class="text-sm font-medium text-[#111111]">
+                            Saya memahami dan menyetujui 
+                        </span>
+                        <button type="button" 
+                                onclick="openRefundModal()" 
+                                class="text-[#C1121F] underline font-medium text-sm hover:text-[#8A0F18] transition">
+                            Kebijakan Pembatalan & Refund
+                        </button>
+                    </div>
+                </label>
+                <div class="mt-2 ml-8 text-xs text-gray-500 font-light">
+                    <p>• Pembatalan setelah bayar: biaya <strong class="text-[#C1121F]">25%</strong></p>
+                    <p>• Tidak bisa dibatalkan jika &lt; 24 jam sebelum keberangkatan</p>
+                </div>
+            </div>
+
+            {{-- TOMBOL SUBMIT (disabled by default) --}}
             <div class="flex gap-4 justify-center">
                 <button type="button" onclick="goToStep3()" class="border border-[#E5E5E5] text-gray-700 px-6 py-3 rounded-[12px] font-semibold hover:bg-[#F5F5F5] transition">Kembali</button>
-                <button type="button" onclick="submitBooking()" class="bg-[#C1121F] text-white px-8 py-3 rounded-[12px] font-bold text-lg hover:bg-[#8A0F18] transition">
-                    Buat Booking
+                <button type="button" onclick="submitBooking()" id="btnSubmit" disabled
+                        class="bg-[#E5E5E5] text-gray-500 px-8 py-3 rounded-[12px] font-bold text-lg cursor-not-allowed transition">
+                    🎫 BUAT BOOKING
                 </button>
             </div>
         </div>
@@ -219,6 +267,128 @@
     </form>
 </div>
 
+{{-- ═══════════════════════════════════ --}}
+{{-- MODAL: Syarat & Ketentuan Travel --}}
+{{-- ═══════════════════════════════════ --}}
+<div id="termsModal" class="fixed inset-0 bg-[#111111]/50 z-50 hidden items-center justify-center p-4" style="display:none;">
+    <div class="bg-white rounded-[12px] shadow-2xl max-w-2xl w-full max-h-[85vh] overflow-y-auto border border-[#E5E5E5]">
+        <div class="sticky top-0 bg-white border-b border-[#E5E5E5] p-6 rounded-t-[12px] z-10">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-[#C1121F]/10 rounded-[12px] flex items-center justify-center text-xl border border-[#E5E5E5]">📄</div>
+                <div>
+                    <h3 class="font-bold text-lg text-[#111111]">Syarat & Ketentuan Perjalanan</h3>
+                    <p class="text-xs text-gray-500 font-light">GoMad Travel</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="p-6 space-y-4">
+            <div class="bg-[#F5F5F5] border border-[#E5E5E5] rounded-[12px] p-4">
+                <p class="text-xs text-gray-500 font-light mb-3">
+                    Dengan melakukan booking, Anda menyetujui syarat dan ketentuan berikut:
+                </p>
+                <ol class="list-decimal list-inside space-y-3 text-sm text-[#111111]">
+                    <li class="font-light leading-relaxed">Penumpang wajib hadir di lokasi penjemputan minimal 15 menit sebelum jadwal keberangkatan.</li>
+                    <li class="font-light leading-relaxed">Pembatalan yang dilakukan kurang dari 24 jam sebelum keberangkatan tidak dapat direfund.</li>
+                    <li class="font-light leading-relaxed">Penumpang wajib membawa identitas diri (KTP/SIM) yang sesuai dengan data booking.</li>
+                    <li class="font-light leading-relaxed">Bagasi maksimal sesuai ketentuan kelas perjalanan (Ekonomi: 15kg, Premium: 20kg).</li>
+                    <li class="font-light leading-relaxed">Agency berhak membatalkan perjalanan jika terjadi force majeure dengan refund penuh.</li>
+                    <li class="font-light leading-relaxed">Penumpang dilarang membawa barang terlarang atau berbahaya selama perjalanan.</li>
+                    <li class="font-light leading-relaxed">Keterlambatan yang disebabkan oleh penumpang bukan tanggung jawab agency.</li>
+                </ol>
+            </div>
+            
+            <div class="bg-yellow-50 border border-yellow-200 rounded-[12px] p-4">
+                <label class="flex items-start gap-3 cursor-pointer">
+                    <input type="checkbox" 
+                           id="agreeTermsInModal" 
+                           class="mt-0.5 w-5 h-5 rounded border-[#E5E5E5] text-[#C1121F] focus:ring-[#C1121F]"
+                           onchange="syncCheckbox('agreeTerms', 'agreeTermsInModal')">
+                    <span class="text-sm text-[#111111] font-light">
+                        Saya telah membaca, memahami, dan menyetujui seluruh syarat & ketentuan di atas
+                    </span>
+                </label>
+            </div>
+        </div>
+        
+        <div class="sticky bottom-0 bg-white border-t border-[#E5E5E5] p-4 rounded-b-[12px] flex gap-3 justify-end">
+            <button type="button" 
+                    onclick="closeTermsModal()" 
+                    class="px-6 py-2.5 border border-[#E5E5E5] rounded-[12px] text-sm font-medium hover:bg-[#F5F5F5] transition">
+                Tutup
+            </button>
+            <button type="button" 
+                    onclick="agreeAndCloseTerms()" 
+                    class="px-6 py-2.5 bg-[#C1121F] text-white rounded-[12px] text-sm font-semibold hover:bg-[#8A0F18] transition">
+                Setuju & Tutup
+            </button>
+        </div>
+    </div>
+</div>
+
+{{-- ═══════════════════════════════════ --}}
+{{-- MODAL: Kebijakan Pembatalan Travel --}}
+{{-- ═══════════════════════════════════ --}}
+<div id="refundModal" class="fixed inset-0 bg-[#111111]/50 z-50 hidden items-center justify-center p-4" style="display:none;">
+    <div class="bg-white rounded-[12px] shadow-2xl max-w-2xl w-full max-h-[85vh] overflow-y-auto border border-[#E5E5E5]">
+        <div class="sticky top-0 bg-white border-b border-[#E5E5E5] p-6 rounded-t-[12px] z-10">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-orange-50 rounded-[12px] flex items-center justify-center text-xl border border-orange-200">🔄</div>
+                <div>
+                    <h3 class="font-bold text-lg text-[#111111]">Kebijakan Pembatalan & Refund</h3>
+                    <p class="text-xs text-gray-500 font-light">Mohon dibaca dengan seksama</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="p-6 space-y-4">
+            <div class="bg-red-50 border border-red-200 rounded-[12px] p-4">
+                <h4 class="font-mono uppercase tracking-wider text-xs font-bold text-red-800 mb-2">⚠️ Biaya Pembatalan</h4>
+                <div class="text-sm text-red-700 space-y-2 font-light">
+                    <p>• <strong>Sebelum pembayaran:</strong> Gratis, tidak ada biaya.</p>
+                    <p>• <strong>Setelah pembayaran (&gt; 24 jam sebelum berangkat):</strong> Dikenakan biaya <strong>25%</strong> dari total.</p>
+                    <p>• <strong>Kurang dari 24 jam sebelum berangkat:</strong> Tidak dapat dibatalkan.</p>
+                </div>
+            </div>
+            
+            <div class="bg-[#F5F5F5] border border-[#E5E5E5] rounded-[12px] p-4">
+                <h4 class="font-mono uppercase tracking-wider text-xs font-bold text-[#111111] mb-2">📋 Kebijakan Refund</h4>
+                <ol class="list-decimal list-inside space-y-3 text-sm text-[#111111]">
+                    <li class="font-light leading-relaxed">Refund akan diproses dalam 1-14 hari kerja ke rekening yang terdaftar.</li>
+                    <li class="font-light leading-relaxed">Biaya pembatalan 25% dipotong dari total pembayaran.</li>
+                    <li class="font-light leading-relaxed">Jika agency membatalkan perjalanan, refund 100% akan diberikan.</li>
+                    <li class="font-light leading-relaxed">Force majeure (bencana alam, dll): kebijakan khusus berlaku sesuai pemberitahuan.</li>
+                </ol>
+            </div>
+            
+            <div class="bg-yellow-50 border border-yellow-200 rounded-[12px] p-4">
+                <label class="flex items-start gap-3 cursor-pointer">
+                    <input type="checkbox" 
+                           id="agreeRefundInModal" 
+                           class="mt-0.5 w-5 h-5 rounded border-[#E5E5E5] text-[#C1121F] focus:ring-[#C1121F]"
+                           onchange="syncCheckbox('agreeRefund', 'agreeRefundInModal')">
+                    <span class="text-sm text-[#111111] font-light">
+                        Saya telah membaca, memahami, dan menyetujui kebijakan pembatalan & refund di atas
+                    </span>
+                </label>
+            </div>
+        </div>
+        
+        <div class="sticky bottom-0 bg-white border-t border-[#E5E5E5] p-4 rounded-b-[12px] flex gap-3 justify-end">
+            <button type="button" 
+                    onclick="closeRefundModal()" 
+                    class="px-6 py-2.5 border border-[#E5E5E5] rounded-[12px] text-sm font-medium hover:bg-[#F5F5F5] transition">
+                Tutup
+            </button>
+            <button type="button" 
+                    onclick="agreeAndCloseRefund()" 
+                    class="px-6 py-2.5 bg-[#C1121F] text-white rounded-[12px] text-sm font-semibold hover:bg-[#8A0F18] transition">
+                Setuju & Tutup
+            </button>
+        </div>
+    </div>
+</div>
+
 @push('scripts')
 <script>
 var scheduleData = @json($scheduleData);
@@ -232,6 +402,7 @@ var hasUsedOwner = false;
 document.addEventListener('DOMContentLoaded', function() {
     renderPickupGrid();
     addPassenger();
+    toggleSubmitButton(); // Init tombol disabled
 });
 
 function renderPickupGrid() {
@@ -320,6 +491,7 @@ function goToStep4() {
     document.getElementById('dropoffCityName4').textContent = selectedDropoff.city_name;
     updateSummary();
     showStep(4);
+    toggleSubmitButton(); // Pastikan tombol disabled
 }
 
 function addPassenger() {
@@ -377,6 +549,17 @@ function updateSummary() {
 }
 
 function submitBooking() {
+    // Validasi checkbox
+    if (!document.getElementById('agreeTerms').checked) {
+        alert('Anda harus menyetujui Syarat & Ketentuan terlebih dahulu.');
+        return;
+    }
+    
+    if (!document.getElementById('agreeRefund').checked) {
+        alert('Anda harus menyetujui Kebijakan Pembatalan & Refund terlebih dahulu.');
+        return;
+    }
+    
     var destAddress = document.getElementById('destinationAddress').value.trim();
     if (!destAddress) return alert('Isi alamat tujuan!');
     var passengerItems = document.querySelectorAll('.passenger-item');
@@ -403,6 +586,11 @@ function submitBooking() {
         passengerDiv.innerHTML += '<input type="hidden" name="passengers[' + idx + '][phone]" value="' + escapeHtml(p.phone) + '">';
         passengerDiv.innerHTML += '<input type="hidden" name="passengers[' + idx + '][baggage_weight]" value="' + p.baggage_weight + '">';
     });
+    
+    var btn = document.getElementById('btnSubmit');
+    btn.disabled = true;
+    btn.textContent = '⏳ Memproses...';
+    
     document.getElementById('bookingForm').submit();
 }
 
@@ -423,7 +611,82 @@ function showStep(step) {
 function formatRupiah(num) { return new Intl.NumberFormat('id-ID').format(num || 0); }
 function escapeHtml(text) { if (!text) return ''; return text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;'); }
 
+// ═══════════════════════════════════
+// MODAL FUNCTIONS
+// ═══════════════════════════════════
+
+function openTermsModal() {
+    document.getElementById('termsModal').style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+}
+
+function closeTermsModal() {
+    document.getElementById('termsModal').style.display = 'none';
+    document.body.style.overflow = '';
+}
+
+function openRefundModal() {
+    document.getElementById('refundModal').style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+}
+
+function closeRefundModal() {
+    document.getElementById('refundModal').style.display = 'none';
+    document.body.style.overflow = '';
+}
+
+function agreeAndCloseTerms() {
+    document.getElementById('agreeTermsInModal').checked = true;
+    document.getElementById('agreeTerms').checked = true;
+    toggleSubmitButton();
+    closeTermsModal();
+}
+
+function agreeAndCloseRefund() {
+    document.getElementById('agreeRefundInModal').checked = true;
+    document.getElementById('agreeRefund').checked = true;
+    toggleSubmitButton();
+    closeRefundModal();
+}
+
+function syncCheckbox(mainId, modalId) {
+    document.getElementById(mainId).checked = document.getElementById(modalId).checked;
+    toggleSubmitButton();
+}
+
+function toggleSubmitButton() {
+    var agreeTerms = document.getElementById('agreeTerms');
+    var agreeRefund = document.getElementById('agreeRefund');
+    var btnSubmit = document.getElementById('btnSubmit');
+    
+    if (!agreeTerms || !agreeRefund || !btnSubmit) return;
+    
+    if (agreeTerms.checked && agreeRefund.checked) {
+        btnSubmit.disabled = false;
+        btnSubmit.className = 'bg-[#C1121F] text-white px-8 py-3 rounded-[12px] font-bold text-lg hover:bg-[#8A0F18] cursor-pointer transition';
+    } else {
+        btnSubmit.disabled = true;
+        btnSubmit.className = 'bg-[#E5E5E5] text-gray-500 px-8 py-3 rounded-[12px] font-bold text-lg cursor-not-allowed transition';
+    }
+}
+
+// Tutup modal dengan klik overlay
+document.addEventListener('click', function(e) {
+    if (e.target.id === 'termsModal') closeTermsModal();
+    if (e.target.id === 'refundModal') closeRefundModal();
+});
+
+// Tutup modal dengan ESC
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeTermsModal();
+        closeRefundModal();
+    }
+});
+
+// ═══════════════════════════════════
 // GEOLOCATION
+// ═══════════════════════════════════
 function getCurrentLocation(type) {
     if (!navigator.geolocation) {
         alert('Browser Anda tidak mendukung geolocation.');

@@ -25,6 +25,10 @@ yarn-error.log
 *.back
 *.backup
 .env.production
+.env.dev
 storage/certs/
 database/migrations/
 database/seeders/
+app/Console/Commands/FlowTest/
+app/Console/Commands/FlowTestCommand.php
+app/Console/Commands/ProductionReadinessCheck.php

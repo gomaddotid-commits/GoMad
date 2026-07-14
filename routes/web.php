@@ -9,6 +9,7 @@ use App\Http\Controllers\Web\Public\HomeController as WebPublicHomeController;
 use App\Http\Controllers\Web\Public\SearchController as WebPublicSearchController;
 use App\Http\Controllers\Web\Public\AgencyProfileController as WebPublicAgencyProfileController;
 use App\Http\Controllers\Web\Public\ListingController as WebPublicListingController;
+use App\Http\Controllers\Web\Public\RentalController as WebPublicRentalController;
 
 // Auth Controllers
 use App\Http\Controllers\Web\Auth\LoginController as WebAuthLoginController;
@@ -18,6 +19,7 @@ use App\Http\Controllers\Web\Auth\RegisterController as WebAuthRegisterControlle
 use App\Http\Controllers\Web\Customer\HomeController as WebCustomerHomeController;
 use App\Http\Controllers\Web\Customer\BookingController as WebCustomerBookingController;
 use App\Http\Controllers\Web\Customer\ProfileController as WebCustomerProfileController;
+use App\Http\Controllers\Web\Customer\RentalController as WebCustomerRentalController;
 
 // Agency Controllers
 use App\Http\Controllers\Web\Agency\DashboardController as WebAgencyDashboardController;
@@ -30,6 +32,8 @@ use App\Http\Controllers\Web\Agency\WalletController as WebAgencyWalletControlle
 use App\Http\Controllers\Web\Agency\WithdrawalController as WebAgencyWithdrawalController;
 use App\Http\Controllers\Web\Agency\ReportController as WebAgencyReportController;
 use App\Http\Controllers\Web\Agency\PromoController as WebAgencyPromoController;
+use App\Http\Controllers\Web\Agency\RentalController as WebAgencyRentalController;
+use App\Http\Controllers\Web\Agency\RentalPromoController as WebAgencyRentalPromoController;
 
 // Driver Controllers
 use App\Http\Controllers\Web\Driver\ScheduleController as WebDriverScheduleController;
@@ -55,7 +59,8 @@ use App\Http\Controllers\Web\Admin\WithdrawalController as WebAdminWithdrawalCon
 use App\Http\Controllers\Web\Admin\SettlementController as WebAdminSettlementController;
 use App\Http\Controllers\Web\Admin\ReportController as WebAdminReportController;
 use App\Http\Controllers\Web\Admin\SettingController as WebAdminSettingController;
-
+use App\Http\Controllers\Web\Admin\RentalController as WebAdminRentalController;
+use App\Http\Controllers\Web\Admin\RentalDocumentController as WebAdminRentalDocumentController;
 /*
 |--------------------------------------------------------------------------
 | Customer Routes
@@ -80,6 +85,19 @@ Route::middleware(['auth', \App\Http\Middleware\Web\CustomerMiddleware::class])
         Route::get('/booking/{booking}', [WebCustomerBookingController::class, 'show'])->name('booking.show');
         Route::get('/booking/{booking}/detail', [WebCustomerBookingController::class, 'detail'])->name('booking.detail');
         
+        // Rental
+        Route::get('/rentals', [WebCustomerRentalController::class, 'index'])->name('rentals');
+        Route::get('/rentals/browse', [WebCustomerRentalController::class, 'browse'])->name('rental.browse');
+        Route::get('/rentals/create/{vehicleSetting}', [WebCustomerRentalController::class, 'create'])->name('rental.create');
+        Route::post('/rentals', [WebCustomerRentalController::class, 'store'])->name('rental.store');
+        Route::get('/rentals/{rental}', [WebCustomerRentalController::class, 'show'])->name('rental.show');
+        Route::post('/rentals/{rental}/cancel', [WebCustomerRentalController::class, 'cancel'])->name('rental.cancel');
+        Route::post('/rentals/{rental}/pay', [WebCustomerRentalController::class, 'pay'])->name('rental.pay');
+
+        // Dokumen
+        Route::get('/documents', [WebCustomerRentalController::class, 'documents'])->name('documents');
+        Route::post('/documents', [WebCustomerRentalController::class, 'submitDocuments'])->name('documents.submit');
+
         // PAYMENT PROCESS (dari dropdown)
         Route::post('/booking/{booking}/pay-process', [WebCustomerBookingController::class, 'payProcess'])->name('booking.pay-process');
         
@@ -136,12 +154,28 @@ Route::middleware(['auth', \App\Http\Middleware\Web\AgencyMiddleware::class])
         Route::post('/schedules/{schedule}/assign-driver', [WebAgencyScheduleController::class, 'assignDriver'])->name('schedules.assign-driver');
         Route::post('/schedules/{schedule}/start', [WebAgencyScheduleController::class, 'startSchedule'])->name('schedules.start');
         Route::delete('/schedules/{schedule}', [WebAgencyScheduleController::class, 'destroy'])->name('schedules.destroy');
-// Di dalam grup agency
         Route::delete('/schedules/{schedule}', [WebAgencyScheduleController::class, 'destroy'])->name('schedules.destroy');
 
         Route::get('/bookings', [WebAgencyBookingController::class, 'index'])->name('bookings.index');
         Route::get('/bookings/{booking}', [WebAgencyBookingController::class, 'show'])->name('bookings.show');
         Route::put('/bookings/{booking}/status', [WebAgencyBookingController::class, 'updateStatus'])->name('bookings.status');
+
+        // Rental
+        Route::get('/rental/dashboard', [WebAgencyRentalController::class, 'dashboard'])->name('rental.dashboard');
+        Route::get('/rentals', [WebAgencyRentalController::class, 'index'])->name('rental.index');
+        Route::get('/rentals/{rental}', [WebAgencyRentalController::class, 'show'])->name('rental.show');
+        Route::post('/rentals/{rental}/verify-pickup', [WebAgencyRentalController::class, 'verifyPickup'])->name('rental.verify-pickup');
+        Route::post('/rentals/{rental}/verify-return', [WebAgencyRentalController::class, 'verifyReturn'])->name('rental.verify-return');
+        Route::post('/rentals/{rental}/complete', [WebAgencyRentalController::class, 'complete'])->name('rental.complete');
+        Route::get('/rental-promos', [App\Http\Controllers\Web\Agency\RentalPromoController::class, 'index'])->name('rental.promos');
+        Route::post('/rental-promos/attach', [App\Http\Controllers\Web\Agency\RentalPromoController::class, 'attach'])->name('rental.promos.attach');
+        Route::delete('/rental-promos/{vehicle}/detach/{promo}', [App\Http\Controllers\Web\Agency\RentalPromoController::class, 'detach'])->name('rental.promos.detach');
+        Route::post('/rentals/{rental}/assign-driver', [WebAgencyRentalController::class, 'assignDriver'])->name('rental.assign-driver');
+
+        // Setup Kendaraan
+        Route::get('/rental-vehicles', [WebAgencyRentalController::class, 'vehicles'])->name('rental.vehicles');
+        Route::get('/rental-vehicles/{vehicle}/setup', [WebAgencyRentalController::class, 'vehicleSetup'])->name('rental.vehicle-setup');
+        Route::post('/rental-vehicles/{vehicle}/setup', [WebAgencyRentalController::class, 'saveVehicleSetup'])->name('rental.vehicle-setup.save');
 
         Route::get('/promos', [WebAgencyPromoController::class, 'index'])->name('promos.index');
         Route::post('/promos/attach', [WebAgencyPromoController::class, 'attachToSchedule'])->name('promos.attach');
@@ -294,7 +328,21 @@ Route::middleware(['auth', \App\Http\Middleware\Web\AdminMiddleware::class])
         Route::get('/settings', [WebAdminSettingController::class, 'index'])->name('settings');
         Route::put('/settings', [WebAdminSettingController::class, 'update'])->name('settings.update');
     });
-
+// ADMIN - RENTAL ROUTES
+Route::middleware(['auth', \App\Http\Middleware\Web\AdminMiddleware::class])
+    ->prefix('admin/rental')
+    ->name('admin.rental.')
+    ->group(function () {
+        
+        Route::get('/dashboard', [App\Http\Controllers\Web\Admin\RentalController::class, 'dashboard'])->name('dashboard');
+        Route::get('/rentals', [App\Http\Controllers\Web\Admin\RentalController::class, 'index'])->name('index');
+        Route::get('/rentals/{rental}', [App\Http\Controllers\Web\Admin\RentalController::class, 'show'])->name('show');
+        
+        // Verifikasi Dokumen
+        Route::get('/documents', [App\Http\Controllers\Web\Admin\RentalController::class, 'documents'])->name('documents');
+        Route::post('/documents/{document}/verify', [App\Http\Controllers\Web\Admin\RentalController::class, 'verifyDocument'])->name('documents.verify');
+        Route::post('/documents/{document}/reject', [App\Http\Controllers\Web\Admin\RentalController::class, 'rejectDocument'])->name('documents.reject');
+    });
 /*
 |--------------------------------------------------------------------------
 | Public Routes (No Auth)
@@ -305,6 +353,8 @@ Route::get('/', [WebPublicHomeController::class, 'index'])->name('home');
 Route::get('/search', [WebPublicSearchController::class, 'search'])->name('search');
 Route::get('/listing', [WebPublicListingController::class, 'index'])->name('listing');
 Route::get('/agency/{slug}', [WebPublicAgencyProfileController::class, 'show'])->name('agency.profile');
+Route::get('/rental', [App\Http\Controllers\Web\Public\RentalController::class, 'index'])->name('rental.public');
+Route::get('/rental/{vehicleSetting}', [App\Http\Controllers\Web\Public\RentalController::class, 'show'])->name('rental.public.show');
 Route::get('/download-app', [WebPublicHomeController::class, 'downloadApp'])->name('download-app');
 Route::get('/e-ticket', [WebPublicHomeController::class, 'eTicketPage'])->name('eticket.public');
 Route::post('/e-ticket/check', [WebPublicHomeController::class, 'checkETicket'])->name('eticket.check');

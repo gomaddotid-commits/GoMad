@@ -235,14 +235,16 @@
         <div class="bg-[#F5F5F5] border border-[#E5E5E5] rounded-[12px] p-4 mb-4 text-sm text-[#111111]">
             <p>💳 <strong>Midtrans</strong> - Transfer Bank, Virtual Account, QRIS, E-Wallet</p>
         </div>
-        @if(isset($snapToken))
+        @if(isset($snapToken) && $snapToken)
         <button id="pay-button" class="w-full bg-[#C1121F] text-white py-4 rounded-[12px] font-bold text-lg hover:bg-[#8A0F18] transition">
             💳 BAYAR SEKARANG (MIDTRANS)
         </button>
         @else
         <div class="bg-yellow-50 border border-yellow-200 rounded-[12px] p-4 text-center text-sm text-yellow-800 font-light">
-            Menghubungkan ke gateway pembayaran...
-            <a href="{{ route('customer.booking.show', $booking) }}" class="text-[#C1121F] underline font-medium ml-2">Muat Ulang Halaman</a>
+            ⏳ Menyiapkan pembayaran...
+            <button onclick="window.location.reload()" class="block w-full mt-2 bg-[#C1121F] text-white py-2 rounded-[12px] font-medium hover:bg-[#8A0F18] transition">
+                🔄 Muat Ulang Halaman
+            </button>
         </div>
         @endif
     </div>
@@ -408,19 +410,48 @@
 {{-- =========================================================== --}}
 {{-- SCRIPTS --}}
 {{-- =========================================================== --}}
-
-{{-- Midtrans Snap --}}
-@if(isset($snapToken))
+{{-- MIDTRANS SNAP (Jika ada snap token) --}}
+@if($snapToken)
 @push('scripts')
 <script src="{{ config('gomad.midtrans.snap_url') }}" data-client-key="{{ config('gomad.midtrans.client_key') }}"></script>
 <script>
-document.getElementById('pay-button').addEventListener('click', function() {
-    snap.pay('{{ $snapToken }}', {
-        onSuccess: function(result) { window.location.reload(); },
-        onPending: function(result) { alert('Menunggu pembayaran...'); },
-        onError: function(result) { alert('Pembayaran gagal. Silakan coba lagi.'); }
+var payButton = document.getElementById('pay-button');
+if (payButton) {
+    payButton.addEventListener('click', function(e) {
+        e.preventDefault();
+        
+        // Disable button
+        payButton.disabled = true;
+        payButton.textContent = '⏳ Menghubungkan...';
+        
+        snap.pay('{{ $snapToken }}', {
+            onSuccess: function(result) {
+                // Pembayaran sukses
+                window.location.href = '{{ route('customer.booking.show', $booking) }}?status=success';
+            },
+            onPending: function(result) {
+                // Pembayaran pending
+                alert('Pembayaran Anda masih dalam proses. Silakan cek status secara berkala.');
+                window.location.reload();
+            },
+            onError: function(result) {
+                // Pembayaran gagal
+                alert('Pembayaran gagal. Silakan coba lagi.');
+                window.location.reload();
+            },
+            onClose: function() {
+                // User menutup popup tanpa bayar
+                payButton.disabled = false;
+                payButton.textContent = '💳 BAYAR SEKARANG (MIDTRANS)';
+                
+                // Reload halaman untuk dapat Snap Token baru
+                setTimeout(function() {
+                    window.location.reload();
+                }, 500);
+            }
+        });
     });
-});
+}
 </script>
 @endpush
 @endif

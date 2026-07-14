@@ -259,6 +259,11 @@ class Agency extends Model
     {
         return $query->where('slug', $slug);
     }
+
+    public function rentals(): HasMany
+    {
+        return $this->hasMany(Rental::class);
+    }
 }
 
 // End of file

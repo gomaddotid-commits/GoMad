@@ -12,8 +12,8 @@
     <meta name="robots" content="index, follow">
 
     {{-- Open Graph --}}
-    <meta property="og:title" content="@yield('og_title', 'GoMad - Solusi transportasi Anda')">
-    <meta property="og:description" content="@yield('og_description', 'GoMad - Solusi transportasi Anda. Booking travel antar kota dengan mudah, dijemput di rumah, dan diantar ke tujuan.')">
+    <meta property="og:title" content="@yield('og_title', \App\Models\PlatformSetting::getValue('app_name', 'GoMad'))">
+    <meta property="og:description" content="@yield('og_description', \App\Models\PlatformSetting::getValue('app_tagline', 'Mobilitas orèng Madhurâ'))">
     <meta property="og:image" content="@yield('og_image', asset('images/og-default.jpg'))">
     <meta property="og:url" content="{{ url()->current() }}">
     <meta property="og:type" content="website">
@@ -31,7 +31,8 @@
     {{-- Favicon --}}
     <link rel="icon" type="image/svg+xml" href="{{ asset('images/favicon.svg') }}">
 
-    <title>@yield('title', 'GoMad') - Solusi transportasi Anda</title>
+    <title>@yield('title', \App\Models\PlatformSetting::getValue('app_name', 'GoMad')) -
+        {{ \App\Models\PlatformSetting::getValue('app_tagline', 'Mobilitas orèng Madhurâ') }}</title>
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @stack('styles')
@@ -41,7 +42,7 @@
     {{-- HEADER --}}
     <header class="fixed top-0 left-0 right-0 z-50 h-16 md:h-20" id="mainHeader" x-data="{ mobileMenu: false }">
         <div class="container-magazine h-full flex items-center justify-between">
-            
+
             {{-- LOGO --}}
             <a href="{{ route('home') }}" class="flex items-center gap-3 z-50">
                 <img src="{{ asset('images/logo-putih.png') }}" alt="GoMad" class="h-8 md:h-10 w-auto logo-white transition-opacity duration-300">
@@ -53,11 +54,10 @@
                 @foreach([
                     ['route' => 'home', 'label' => 'Beranda'],
                     ['route' => 'search', 'label' => 'Cari Jadwal'],
-                    ['route' => 'listing', 'label' => 'Agency'],
-                    ['route' => 'download-app', 'label' => 'App'],
+                    ['route' => 'rental.public', 'label' => 'Sewa Kendaraan'],                    ['route' => 'listing', 'label' => 'Agency'],
                     ['route' => 'eticket.public', 'label' => 'E-Ticket']
                 ] as $link)
-                    <a href="{{ route($link['route']) }}" 
+                    <a href="{{ route($link['route']) }}"
                        class="nav-link text-sm font-medium transition-colors duration-300 relative
                        {{ request()->routeIs($link['route']) ? 'active' : '' }}">
                         {{ $link['label'] }}
@@ -68,7 +68,7 @@
             {{-- AUTH BUTTONS --}}
             <div class="hidden lg:flex items-center gap-3 z-50">
                 @auth
-                    <a href="{{ route(\App\Enums\UserRole::from(auth()->user()->role)->defaultRedirectRoute()) }}" 
+                    <a href="{{ route(\App\Enums\UserRole::from(auth()->user()->role)->defaultRedirectRoute()) }}"
                        class="btn-gomad-outline text-sm py-2 px-5 transition-all">
                         Dashboard
                     </a>
@@ -77,7 +77,7 @@
                     <a href="{{ route('register') }}" class="btn-gomad-primary bg-white text-[#C1121F] hover:bg-[#111111] hover:text-white text-sm py-2 px-5 transition-all">Daftar</a>
                 @endauth
             </div>
-            
+
             {{-- MOBILE TOGGLE --}}
             <button @click="mobileMenu = !mobileMenu" class="lg:hidden mobile-toggle-btn outline-none transition-colors duration-300 relative z-50">
                 <svg x-show="!mobileMenu" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -91,8 +91,8 @@
         </div>
 
         {{-- MOBILE DRAWER --}}
-        <div x-show="mobileMenu" x-cloak 
-             @click="mobileMenu = false" 
+        <div x-show="mobileMenu" x-cloak
+             @click="mobileMenu = false"
              class="fixed inset-0 bg-[#111111]/50 z-40 lg:hidden"
              x-transition:enter="transition ease-out duration-300"
              x-transition:enter-start="opacity-0"
@@ -102,7 +102,7 @@
              x-transition:leave-end="opacity-0">
         </div>
 
-        <div x-show="mobileMenu" x-cloak 
+        <div x-show="mobileMenu" x-cloak
              class="fixed right-0 top-0 h-screen w-3/4 max-w-sm bg-white shadow-2xl z-[60] lg:hidden flex flex-col p-8"
              x-transition:enter="transition transform ease-out duration-300"
              x-transition:enter-start="transform translate-x-full"
@@ -111,7 +111,7 @@
              x-transition:leave-start="transform translate-x-0"
              x-transition:leave-end="transform translate-x-full"
              @click.away="mobileMenu = false">
-            
+
             <div class="mb-10">
                 <img src="{{ asset('images/logo-merah.png') }}" alt="GoMad" class="h-10 w-auto">
             </div>
@@ -120,7 +120,7 @@
                 <a href="{{ route('home') }}" class="border-b border-[#E5E5E5] pb-3 hover:text-[#C1121F] transition">Beranda</a>
                 <a href="{{ route('search') }}" class="border-b border-[#E5E5E5] pb-3 hover:text-[#C1121F] transition">Cari Jadwal</a>
                 <a href="{{ route('listing') }}" class="border-b border-[#E5E5E5] pb-3 hover:text-[#C1121F] transition">Agency</a>
-                <a href="{{ route('download-app') }}" class="border-b border-[#E5E5E5] pb-3 hover:text-[#C1121F] transition">Download App</a>
+                <a href="{{ route('rental.public') }}" class="border-b border-[#E5E5E5] pb-3 hover:text-[#C1121F] transition">Sewa Kendaraan</a>
                 <a href="{{ route('eticket.public') }}" class="border-b border-[#E5E5E5] pb-3 hover:text-[#C1121F] transition">Cek E-Ticket</a>
             </div>
 
@@ -155,6 +155,10 @@
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3"/></svg>
                 <span>Agency</span>
             </a>
+            <a href="{{ route('rental.public') }}" class="flex flex-col items-center gap-1 text-[10px] {{ request()->routeIs('rental.public') ? 'text-[#C1121F]' : 'text-gray-500' }}">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
+                <span>Sewa Kendaraan</span>
+            </a>
             @auth
             <a href="{{ route('customer.profile') }}" class="flex flex-col items-center gap-1 text-[10px] {{ request()->routeIs('customer.profile') ? 'text-[#C1121F]' : 'text-gray-500' }}">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14"/></svg>
@@ -172,29 +176,42 @@
                     <span class="text-4xl font-bold tracking-tighter">Go</span>
                     <span class="text-[#C1121F] text-4xl font-bold tracking-tighter">Mad</span>
                 </div>
-                <p class="text-gray-400 text-sm leading-relaxed max-w-xs">Solusi transportasi Anda. Booking travel antar kota dengan mudah, dijemput di rumah, dan diantar ke tujuan.</p>
+                <p class="text-gray-400 text-sm leading-relaxed max-w-xs">
+                    {{ \App\Models\PlatformSetting::getValue('app_tagline', 'Solusi transportasi Anda.') }}
+                </p>
             </div>
-            
+
             <div class="md:col-span-3 grid grid-cols-2 md:grid-cols-3 gap-8 text-sm">
                 <div>
                     <h4 class="font-semibold text-white mb-4">Layanan</h4>
-                    <ul class="space-y-2 text-gray-400"><li>Ekonomi</li><li>Premium</li><li>Charter</li></ul>
+                    <ul class="space-y-2 text-gray-400">
+                        <li><a href="{{ route('search') }}" class="hover:text-white transition">Travel Reguler</a></li>
+                        <li><a href="{{ route('rental.public') }}" class="hover:text-white transition">Sewa Kendaraan</a></li>
+                        <li>Charter</li>
+                    </ul>
                 </div>
                 <div>
                     <h4 class="font-semibold text-white mb-4">Tautan</h4>
-                    <ul class="space-y-2 text-gray-400"><li>Beranda</li><li>Cari</li><li>E-Ticket</li></ul>
+                    <ul class="space-y-2 text-gray-400">
+                        <li><a href="{{ route('home') }}" class="hover:text-white transition">Beranda</a></li>
+                        <li><a href="{{ route('search') }}" class="hover:text-white transition">Cari Jadwal</a></li>
+                        <li><a href="{{ route('eticket.public') }}" class="hover:text-white transition">Cek E-Ticket</a></li>
+                        <li><a href="{{ route('download-app') }}" class="hover:text-white transition">Download App</a></li>
+                    </ul>
                 </div>
                 <div>
                     <h4 class="font-semibold text-white mb-4">Kontak</h4>
-                    <ul class="space-y-2 text-gray-400"><li>support@gomad.id</li><li>Sumenep, Madura</li></ul>
+                    <ul class="space-y-2 text-gray-400">
+                        <li> {{ \App\Models\PlatformSetting::getValue('support_email', 'support@gomad.id') }}</li>
+                        <li> {{ \App\Models\PlatformSetting::getValue('support_phone', '081234567890') }}</li>
+                        <li>Sumenep, Madura</li>
+                    </ul>
                 </div>
             </div>
         </div>
-        
-        <div class="absolute inset-0 opacity-10 pointer-events-none bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC40Ij48cGF0aCBkPSJNMzYgMzR2LTRIMjR2NEgxMnYxMmwxMiAxMlY0MGgxMnYxMmgxMlYzNHoiLz48L2c+PC9nPjwvc3ZnPg==')]"></div>
 
         <div class="container-magazine mt-12 pt-8 border-t border-white/10 text-center text-gray-500 text-xs relative z-10">
-            &copy; {{ date('Y') }} GoMad. All rights reserved.
+            &copy; {{ date('Y') }} {{ \App\Models\PlatformSetting::getValue('app_name', 'GoMad') }}. All rights reserved.
         </div>
     </footer>
 

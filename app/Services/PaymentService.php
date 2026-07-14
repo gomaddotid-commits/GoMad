@@ -45,7 +45,24 @@ class PaymentService
 
     public function getSnapToken(Booking $booking): string
     {
-        $payment = $this->createPayment($booking);
+        $payment = $booking->payment;
+        
+        // Jika tidak ada payment atau payment bukan midtrans, buat baru
+        if (!$payment || $payment->payment_type !== 'midtrans') {
+            $payment = $this->createPayment($booking);
+        }
+        
+        // Jika payment expired, buat payment baru
+        if ($payment->status === \App\Enums\PaymentStatus::EXPIRED->value) {
+            // Hapus payment lama
+            $payment->delete();
+            $payment = $this->createPayment($booking);
+        }
+        
+        // Jika payment sudah paid, kembalikan kosong
+        if ($payment->status === \App\Enums\PaymentStatus::PAID->value) {
+            return '';
+        }
         
         $serverKey = config('gomad.midtrans.server_key');
         $isProduction = config('gomad.midtrans.is_production', false);
@@ -54,9 +71,12 @@ class PaymentService
             ? 'https://app.midtrans.com/snap/v1/transactions' 
             : 'https://app.sandbox.midtrans.com/snap/v1/transactions';
 
+        // Gunakan order_id yang unik (dengan timestamp)
+        $orderId = $booking->booking_code . '-' . time();
+
         $payload = [
             'transaction_details' => [
-                'order_id' => $booking->booking_code,
+                'order_id' => $orderId,
                 'gross_amount' => (int) $booking->total_price,
             ],
             'customer_details' => [
@@ -65,12 +85,12 @@ class PaymentService
                 'phone' => $booking->customer->phone,
             ],
             'callbacks' => [
-                'finish' => config('app.url') . '/booking/' . $booking->booking_code . '/detail',
+                'finish' => route('customer.booking.show', $booking),
             ],
         ];
 
         try {
-            $response = Http::withBasicAuth($serverKey, '')
+            $response = \Illuminate\Support\Facades\Http::withBasicAuth($serverKey, '')
                 ->withHeaders(['Content-Type' => 'application/json'])
                 ->post($baseUrl, $payload);
 
@@ -78,22 +98,25 @@ class PaymentService
                 $result = $response->json();
                 
                 $payment->update([
+                    'transaction_id' => $orderId,
                     'payment_detail' => array_merge($payment->payment_detail ?? [], [
+                        'snap_request' => $payload,
                         'snap_response' => $result,
+                        'snap_token_created_at' => now()->toISOString(),
                     ]),
                 ]);
                 
                 return $result['token'] ?? '';
             }
 
-            Log::error('Midtrans Snap Token Error', [
+            \Log::error('Midtrans Snap Token Error', [
                 'response' => $response->body(),
                 'booking_code' => $booking->booking_code,
             ]);
             
             throw new \Exception('Gagal membuat Snap Token: ' . $response->body());
         } catch (\Exception $e) {
-            Log::error('Midtrans Snap Token Exception', [
+            \Log::error('Midtrans Snap Token Exception', [
                 'error' => $e->getMessage(),
                 'booking_code' => $booking->booking_code,
             ]);
@@ -451,6 +474,115 @@ class PaymentService
         return ['success' => true, 'message' => 'Refund ditolak.'];
     }
 
+    /**
+     * Refund pembayaran rental
+     */
+    public function refundPaymentForRental(Rental $rental, float $refundAmount): array
+    {
+        $payment = $rental->payment;
+        
+        if (!$payment) {
+            return ['success' => false, 'message' => 'Tidak ada data pembayaran.'];
+        }
+        
+        if ($payment->payment_type !== 'midtrans') {
+            return ['success' => false, 'message' => 'Hanya pembayaran Midtrans yang bisa direfund via API.'];
+        }
+        
+        if ($payment->status !== \App\Enums\PaymentStatus::PAID->value) {
+            return ['success' => false, 'message' => 'Pembayaran tidak dalam status paid.'];
+        }
+        
+        $isProduction = config('gomad.midtrans.is_production', false);
+        $serverKey = config('gomad.midtrans.server_key');
+        
+        if (empty($serverKey)) {
+            // Simulasi
+            $payment->update([
+                'status' => \App\Enums\PaymentStatus::REFUNDED->value,
+                'payment_detail' => array_merge($payment->payment_detail ?? [], [
+                    'refund' => [
+                        'refund_amount' => $refundAmount,
+                        'refunded_at' => now()->toIso8601String(),
+                        'mode' => 'simulation',
+                        'status' => 'refunded_simulated',
+                    ],
+                ]),
+            ]);
+            
+            return ['success' => true, 'message' => 'Refund berhasil (simulasi).'];
+        }
+        
+        $transactionId = $payment->transaction_id ?? 'RNTL-' . $rental->id;
+        
+        $baseUrl = $isProduction 
+            ? 'https://api.midtrans.com/v2' 
+            : 'https://api.sandbox.midtrans.com/v2';
+        
+        try {
+            $response = \Illuminate\Support\Facades\Http::withBasicAuth($serverKey, '')
+                ->withHeaders(['Content-Type' => 'application/json'])
+                ->post($baseUrl . '/' . $transactionId . '/refund', [
+                    'amount' => (int) $refundAmount,
+                    'reason' => 'Pembatalan rental ' . $rental->rental_code,
+                ]);
+            
+            $result = $response->json();
+            $httpCode = $response->status();
+            
+            if ($httpCode === 200 && in_array($result['status_code'] ?? '', ['200', '201'])) {
+                $payment->update([
+                    'status' => \App\Enums\PaymentStatus::REFUNDED->value,
+                    'payment_detail' => array_merge($payment->payment_detail ?? [], [
+                        'refund' => array_merge($result, [
+                            'refund_amount' => $refundAmount,
+                            'refunded_at' => now()->toIso8601String(),
+                            'status' => 'refunded',
+                        ]),
+                    ]),
+                ]);
+                
+                return ['success' => true, 'message' => 'Refund berhasil diproses.'];
+            }
+            
+            // Gagal refund via API → perlu manual
+            $payment->update([
+                'status' => \App\Enums\PaymentStatus::REFUNDED->value,
+                'payment_detail' => array_merge($payment->payment_detail ?? [], [
+                    'refund' => [
+                        'refund_amount' => $refundAmount,
+                        'refunded_at' => now()->toIso8601String(),
+                        'needs_manual_refund' => true,
+                        'api_response' => $result,
+                        'status' => 'needs_manual_refund',
+                    ],
+                ]),
+            ]);
+            
+            return ['success' => true, 'message' => 'Refund akan diproses manual oleh admin.'];
+            
+        } catch (\Exception $e) {
+            \Log::error('Rental refund exception', [
+                'rental_code' => $rental->rental_code,
+                'error' => $e->getMessage(),
+            ]);
+            
+            $payment->update([
+                'status' => \App\Enums\PaymentStatus::REFUNDED->value,
+                'payment_detail' => array_merge($payment->payment_detail ?? [], [
+                    'refund' => [
+                        'refund_amount' => $refundAmount,
+                        'refunded_at' => now()->toIso8601String(),
+                        'needs_manual_refund' => true,
+                        'error' => $e->getMessage(),
+                        'status' => 'error_manual_refund',
+                    ],
+                ]),
+            ]);
+            
+            return ['success' => true, 'message' => 'Refund akan diproses manual oleh admin.'];
+        }
+    }
     
 }
 

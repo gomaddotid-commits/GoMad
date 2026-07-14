@@ -22,7 +22,7 @@ class ScheduleRequest extends FormRequest
             'driver_id' => ['nullable', 'integer', 'exists:users,id'],
             'departure_date' => ['required', 'date', 'after_or_equal:' . now()->addDays(30)->toDateString()],
             'departure_time' => ['required', 'date_format:H:i'],
-            'travel_class' => ['required', 'in:economy,premium,charter,rental'],
+            'travel_class' => ['required', 'in:economy,premium,charter'],
             'max_overload' => ['nullable', 'integer', 'min:0', 'max:2'],
             'price_per_seat' => ['required', 'numeric', 'min:1000'],
             'baggage_limit_kg' => ['nullable', 'numeric', 'min:0', 'max:50'],

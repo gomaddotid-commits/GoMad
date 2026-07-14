@@ -17,7 +17,11 @@
         {{-- SIDEBAR --}}
         <aside class="fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-[#E5E5E5] transform transition-transform duration-300 lg:relative lg:translate-x-0 overflow-y-auto"
                :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'">
-            @php $agency = auth()->user()->agency; $hasAgency = $agency && $agency->agency_name; @endphp
+            @php 
+                $agency = auth()->user()->agency; 
+                $hasAgency = $agency && $agency->agency_name;
+                $isRentalMode = request()->is('agency/rental*');
+            @endphp
             
             <div class="p-5 border-b border-[#E5E5E5]">
                 <a href="{{ route('agency.dashboard') }}" class="flex items-center gap-2">
@@ -33,44 +37,103 @@
             
             <nav class="p-3 space-y-1">
                 @if(!$hasAgency)
+                {{-- Setup Agency --}}
                 <a href="{{ route('agency.setup') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-[12px] text-sm transition {{ request()->routeIs('agency.setup') ? 'bg-[#C1121F]/10 text-[#C1121F] font-semibold' : 'text-gray-600 hover:bg-[#F5F5F5]' }}">
                     <span>📝</span> Setup Agency
                 </a>
                 @else
-                <a href="{{ route('agency.dashboard') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-[12px] text-sm transition {{ request()->routeIs('agency.dashboard') ? 'bg-[#C1121F]/10 text-[#C1121F] font-semibold' : 'text-gray-600 hover:bg-[#F5F5F5]' }}">
+                
+                {{-- ═══════════════════════════════════════ --}}
+                {{-- FLIP MODE SWITCH --}}
+                {{-- ═══════════════════════════════════════ --}}
+                <div class="px-1 mb-3">
+                    <div class="flex bg-[#F5F5F5] rounded-lg p-1">
+                        <a href="{{ $isRentalMode ? route('agency.dashboard') : '#' }}" 
+                           class="flex-1 text-center py-2 rounded-md text-xs font-semibold transition {{ !$isRentalMode ? 'bg-white shadow text-[#C1121F]' : 'text-gray-500 hover:text-[#111111]' }}">
+                            🚐 Travel
+                        </a>
+                        <a href="{{ $isRentalMode ? '#' : route('agency.rental.dashboard') }}" 
+                           class="flex-1 text-center py-2 rounded-md text-xs font-semibold transition {{ $isRentalMode ? 'bg-white shadow text-[#C1121F]' : 'text-gray-500 hover:text-[#111111]' }}">
+                            🚗 Rental
+                        </a>
+                    </div>
+                </div>
+
+                {{-- ═══════════════════════════════════════ --}}
+                {{-- AKSES DASAR (Selalu Ada) --}}
+                {{-- ═══════════════════════════════════════ --}}
+                <div class="px-1 py-1 text-[10px] font-mono uppercase tracking-wider text-gray-400">Akses Dasar</div>
+                
+                <a href="{{ route('agency.dashboard') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-[12px] text-sm transition {{ request()->routeIs('agency.dashboard') && !$isRentalMode ? 'bg-[#C1121F]/10 text-[#C1121F] font-semibold' : 'text-gray-600 hover:bg-[#F5F5F5]' }}">
                     <span>📊</span> Dashboard
                 </a>
                 
                 @if($agency->is_verified)
-                <a href="{{ route('agency.schedules.index') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-[12px] text-sm transition {{ request()->routeIs('agency.schedules.*') ? 'bg-[#C1121F]/10 text-[#C1121F] font-semibold' : 'text-gray-600 hover:bg-[#F5F5F5]' }}">
-                    <span>📅</span> Jadwal
-                </a>
-                <a href="{{ route('agency.bookings.index') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-[12px] text-sm transition {{ request()->routeIs('agency.bookings.*') ? 'bg-[#C1121F]/10 text-[#C1121F] font-semibold' : 'text-gray-600 hover:bg-[#F5F5F5]' }}">
-                    <span>🎫</span> Booking
-                </a>
-                <a href="{{ route('agency.vehicles.index') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-[12px] text-sm transition {{ request()->routeIs('agency.vehicles.*') ? 'bg-[#C1121F]/10 text-[#C1121F] font-semibold' : 'text-gray-600 hover:bg-[#F5F5F5]' }}">
-                    <span>🚐</span> Kendaraan
-                </a>
+                
                 <a href="{{ route('agency.drivers.index') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-[12px] text-sm transition {{ request()->routeIs('agency.drivers.*') ? 'bg-[#C1121F]/10 text-[#C1121F] font-semibold' : 'text-gray-600 hover:bg-[#F5F5F5]' }}">
                     <span>👨‍✈️</span> Driver
                 </a>
-                <a href="{{ route('agency.transfers.index') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-[12px] text-sm transition {{ request()->routeIs('agency.transfers.*') ? 'bg-[#C1121F]/10 text-[#C1121F] font-semibold' : 'text-gray-600 hover:bg-[#F5F5F5]' }}">
-                    <span>🔄</span> Transfer
+                
+                {{-- Kendaraan (akses dasar - selalu tampil) --}}
+                <a href="{{ $isRentalMode ? route('agency.rental.vehicles') : route('agency.vehicles.index') }}" 
+                   class="flex items-center gap-3 px-3 py-2.5 rounded-[12px] text-sm transition {{ request()->routeIs('agency.vehicles.*') || request()->routeIs('agency.rental.vehicles*') ? 'bg-[#C1121F]/10 text-[#C1121F] font-semibold' : 'text-gray-600 hover:bg-[#F5F5F5]' }}">
+                    <span>🚐</span> Kendaraan
                 </a>
-                <a href="{{ route('agency.promos.index') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-[12px] text-sm transition {{ request()->routeIs('agency.promos.*') ? 'bg-[#C1121F]/10 text-[#C1121F] font-semibold' : 'text-gray-600 hover:bg-[#F5F5F5]' }}">
-                    <span>🎫</span> Promo
-                </a>
+                
                 <a href="{{ route('agency.wallet.index') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-[12px] text-sm transition {{ request()->routeIs('agency.wallet.*') ? 'bg-[#C1121F]/10 text-[#C1121F] font-semibold' : 'text-gray-600 hover:bg-[#F5F5F5]' }}">
                     <span>💰</span> Dompet
                 </a>
+                
                 <a href="{{ route('agency.reports') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-[12px] text-sm transition {{ request()->routeIs('agency.reports') ? 'bg-[#C1121F]/10 text-[#C1121F] font-semibold' : 'text-gray-600 hover:bg-[#F5F5F5]' }}">
                     <span>📈</span> Laporan
                 </a>
+                
                 <a href="{{ route('agency.reviews') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-[12px] text-sm transition {{ request()->routeIs('agency.reviews') ? 'bg-[#C1121F]/10 text-[#C1121F] font-semibold' : 'text-gray-600 hover:bg-[#F5F5F5]' }}">
                     <span>⭐</span> Review
                 </a>
+
+                {{-- ═══════════════════════════════════════ --}}
+                {{-- AKSES LANJUTAN (Mode Travel / Rental) --}}
+                {{-- ═══════════════════════════════════════ --}}
+                
+                @if(!$isRentalMode)
+                    {{-- MODE TRAVEL --}}
+                    <div class="px-1 py-1 mt-2 text-[10px] font-mono uppercase tracking-wider text-gray-400">Modul Travel</div>
+                    
+                    <a href="{{ route('agency.schedules.index') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-[12px] text-sm transition {{ request()->routeIs('agency.schedules.*') ? 'bg-[#C1121F]/10 text-[#C1121F] font-semibold' : 'text-gray-600 hover:bg-[#F5F5F5]' }}">
+                        <span>📅</span> Jadwal
+                    </a>
+                    <a href="{{ route('agency.bookings.index') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-[12px] text-sm transition {{ request()->routeIs('agency.bookings.*') ? 'bg-[#C1121F]/10 text-[#C1121F] font-semibold' : 'text-gray-600 hover:bg-[#F5F5F5]' }}">
+                        <span>🎫</span> Booking
+                    </a>
+                    <a href="{{ route('agency.transfers.index') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-[12px] text-sm transition {{ request()->routeIs('agency.transfers.*') ? 'bg-[#C1121F]/10 text-[#C1121F] font-semibold' : 'text-gray-600 hover:bg-[#F5F5F5]' }}">
+                        <span>🔄</span> Transfer
+                    </a>
+                    <a href="{{ route('agency.promos.index') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-[12px] text-sm transition {{ request()->routeIs('agency.promos.*') ? 'bg-[#C1121F]/10 text-[#C1121F] font-semibold' : 'text-gray-600 hover:bg-[#F5F5F5]' }}">
+                        <span>🎫</span> Promo
+                    </a>
+                @else
+                    {{-- MODE RENTAL --}}
+                    <div class="px-1 py-1 mt-2 text-[10px] font-mono uppercase tracking-wider text-gray-400">Modul Rental</div>
+                    
+                    <a href="{{ route('agency.rental.dashboard') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-[12px] text-sm transition {{ request()->routeIs('agency.rental.dashboard') ? 'bg-[#C1121F]/10 text-[#C1121F] font-semibold' : 'text-gray-600 hover:bg-[#F5F5F5]' }}">
+                        <span>📊</span> Dashboard Rental
+                    </a>
+                    <a href="{{ route('agency.rental.index') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-[12px] text-sm transition {{ request()->routeIs('agency.rental.index') || request()->routeIs('agency.rental.show') ? 'bg-[#C1121F]/10 text-[#C1121F] font-semibold' : 'text-gray-600 hover:bg-[#F5F5F5]' }}">
+                        <span>🎫</span> Booking Rental
+                    </a>
+                    <a href="{{ route('agency.rental.vehicles') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-[12px] text-sm transition {{ request()->routeIs('agency.rental.vehicles*') ? 'bg-[#C1121F]/10 text-[#C1121F] font-semibold' : 'text-gray-600 hover:bg-[#F5F5F5]' }}">
+                        <span>🚗</span> Setup Kendaraan
+                    </a>
+                    <a href="{{ route('agency.rental.promos') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-[12px] text-sm transition {{ request()->routeIs('agency.rental.promos') ? 'bg-[#C1121F]/10 text-[#C1121F] font-semibold' : 'text-gray-600 hover:bg-[#F5F5F5]' }}">
+                        <span>🎫</span> Promo
+                    </a>
                 @endif
                 
+                @endif
+                
+                {{-- Profil (selalu di bawah) --}}
+                <div class="px-1 py-1 mt-2 text-[10px] font-mono uppercase tracking-wider text-gray-400">Pengaturan</div>
                 <a href="{{ route('agency.profile.edit') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-[12px] text-sm transition {{ request()->routeIs('agency.profile.*') ? 'bg-[#C1121F]/10 text-[#C1121F] font-semibold' : 'text-gray-600 hover:bg-[#F5F5F5]' }}">
                     <span>⚙️</span> Profil
                 </a>
@@ -103,6 +166,13 @@
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
                     </button>
                     <h1 class="text-lg font-bold text-[#111111]">@yield('title', 'Dashboard')</h1>
+                    
+                    {{-- Mode Badge --}}
+                    @if($hasAgency && $agency->is_verified)
+                    <span class="text-[10px] font-mono uppercase tracking-wider px-2 py-1 rounded-full border {{ $isRentalMode ? 'bg-orange-50 text-orange-700 border-orange-200' : 'bg-blue-50 text-blue-700 border-blue-200' }}">
+                        {{ $isRentalMode ? 'Mode Rental' : 'Mode Travel' }}
+                    </span>
+                    @endif
                 </div>
                 <div class="flex items-center gap-3">
                     @if($hasAgency && !$agency->is_verified)

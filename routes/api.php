@@ -10,18 +10,22 @@ use App\Http\Controllers\Api\Auth\LoginController as ApiAuthLoginController;
 use App\Http\Controllers\Api\Auth\RegisterController as ApiAuthRegisterController;
 use App\Http\Controllers\Api\Auth\DeviceTokenController as ApiAuthDeviceTokenController;
 
+use App\Http\Controllers\Api\LandingController;
+
 // Public Controllers
 use App\Http\Controllers\Api\Public\HomeController as ApiPublicHomeController;
 use App\Http\Controllers\Api\Public\SearchController as ApiPublicSearchController;
 use App\Http\Controllers\Api\Public\AgencyProfileController as ApiPublicAgencyProfileController;
 use App\Http\Controllers\Api\Public\ListingController as ApiPublicListingController;
 use App\Http\Controllers\Api\Public\ScheduleController as ApiPublicScheduleController;
+use App\Http\Controllers\Api\Public\RentalController as ApiPublicRentalController;
 use App\Http\Controllers\Api\Public\ETicketController as ApiPublicETicketController;
 
 // Customer Controllers
 use App\Http\Controllers\Api\Customer\BookingController as ApiCustomerBookingController;
 use App\Http\Controllers\Api\Customer\ScheduleController as ApiCustomerScheduleController;
 use App\Http\Controllers\Api\Customer\RouteController as ApiCustomerRouteController;
+use App\Http\Controllers\Api\Customer\RentalController as ApiCustomerRentalController;
 use App\Http\Controllers\Api\Customer\AgencyController as ApiCustomerAgencyController;
 use App\Http\Controllers\Api\Customer\PaymentController as ApiCustomerPaymentController;
 use App\Http\Controllers\Api\Customer\ProfileController as ApiCustomerProfileController;
@@ -32,6 +36,7 @@ use App\Http\Controllers\Api\Agency\DashboardController as ApiAgencyDashboardCon
 use App\Http\Controllers\Api\Agency\ProfileController as ApiAgencyProfileController;
 use App\Http\Controllers\Api\Agency\ScheduleController as ApiAgencyScheduleController;
 use App\Http\Controllers\Api\Agency\BookingController as ApiAgencyBookingController;
+use App\Http\Controllers\Api\Agency\RentalController as ApiAgencyRentalController;
 use App\Http\Controllers\Api\Agency\VehicleController as ApiAgencyVehicleController;
 use App\Http\Controllers\Api\Agency\DriverController as ApiAgencyDriverController;
 use App\Http\Controllers\Api\Agency\WalletController as ApiAgencyWalletController;
@@ -67,6 +72,8 @@ use App\Http\Controllers\Api\Admin\SettlementController as ApiAdminSettlementCon
 use App\Http\Controllers\Api\Admin\ReportController as ApiAdminReportController;
 use App\Http\Controllers\Api\Admin\SettingController as ApiAdminSettingController;
 use App\Http\Controllers\Api\Admin\PromoController as ApiAdminPromoController;
+use App\Http\Controllers\Api\Admin\RentalController as ApiAdminRentalController;
+
 
 /*
 |--------------------------------------------------------------------------
@@ -96,10 +103,24 @@ Route::prefix('v1')->group(function () {
     Route::get('/schedules/{id}', [ApiPublicSearchController::class, 'scheduleDetail']);
     Route::get('/schedules/{schedule}/dropoffs/{originStopId}', [ApiPublicScheduleController::class, 'availableDropoffs']);
     Route::get('/nearby-warungs', [ApiPublicSearchController::class, 'nearbyWarungs']);
-
-    // E-Ticket Public
+    Route::get('/rental/vehicle/{vehicle}/availability', [App\Http\Controllers\Api\Public\RentalController::class, 'availability']);
+    Route::get('/rental/vehicle/{vehicle}/availability', [App\Http\Controllers\Api\Public\RentalController::class, 'availability']);
     Route::post('/e-ticket/check', [ApiPublicETicketController::class, 'check']);
     Route::post('/e-ticket/send', [ApiPublicETicketController::class, 'send']);
+
+    // Landing Page Public API (No Auth, CORS allowed)
+    Route::prefix('v1/landing')->group(function () {
+        Route::get('/stats', [App\Http\Controllers\Api\LandingController::class, 'stats']);
+        Route::get('/popular-routes', [App\Http\Controllers\Api\LandingController::class, 'popularRoutes']);
+        Route::get('/top-agencies', [App\Http\Controllers\Api\LandingController::class, 'topAgencies']);
+        Route::get('/testimonials', [App\Http\Controllers\Api\LandingController::class, 'testimonials']);
+        Route::get('/rental-cars', [App\Http\Controllers\Api\LandingController::class, 'rentalCars']);
+        Route::get('/today-schedules', [App\Http\Controllers\Api\LandingController::class, 'todaySchedules']);
+        Route::get('/warungs', [App\Http\Controllers\Api\LandingController::class, 'warungs']);
+        
+        // Single endpoint untuk semua data (lebih efisien)
+        Route::get('/all', [App\Http\Controllers\Api\LandingController::class, 'all']);
+    });
 
     // Midtrans Callback (No Auth) — rate limit + IP whitelist
     Route::middleware(['throttle:60,1', 'midtrans.webhook'])->group(function () {
@@ -137,6 +158,17 @@ Route::prefix('v1')->group(function () {
             Route::post('/bookings', [ApiCustomerBookingController::class, 'store']);
             Route::post('/bookings/{booking}/cancel', [ApiCustomerBookingController::class, 'cancel']);
             Route::get('/bookings/{booking}/e-ticket', [ApiCustomerBookingController::class, 'eTicket']);
+
+            // Rental
+            Route::get('/rentals', [ApiCustomerRentalController::class, 'index']);
+            Route::get('/rentals/vehicles', [ApiCustomerRentalController::class, 'availableVehicles']);
+            Route::post('/rentals', [ApiCustomerRentalController::class, 'store']);
+            Route::get('/rentals/{rental}', [ApiCustomerRentalController::class, 'show']);
+            Route::post('/rentals/{rental}/cancel', [ApiCustomerRentalController::class, 'cancel']);
+            
+            // Dokumen
+            Route::get('/documents/status', [ApiCustomerRentalController::class, 'documentStatus']);
+            Route::post('/documents', [ApiCustomerRentalController::class, 'submitDocuments']);
 
             // Payments
             Route::post('/payments/midtrans', [ApiCustomerPaymentController::class, 'payWithMidtrans']);
@@ -208,6 +240,17 @@ Route::prefix('v1')->group(function () {
             Route::get('/bookings', [ApiAgencyBookingController::class, 'index']);
             Route::get('/bookings/{booking}', [ApiAgencyBookingController::class, 'show']);
             Route::put('/bookings/{booking}/status', [ApiAgencyBookingController::class, 'updateStatus']);
+
+            // Rental
+            Route::get('/rentals', [ApiAgencyRentalController::class, 'index']);
+            Route::get('/rentals/{rental}', [ApiAgencyRentalController::class, 'show']);
+            Route::post('/rentals/{rental}/verify-pickup', [ApiAgencyRentalController::class, 'verifyPickup']);
+            Route::post('/rentals/{rental}/verify-return', [ApiAgencyRentalController::class, 'verifyReturn']);
+            Route::post('/rentals/{rental}/complete', [ApiAgencyRentalController::class, 'complete']);
+            
+            // Kendaraan Rental
+            Route::get('/rental-vehicles', [ApiAgencyRentalController::class, 'rentableVehicles']);
+            Route::post('/vehicles/{vehicle}/rental-setup', [ApiAgencyRentalController::class, 'setupVehicle']);
 
             // Vehicles
             Route::get('/vehicles', [ApiAgencyVehicleController::class, 'index']);
@@ -336,6 +379,15 @@ Route::prefix('v1')->group(function () {
             Route::get('/bookings', [ApiAdminBookingController::class, 'index']);
             Route::get('/bookings/{booking}', [ApiAdminBookingController::class, 'show']);
 
+            // Rental
+            Route::get('/rentals', [ApiAdminRentalController::class, 'index']);
+            Route::get('/rentals/{rental}', [ApiAdminRentalController::class, 'show']);
+            
+            // Dokumen
+            Route::get('/documents/pending', [ApiAdminRentalController::class, 'pendingDocuments']);
+            Route::post('/documents/{document}/verify', [ApiAdminRentalController::class, 'verifyDocument']);
+            Route::post('/documents/{document}/reject', [ApiAdminRentalController::class, 'rejectDocument']);
+            
             // Withdrawals
             Route::get('/withdrawals', [ApiAdminWithdrawalController::class, 'index']);
             Route::get('/withdrawals/pending', [ApiAdminWithdrawalController::class, 'pending']);

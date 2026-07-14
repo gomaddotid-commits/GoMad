@@ -1,6 +1,4 @@
 <?php
-// File: app/Http/Controllers/Web/Admin/SettingController.php
-// Deskripsi: Web Controller untuk pengaturan platform
 
 namespace App\Http\Controllers\Web\Admin;
 
@@ -12,20 +10,53 @@ use Illuminate\View\View;
 
 class SettingController extends Controller
 {
+    /**
+     * Halaman pengaturan
+     */
     public function index(): View
     {
         $settings = PlatformSetting::getAllSettings();
         return view('admin.settings.index', compact('settings'));
     }
 
+    /**
+     * Update pengaturan
+     */
     public function update(Request $request): RedirectResponse
     {
-        foreach ($request->except('_token', '_method') as $key => $value) {
+        // Validasi input
+        $request->validate([
+            'commission_rate' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'warung_commission_rate' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'payment_timeout' => ['nullable', 'integer', 'min:1'],
+            'schedule_min_days' => ['nullable', 'integer', 'min:1'],
+            'minimal_withdrawal' => ['nullable', 'numeric', 'min:0'],
+            'withdrawal_admin_fee' => ['nullable', 'numeric', 'min:0'],
+            'auto_approve_limit' => ['nullable', 'numeric', 'min:0'],
+            'topup_admin_fee' => ['nullable', 'numeric', 'min:0'],
+            'service_fee' => ['nullable', 'numeric', 'min:0'],
+            'platform_fee_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'payment_code_expiry_hours' => ['nullable', 'integer', 'min:1'],
+            'support_phone' => ['nullable', 'string', 'max:20'],
+            'support_email' => ['nullable', 'email', 'max:100'],
+        ]);
+
+        $updatedCount = 0;
+
+        foreach ($request->except(['_token', '_method']) as $key => $value) {
+            // Skip empty values (biarkan nilai existing)
+            if ($value === null || $value === '') {
+                continue;
+            }
+
             PlatformSetting::setValue($key, $value, auth()->id());
+            $updatedCount++;
         }
 
-        return back()->with('success', 'Pengaturan berhasil disimpan.');
+        // Clear cache
+        PlatformSetting::clearCache();
+
+        return redirect()->route('admin.settings')
+            ->with('success', "✅ {$updatedCount} pengaturan berhasil disimpan!");
     }
 }
-
-// End of file

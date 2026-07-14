@@ -57,6 +57,9 @@ class AgencyMiddleware
                 'agency.profile.gallery.remove',
                 'agency.profile.verify',
                 'agency.dashboard',
+                'agency.drivers.index', 'agency.drivers.create',  // 👈 TAMBAH INI
+                'agency.drivers.store', 'agency.drivers.edit',     // 👈 TAMBAH INI
+                'agency.drivers.update', 'agency.drivers.destroy', // 👈 TAMBAH INI
                 'logout',
             ];
 

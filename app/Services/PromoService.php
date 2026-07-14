@@ -294,6 +294,82 @@ class PromoService
             ->latest()
             ->get();
     }
+
+    /**
+     * Get available promos for rental
+     */
+    public function getAvailablePromosForRental(User $user, ?float $rentalAmount = null): Collection
+    {
+        $usedPromoIds = PromoUsage::where('user_id', $user->id)
+            ->pluck('promo_id')
+            ->toArray();
+
+        $query = Promo::active()
+            ->whereNotIn('id', $usedPromoIds)
+            ->forRental(); // Menggunakan scope
+
+        $promos = $query->get();
+
+        // Filter yang memenuhi minimum purchase
+        if ($rentalAmount !== null) {
+            $promos = $promos->filter(function ($promo) use ($rentalAmount) {
+                return $rentalAmount >= (float) $promo->min_purchase;
+            });
+        }
+
+        return $promos;
+    }
+
+    /**
+     * Calculate discount for rental
+     */
+    public function calculateRentalDiscount(Promo $promo, float $rentalAmount): float
+    {
+        // Cek minimum purchase
+        if ((float) $promo->min_purchase > 0 && $rentalAmount < (float) $promo->min_purchase) {
+            return 0;
+        }
+
+        // Gunakan rental_discount_type jika ada
+        if ($promo->rental_discount_type === 'fixed' && (float) $promo->rental_discount_amount > 0) {
+            return min((float) $promo->rental_discount_amount, $rentalAmount);
+        }
+
+        // Default: persentase (gunakan rental_max_discount jika ada, jika tidak gunakan max_discount)
+        $maxDiscount = (float) ($promo->rental_max_discount ?? $promo->max_discount);
+        $discount = $rentalAmount * ((float) $promo->discount_percent / 100);
+        
+        return min($discount, $maxDiscount);
+    }
+
+    /**
+     * Apply promo to rental
+     */
+    public function applyPromoToRental(Rental $rental, Promo $promo): ?PromoUsage
+    {
+        // Validasi
+        if (!$this->canUsePromo($rental->customer, $promo)) {
+            return null;
+        }
+
+        if (!$promo->isForModule('rental')) {
+            return null;
+        }
+
+        $discount = $this->calculateRentalDiscount($promo, (float) $rental->subtotal);
+
+        if ($discount <= 0) {
+            return null;
+        }
+
+        return PromoUsage::create([
+            'promo_id' => $promo->id,
+            'user_id' => $rental->customer_id,
+            'booking_id' => null, // Tidak terkait booking travel
+            'rental_id' => $rental->id,  // 👈 TAMBAHKAN INI (perlu migration)
+            'discount_amount' => $discount,
+        ]);
+    }
 }
 
 // End of file

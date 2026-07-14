@@ -9,7 +9,6 @@ enum TravelClass: string
     case ECONOMY = 'economy';
     case PREMIUM = 'premium';
     case CHARTER = 'charter';
-    case RENTAL = 'rental';
 
     public function label(): string
     {
@@ -17,7 +16,6 @@ enum TravelClass: string
             self::ECONOMY => 'Ekonomi',
             self::PREMIUM => 'Premium',
             self::CHARTER => 'Charter',
-            self::RENTAL => 'Rental',
         };
     }
 
@@ -27,7 +25,6 @@ enum TravelClass: string
             self::ECONOMY => 'Mobil 8 seat, max overload +2 (total max 10), bagasi 15kg/orang',
             self::PREMIUM => 'Sesuai kapasitas (8 seat strict), bagasi 20kg/orang',
             self::CHARTER => 'Sewa mobil + supir (harga flat per mobil)',
-            self::RENTAL => 'Sewa mobil tanpa supir (harga flat)',
         };
     }
 
@@ -37,7 +34,6 @@ enum TravelClass: string
             self::ECONOMY => 2,
             self::PREMIUM => 0,
             self::CHARTER => 0,
-            self::RENTAL => 0,
         };
     }
 
@@ -47,7 +43,6 @@ enum TravelClass: string
             self::ECONOMY => 15.00,
             self::PREMIUM => 20.00,
             self::CHARTER => 25.00,
-            self::RENTAL => 0,
         };
     }
 }

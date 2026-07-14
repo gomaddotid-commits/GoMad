@@ -192,6 +192,16 @@ class User extends Authenticatable
     {
         return $query->where('agency_id', $agencyId);
     }
+
+    public function customerDocuments(): HasOne
+    {
+        return $this->hasOne(CustomerDocument::class);
+    }
+
+    public function rentals(): HasMany
+    {
+        return $this->hasMany(Rental::class, 'customer_id');
+    }
 }
 
 // End of file
