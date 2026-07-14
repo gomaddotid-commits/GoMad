@@ -327,6 +327,7 @@ Route::middleware(['auth', \App\Http\Middleware\Web\AdminMiddleware::class])
         Route::get('/reports', [WebAdminReportController::class, 'index'])->name('reports');
         Route::get('/settings', [WebAdminSettingController::class, 'index'])->name('settings');
         Route::put('/settings', [WebAdminSettingController::class, 'update'])->name('settings.update');
+        Route::post('/test-whatsapp', [WebAdminSettingController::class, 'testWhatsApp'])->name('test-whatsapp');      
     });
 // ADMIN - RENTAL ROUTES
 Route::middleware(['auth', \App\Http\Middleware\Web\AdminMiddleware::class])

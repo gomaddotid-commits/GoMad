@@ -59,4 +59,26 @@ class SettingController extends Controller
         return redirect()->route('admin.settings')
             ->with('success', "✅ {$updatedCount} pengaturan berhasil disimpan!");
     }
+
+    public function testWhatsApp(Request $request): JsonResponse
+    {
+        $request->validate([
+            'phone' => ['required', 'string', 'min:10', 'max:15'],
+            'message' => ['required', 'string', 'max:500'],
+        ]);
+
+        try {
+            app(\App\Services\NotificationService::class)->sendWhatsApp($request->phone, $request->message);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Pesan test berhasil dikirim ke ' . $request->phone,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
 }

@@ -48,6 +48,37 @@ class SettingController extends Controller
             'meta' => null,
         ]);
     }
+
+    /**
+     * Test kirim WhatsApp
+     */
+    public function testWhatsApp(Request $request): JsonResponse
+    {
+        $request->validate([
+            'phone' => ['required', 'string', 'min:10', 'max:15'],
+            'message' => ['required', 'string', 'max:500'],
+        ]);
+
+        try {
+            $notificationService = app(\App\Services\NotificationService::class);
+            $notificationService->sendWhatsApp($request->phone, $request->message);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Pesan test berhasil dikirim ke ' . $request->phone,
+                'data' => [
+                    'phone' => $request->phone,
+                    'driver' => config('gomad.whatsapp.driver', 'log'),
+                    'sent_at' => now()->toISOString(),
+                ],
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal mengirim: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
 }
 
 // End of file

@@ -96,12 +96,12 @@
                 <button @click="searchMode = 'travel'" 
                         :class="searchMode === 'travel' ? 'bg-white shadow text-[#C1121F]' : 'text-gray-500 hover:text-[#111111]'"
                         class="px-6 py-2 rounded-md text-sm font-semibold transition">
-                    🚐 Cari Travel
+                    Cari Travel
                 </button>
                 <button @click="searchMode = 'rental'" 
                         :class="searchMode === 'rental' ? 'bg-white shadow text-[#C1121F]' : 'text-gray-500 hover:text-[#111111]'"
                         class="px-6 py-2 rounded-md text-sm font-semibold transition">
-                    🚗 Cari Rental
+                    Cari Rental
                 </button>
             </div>
         </div>

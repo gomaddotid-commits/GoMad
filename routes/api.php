@@ -74,7 +74,6 @@ use App\Http\Controllers\Api\Admin\SettingController as ApiAdminSettingControlle
 use App\Http\Controllers\Api\Admin\PromoController as ApiAdminPromoController;
 use App\Http\Controllers\Api\Admin\RentalController as ApiAdminRentalController;
 
-
 /*
 |--------------------------------------------------------------------------
 | Public Routes (No Auth)
@@ -416,6 +415,7 @@ Route::prefix('v1')->group(function () {
             Route::get('/settings', [ApiAdminSettingController::class, 'index']);
             Route::put('/settings', [ApiAdminSettingController::class, 'update']);
         });
+ 
     });
 });
 
