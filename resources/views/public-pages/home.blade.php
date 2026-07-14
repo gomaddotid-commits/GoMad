@@ -2,7 +2,7 @@
 
 @section('title', 'Beranda')
 @section('meta_description', 'GoMad - Solusi transportasi Anda. Booking travel antar kota dan sewa mobil dengan mudah, dijemput di rumah, dan diantar ke tujuan.')
-@section('og_image', asset('images/og-home.jpg'))
+@section('og_image', asset('images/og-home.png'))
 
 @section('content')
 @php
