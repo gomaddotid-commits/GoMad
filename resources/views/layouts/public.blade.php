@@ -14,7 +14,7 @@
     {{-- Open Graph --}}
     <meta property="og:title" content="@yield('og_title', \App\Models\PlatformSetting::getValue('app_name', 'GoMad'))">
     <meta property="og:description" content="@yield('og_description', \App\Models\PlatformSetting::getValue('app_tagline', 'Mobilitas orèng Madhurâ'))">
-    <meta property="og:image" content="@yield('og_image', asset('images/og-default.jpg'))">
+    <meta property="og:image" content="@yield('og_image', asset('images/og-default.png'))">
     <meta property="og:url" content="{{ url()->current() }}">
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="GoMad">
