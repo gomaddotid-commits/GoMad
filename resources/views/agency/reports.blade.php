@@ -36,36 +36,36 @@
 @endphp
 
 <div>
-    <h1 class="text-lg font-bold text-[#111111] mb-6">Laporan</h1>
+    <h1 class="text-lg font-bold text-[#111827] mb-6">Laporan</h1>
 
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        <div class="bg-white border border-[#E5E5E5] rounded-[12px] p-5 shadow-sm">
+        <div class="bg-white border border-[#E5E7EB] rounded-[12px] p-5 shadow-gomad">
             <p class="text-[10px] font-mono uppercase tracking-wider text-gray-400">Total Booking</p>
-            <p class="text-2xl font-bold text-[#111111] mt-1">{{ $totalBookings }}</p>
+            <p class="text-2xl font-bold text-[#111827] mt-1">{{ $totalBookings }}</p>
         </div>
-        <div class="bg-white border border-[#E5E5E5] rounded-[12px] p-5 shadow-sm">
+        <div class="bg-white border border-[#E5E7EB] rounded-[12px] p-5 shadow-gomad">
             <p class="text-[10px] font-mono uppercase tracking-wider text-gray-400">Booking Selesai</p>
             <p class="text-2xl font-bold text-green-600 mt-1">{{ $completedBookings }}</p>
         </div>
-        <div class="bg-white border border-[#E5E5E5] rounded-[12px] p-5 shadow-sm">
+        <div class="bg-white border border-[#E5E7EB] rounded-[12px] p-5 shadow-gomad">
             <p class="text-[10px] font-mono uppercase tracking-wider text-gray-400">Total Revenue</p>
-            <p class="text-lg font-bold text-[#C1121F] mt-1">Rp {{ number_format($totalRevenue, 0, ',', '.') }}</p>
+            <p class="text-lg font-bold text-[#BA1826] mt-1">Rp {{ number_format($totalRevenue, 0, ',', '.') }}</p>
         </div>
-        <div class="bg-white border border-[#E5E5E5] rounded-[12px] p-5 shadow-sm">
+        <div class="bg-white border border-[#E5E7EB] rounded-[12px] p-5 shadow-gomad">
             <p class="text-[10px] font-mono uppercase tracking-wider text-gray-400">Saldo Tersedia</p>
             <p class="text-lg font-bold text-green-600 mt-1">Rp {{ number_format($balance['available_balance'], 0, ',', '.') }}</p>
         </div>
     </div>
 
     <div class="grid md:grid-cols-2 gap-6">
-        <div class="bg-white border border-[#E5E5E5] rounded-[12px] p-6 shadow-sm">
-            <h3 class="font-bold text-[#111111] mb-4">💰 Revenue 6 Bulan Terakhir</h3>
+        <div class="bg-white border border-[#E5E7EB] rounded-[12px] p-6 shadow-gomad">
+            <h3 class="font-bold text-[#111827] mb-4">💰 Revenue 6 Bulan Terakhir</h3>
             <div class="relative" style="height: 320px;">
                 <canvas id="agencyReportRevenue"></canvas>
             </div>
         </div>
-        <div class="bg-white border border-[#E5E5E5] rounded-[12px] p-6 shadow-sm">
-            <h3 class="font-bold text-[#111111] mb-4">🎫 Booking per Rute</h3>
+        <div class="bg-white border border-[#E5E7EB] rounded-[12px] p-6 shadow-gomad">
+            <h3 class="font-bold text-[#111827] mb-4">🎫 Booking per Rute</h3>
             <div class="relative" style="height: 320px;">
                 <canvas id="agencyReportRoutes"></canvas>
             </div>
@@ -85,8 +85,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 datasets: [{
                     label: 'Revenue',
                     data: @json($monthlyRevenue),
-                    backgroundColor: 'rgba(193, 18, 31, 0.8)',
-                    borderColor: '#C1121F',
+                    backgroundColor: 'rgba(186, 24, 38, 0.8)',
+                    borderColor: '#BA1826',
                     borderWidth: 1,
                     borderRadius: 8,
                     borderSkipped: false,
@@ -98,7 +98,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 plugins: { 
                     legend: { 
                         display: false,
-                        labels: { color: '#111111' } 
+                        labels: { color: '#111827' } 
                     }, 
                     tooltip: { 
                         callbacks: { 
@@ -110,14 +110,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     y: { 
                         beginAtZero: true, 
                         ticks: { 
-                            font: { family: 'Geist Sans', size: 11 }, 
-                            color: '#111111', 
+                            font: { family: 'Montserrat', size: 11 }, 
+                            color: '#111827', 
                             callback: v => v >= 1000000 ? (v/1000000).toFixed(1)+'M' : v >= 1000 ? (v/1000).toFixed(0)+'K' : v 
                         }, 
-                        grid: { color: '#E5E5E5' } 
+                        grid: { color: '#E5E7EB' } 
                     },
                     x: { 
-                        ticks: { font: { family: 'Geist Sans', size: 11 }, color: '#111111' }, 
+                        ticks: { font: { family: 'Montserrat', size: 11 }, color: '#111827' }, 
                         grid: { display: false } 
                     },
                 },
@@ -134,7 +134,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 datasets: [{
                     label: 'Booking',
                     data: @json($routeCounts),
-                    backgroundColor: ['#C1121F', '#F59E0B', '#3B82F6', '#10B981', '#8B5CF6'],
+                    backgroundColor: ['#BA1826', '#F59E0B', '#3B82F6', '#10B981', '#8B5CF6'],
                     borderRadius: 8,
                     borderSkipped: false,
                 }]
@@ -146,7 +146,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 plugins: { 
                     legend: { 
                         display: false,
-                        labels: { color: '#111111' } 
+                        labels: { color: '#111827' } 
                     } 
                 },
                 scales: {
@@ -154,13 +154,13 @@ document.addEventListener('DOMContentLoaded', function() {
                         beginAtZero: true, 
                         ticks: { 
                             stepSize: 1, 
-                            font: { family: 'Geist Sans', size: 11 }, 
-                            color: '#111111' 
+                            font: { family: 'Montserrat', size: 11 }, 
+                            color: '#111827' 
                         }, 
-                        grid: { color: '#E5E5E5' } 
+                        grid: { color: '#E5E7EB' } 
                     },
                     y: { 
-                        ticks: { font: { family: 'Geist Sans', size: 11 }, color: '#4B5563' }, 
+                        ticks: { font: { family: 'Montserrat', size: 11 }, color: '#4B5563' }, 
                         grid: { display: false } 
                     },
                 },

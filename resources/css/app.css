@@ -2,26 +2,17 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Font Face (Geist) */
-@font-face {
-    font-family: 'Geist Sans';
-    src: url('/fonts/GeistVF.woff2') format('woff2-variations');
-    font-weight: 100 900;
-    font-display: swap;
-}
-@font-face {
-    font-family: 'Geist Mono';
-    src: url('/fonts/GeistMonoVF.woff2') format('woff2-variations');
-    font-weight: 100 900;
-    font-display: swap;
-}
+/* ========================================= */
+/* 1. IMPORT FONT MONTSERRAT (via Google Fonts) */
+/* ========================================= */
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap');
 
-/* BASE STYLES (Menggunakan Hex langsung agar aman) */
+/* BASE STYLES */
 html { scroll-behavior: smooth; }
 body {
-    font-family: 'Geist Sans', system-ui, sans-serif;
-    background-color: #FFFFFF; /* Putih */
-    color: #111111; /* Hitam */
+    font-family: 'Montserrat', system-ui, sans-serif;
+    background-color: #F9FAFB; /* gomad-bg */
+    color: #111827; /* gomad-dark */
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
 }
@@ -33,70 +24,67 @@ body {
 @media (min-width: 768px) { .container-magazine { padding-left: 3rem; padding-right: 3rem; } }
 @media (min-width: 1024px) { .container-magazine { padding-left: 4rem; padding-right: 4rem; } }
 
-/* COMPONENTS */
+/* ========================================= */
+/* 2. GOMAD DESIGN SYSTEM COMPONENTS (CSS)    */
+/* ========================================= */
+
+/* BUTTONS - Font Montserrat Tebal & Rounded 10px */
 .btn-gomad-primary {
-    background-color: #C1121F;
+    background-color: #E42535; /* gomad-cta */
     color: #FFFFFF;
     padding-left: 2rem; padding-right: 2rem;
     padding-top: 0.75rem; padding-bottom: 0.75rem;
-    border-radius: 12px;
-    font-weight: 500;
+    border-radius: 10px;
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 600;
     transition-property: background-color, color, transform;
     transition-duration: 300ms;
 }
-.btn-gomad-primary:hover { background-color: #8A0F18; }
+.btn-gomad-primary:hover { background-color: #BA1826; } /* gomad-primary */
 .btn-gomad-primary:active { transform: scale(0.95); }
 
 .btn-gomad-outline {
-    border: 2px solid #111111;
-    color: #111111;
+    border: 2px solid #111827; /* gomad-dark */
+    color: #111827;
     padding-left: 2rem; padding-right: 2rem;
     padding-top: 0.75rem; padding-bottom: 0.75rem;
-    border-radius: 12px;
+    border-radius: 10px;
+    font-family: 'Montserrat', sans-serif;
     font-weight: 500;
     transition-property: background-color, color, border-color;
     transition-duration: 300ms;
 }
-.btn-gomad-outline:hover { background-color: #111111; color: #FFFFFF; }
+.btn-gomad-outline:hover { background-color: #111827; color: #FFFFFF; }
 
-/* Tambahkan di app.css di bagian bawah */
-#mainHeader .btn-gomad-outline.btn-drawer {
-    border-color: #C1121F !important;
-    color: #C1121F !important;
+.btn-gomad-outline.btn-drawer {
+    border-color: #BA1826 !important;
+    color: #BA1826 !important;
 }
-#mainHeader .btn-gomad-outline.btn-drawer:hover {
-    background-color: #C1121F !important;
+.btn-gomad-outline.btn-drawer:hover {
+    background-color: #BA1826 !important;
     color: #FFFFFF !important;
 }
 
-/* Jika header dalam mode scrolled, tetap gunakan warna hitam untuk tombol drawer */
-#mainHeader.scrolled .btn-gomad-outline.btn-drawer {
-    border-color: #C1121F !important;
-    color: #C1121F !important;
-}
-#mainHeader.scrolled .btn-gomad-outline.btn-drawer:hover {
-    background-color: #C1121F !important;
-    color: #FFFFFF !important;
-}
-
+/* STAT NUMBERS */
 .stat-number {
-    font-family: 'Geist Mono', monospace;
+    font-family: 'Montserrat', monospace;
     font-size: 4.5rem;
     line-height: 1;
     letter-spacing: -0.05em;
-    color: #111111;
+    color: #111827;
 }
 @media (min-width: 768px) { .stat-number { font-size: 8rem; } }
 
+/* CARDS */
 .card-gomad {
     background-color: #FFFFFF;
-    border: 1px solid #E5E5E5;
+    border: 1px solid #E5E7EB; /* gomad-divider */
     border-radius: 12px;
     padding: 1.5rem 2rem;
     transition-property: border-color, background-color;
     transition-duration: 300ms;
 }
-.card-gomad:hover { border-color: #C1121F; background-color: #F5F5F5; }
+.card-gomad:hover { border-color: #BA1826; background-color: #F9FAFB; }
 
 .gomad-map-tiles { filter: grayscale(100%) contrast(1.2); }
 [x-cloak] { display: none !important; }
@@ -106,9 +94,9 @@ body {
 /* HEADER TRANSITION LOGIC (SCROLL vs DEFAULT) */
 /* ========================================= */
 
-/* 1. DEFAULT STATE (Background Merah) */
+/* 1. DEFAULT STATE (Background Merah Utama) */
 #mainHeader {
-    background-color: #C1121F; /* Merah Utama */
+    background-color: #BA1826; /* gomad-primary */
     color: #FFFFFF;
     transition-property: all;
     transition-duration: 300ms;
@@ -140,7 +128,7 @@ body {
     border-color: #FFFFFF;
     color: #FFFFFF;
 }
-#mainHeader .btn-gomad-outline:hover { background-color: #FFFFFF; color: #C1121F; }
+#mainHeader .btn-gomad-outline:hover { background-color: #FFFFFF; color: #BA1826; }
 
 /* Logo Switch - Default */
 #mainHeader .logo-white { display: block; }
@@ -156,31 +144,31 @@ body {
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-    border-bottom: 1px solid #E5E5E5;
+    border-bottom: 1px solid #E5E7EB; /* gomad-divider */
 }
 
 #mainHeader.scrolled .nav-link {
-    color: rgba(193, 18, 31, 0.9); /* Merah Utama */
+    color: rgba(186, 24, 38, 0.9); /* gomad-primary */
 }
-#mainHeader.scrolled .nav-link:hover { color: #C1121F; }
+#mainHeader.scrolled .nav-link:hover { color: #BA1826; }
 
 #mainHeader.scrolled .nav-link::after {
-    background-color: #C1121F;
+    background-color: #BA1826;
 }
 
 /* Scrolled Auth Buttons (Border Merah, Text Merah) */
 #mainHeader.scrolled .btn-gomad-outline {
-    border-color: #C1121F;
-    color: #C1121F;
+    border-color: #BA1826;
+    color: #BA1826;
 }
-#mainHeader.scrolled .btn-gomad-outline:hover { background-color: #C1121F; color: #FFFFFF; }
+#mainHeader.scrolled .btn-gomad-outline:hover { background-color: #BA1826; color: #FFFFFF; }
 
 /* Logo Switch - Scrolled */
 #mainHeader.scrolled .logo-white { display: none; }
 #mainHeader.scrolled .logo-colored { display: block; }
 
 /* Mobile Icon - Scrolled */
-#mainHeader.scrolled .mobile-toggle-btn svg { color: #C1121F; }
+#mainHeader.scrolled .mobile-toggle-btn svg { color: #BA1826; }
 
 /* Infinite Scroll Animation for Popular Routes */
 @keyframes scroll {

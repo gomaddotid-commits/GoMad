@@ -37,7 +37,7 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @stack('styles')
 </head>
-<body class="bg-white text-[#111111] font-sans antialiased">
+<body class="bg-[#F9FAFB] text-[#111827] font-sans antialiased">
 
     {{-- HEADER --}}
     <header class="fixed top-0 left-0 right-0 z-50 h-16 md:h-20" id="mainHeader" x-data="{ mobileMenu: false }">
@@ -53,8 +53,9 @@
             <nav class="hidden lg:flex items-center gap-8">
                 @foreach([
                     ['route' => 'home', 'label' => 'Beranda'],
-                    ['route' => 'search', 'label' => 'Cari Jadwal'],
-                    ['route' => 'rental.public', 'label' => 'Sewa Kendaraan'],                    ['route' => 'listing', 'label' => 'Agency'],
+                    ['route' => 'search', 'label' => 'Cari Travel'],
+                    ['route' => 'rental.public', 'label' => 'Sewa Kendaraan'],
+                    ['route' => 'listing', 'label' => 'Agency'],
                     ['route' => 'eticket.public', 'label' => 'E-Ticket']
                 ] as $link)
                     <a href="{{ route($link['route']) }}"
@@ -74,7 +75,7 @@
                     </a>
                 @else
                     <a href="{{ route('login') }}" class="text-sm font-medium transition-colors nav-link">Masuk</a>
-                    <a href="{{ route('register') }}" class="btn-gomad-primary bg-white text-[#C1121F] hover:bg-[#111111] hover:text-white text-sm py-2 px-5 transition-all">Daftar</a>
+                    <a href="{{ route('register') }}" class="btn-gomad-primary bg-white text-[#E42535] hover:bg-[#111827] hover:text-white text-sm py-2 px-5 transition-all">Daftar</a>
                 @endauth
             </div>
 
@@ -93,7 +94,7 @@
         {{-- MOBILE DRAWER --}}
         <div x-show="mobileMenu" x-cloak
              @click="mobileMenu = false"
-             class="fixed inset-0 bg-[#111111]/50 z-40 lg:hidden"
+             class="fixed inset-0 bg-[#111827]/50 z-40 lg:hidden"
              x-transition:enter="transition ease-out duration-300"
              x-transition:enter-start="opacity-0"
              x-transition:enter-end="opacity-100"
@@ -116,15 +117,15 @@
                 <img src="{{ asset('images/logo-merah.png') }}" alt="GoMad" class="h-10 w-auto">
             </div>
 
-            <div class="flex flex-col gap-6 text-lg font-medium text-[#111111]">
-                <a href="{{ route('home') }}" class="border-b border-[#E5E5E5] pb-3 hover:text-[#C1121F] transition">Beranda</a>
-                <a href="{{ route('search') }}" class="border-b border-[#E5E5E5] pb-3 hover:text-[#C1121F] transition">Cari Jadwal</a>
-                <a href="{{ route('listing') }}" class="border-b border-[#E5E5E5] pb-3 hover:text-[#C1121F] transition">Agency</a>
-                <a href="{{ route('rental.public') }}" class="border-b border-[#E5E5E5] pb-3 hover:text-[#C1121F] transition">Sewa Kendaraan</a>
-                <a href="{{ route('eticket.public') }}" class="border-b border-[#E5E5E5] pb-3 hover:text-[#C1121F] transition">Cek E-Ticket</a>
+            <div class="flex flex-col gap-6 text-lg font-medium text-[#111827]">
+                <a href="{{ route('home') }}" class="border-b border-[#E5E7EB] pb-3 hover:text-[#BA1826] transition">Beranda</a>
+                <a href="{{ route('search') }}" class="border-b border-[#E5E7EB] pb-3 hover:text-[#BA1826] transition">Cari Travel</a>
+                <a href="{{ route('listing') }}" class="border-b border-[#E5E7EB] pb-3 hover:text-[#BA1826] transition">Agency</a>
+                <a href="{{ route('rental.public') }}" class="border-b border-[#E5E7EB] pb-3 hover:text-[#BA1826] transition">Sewa Kendaraan</a>
+                <a href="{{ route('eticket.public') }}" class="border-b border-[#E5E7EB] pb-3 hover:text-[#BA1826] transition">Cek E-Ticket</a>
             </div>
 
-            <div class="mt-auto pt-8 border-t border-[#E5E5E5] flex flex-col gap-3">
+            <div class="mt-auto pt-8 border-t border-[#E5E7EB] flex flex-col gap-3">
                 @auth
                     <a href="{{ route(\App\Enums\UserRole::from(auth()->user()->role)->defaultRedirectRoute()) }}" class="btn-gomad-primary text-center w-full">Dashboard</a>
                 @else
@@ -141,26 +142,26 @@
     </main>
 
     {{-- BOTTOM NAV --}}
-    <nav class="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-[#E5E5E5] z-40 lg:hidden">
+    <nav class="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-[#E5E7EB] z-40 lg:hidden">
         <div class="flex items-center justify-around py-2">
-            <a href="{{ route('home') }}" class="flex flex-col items-center gap-1 text-[10px] {{ request()->routeIs('home') ? 'text-[#C1121F]' : 'text-gray-500' }}">
+            <a href="{{ route('home') }}" class="flex flex-col items-center gap-1 text-[10px] {{ request()->routeIs('home') ? 'text-[#BA1826]' : 'text-gray-500' }}">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3"/></svg>
                 <span>Beranda</span>
             </a>
-            <a href="{{ route('search') }}" class="flex flex-col items-center gap-1 text-[10px] {{ request()->routeIs('search') ? 'text-[#C1121F]' : 'text-gray-500' }}">
+            <a href="{{ route('search') }}" class="flex flex-col items-center gap-1 text-[10px] {{ request()->routeIs('search') ? 'text-[#BA1826]' : 'text-gray-500' }}">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-                <span>Cari</span>
+                <span>Cari Travel</span>
             </a>
-            <a href="{{ route('listing') }}" class="flex flex-col items-center gap-1 text-[10px] {{ request()->routeIs('listing') ? 'text-[#C1121F]' : 'text-gray-500' }}">
+            <a href="{{ route('listing') }}" class="flex flex-col items-center gap-1 text-[10px] {{ request()->routeIs('listing') ? 'text-[#BA1826]' : 'text-gray-500' }}">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3"/></svg>
                 <span>Agency</span>
             </a>
-            <a href="{{ route('rental.public') }}" class="flex flex-col items-center gap-1 text-[10px] {{ request()->routeIs('rental.public') ? 'text-[#C1121F]' : 'text-gray-500' }}">
+            <a href="{{ route('rental.public') }}" class="flex flex-col items-center gap-1 text-[10px] {{ request()->routeIs('rental.public') ? 'text-[#BA1826]' : 'text-gray-500' }}">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
                 <span>Sewa Kendaraan</span>
             </a>
             @auth
-            <a href="{{ route('customer.profile') }}" class="flex flex-col items-center gap-1 text-[10px] {{ request()->routeIs('customer.profile') ? 'text-[#C1121F]' : 'text-gray-500' }}">
+            <a href="{{ route('customer.profile') }}" class="flex flex-col items-center gap-1 text-[10px] {{ request()->routeIs('customer.profile') ? 'text-[#BA1826]' : 'text-gray-500' }}">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14"/></svg>
                 <span>Profil</span>
             </a>
@@ -169,12 +170,12 @@
     </nav>
 
     {{-- FOOTER --}}
-    <footer class="bg-[#111111] text-white py-16 md:py-24 relative overflow-hidden mt-12">
+    <footer class="bg-[#111827] text-white py-16 md:py-24 relative overflow-hidden mt-12">
         <div class="container-magazine grid grid-cols-1 md:grid-cols-4 gap-12 relative z-10">
             <div class="md:col-span-1 flex flex-col gap-4">
                 <div class="flex items-center gap-2">
                     <span class="text-4xl font-bold tracking-tighter">Go</span>
-                    <span class="text-[#C1121F] text-4xl font-bold tracking-tighter">Mad</span>
+                    <span class="text-[#BA1826] text-4xl font-bold tracking-tighter">Mad</span>
                 </div>
                 <p class="text-gray-400 text-sm leading-relaxed max-w-xs">
                     {{ \App\Models\PlatformSetting::getValue('app_tagline', 'Solusi transportasi Anda.') }}
@@ -194,7 +195,7 @@
                     <h4 class="font-semibold text-white mb-4">Tautan</h4>
                     <ul class="space-y-2 text-gray-400">
                         <li><a href="{{ route('home') }}" class="hover:text-white transition">Beranda</a></li>
-                        <li><a href="{{ route('search') }}" class="hover:text-white transition">Cari Jadwal</a></li>
+                        <li><a href="{{ route('search') }}" class="hover:text-white transition">Cari Travel</a></li>
                         <li><a href="{{ route('eticket.public') }}" class="hover:text-white transition">Cek E-Ticket</a></li>
                         <li><a href="{{ route('download-app') }}" class="hover:text-white transition">Download App</a></li>
                     </ul>

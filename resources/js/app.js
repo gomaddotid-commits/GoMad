@@ -14,8 +14,8 @@ L.Icon.Default.mergeOptions({
 
 // --- SETTING GLOBAL CHART.JS ---
 // Agar chart tidak putih semua, set warna teks dan grid menjadi gelap
-Chart.defaults.color = '#111111'; // Warna teks (label, legend, tooltip)
-Chart.defaults.borderColor = '#E5E5E5'; // Warna grid line
+Chart.defaults.color = '#111827'; // Warna teks (label, legend, tooltip) - gomad-dark
+Chart.defaults.borderColor = '#E5E7EB'; // Warna grid line - gomad-divider
 
 window.Alpine = Alpine;
 window.Chart = Chart;
@@ -29,12 +29,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const updateHeader = () => {
             if (window.scrollY > 50) {
                 header.classList.add('scrolled');
-                header.classList.add('bg-white/90', 'backdrop-blur-md', 'border-b', 'border-[#E5E5E5]');
-                header.classList.remove('bg-[#C1121F]', 'shadow-none');
+                header.classList.add('bg-white/90', 'backdrop-blur-md', 'border-b', 'border-[#E5E7EB]');
+                header.classList.remove('bg-[#BA1826]', 'shadow-none');
             } else {
                 header.classList.remove('scrolled');
-                header.classList.remove('bg-white/90', 'backdrop-blur-md', 'border-b', 'border-[#E5E5E5]');
-                header.classList.add('bg-[#C1121F]');
+                header.classList.remove('bg-white/90', 'backdrop-blur-md', 'border-b', 'border-[#E5E7EB]');
+                header.classList.add('bg-[#BA1826]');
             }
         };
         updateHeader();

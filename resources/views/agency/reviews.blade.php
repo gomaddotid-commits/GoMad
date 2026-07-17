@@ -3,17 +3,17 @@
 @section('title', 'Review')
 @section('content')
 <div>
-    <h1 class="text-2xl font-bold text-[#111111] mb-6">Review Customer</h1>
+    <h1 class="text-2xl font-bold text-[#111827] mb-6">Review Customer</h1>
 
     @if($reviews->isEmpty())
-    <div class="bg-white border border-[#E5E5E5] rounded-[12px] p-8 text-center text-gray-500 shadow-sm font-light">Belum ada review.</div>
+    <div class="bg-white border border-[#E5E7EB] rounded-[12px] p-8 text-center text-gray-500 shadow-gomad font-light">Belum ada review.</div>
     @else
     <div class="space-y-4">
         @foreach($reviews as $review)
-        <div class="bg-white border border-[#E5E5E5] rounded-[12px] p-5 shadow-sm hover:border-[#C1121F] transition-colors">
+        <div class="bg-white border border-[#E5E7EB] rounded-[12px] p-5 shadow-gomad hover:border-[#BA1826] transition-colors">
             <div class="flex justify-between items-start">
                 <div>
-                    <p class="font-semibold text-[#111111]">{{ $review->customer->name ?? 'Customer' }}</p>
+                    <p class="font-semibold text-[#111827]">{{ $review->customer->name ?? 'Customer' }}</p>
                     <div class="text-yellow-400 text-sm">
                         @for($i = 1; $i <= 5; $i++){{ $i <= $review->rating ? '⭐' : '☆' }}@endfor
                     </div>

@@ -15,7 +15,7 @@
 
 <div>
     {{-- Welcome Banner --}}
-    <div class="bg-gradient-to-r from-[#C1121F] to-[#8A0F18] rounded-[12px] p-6 mb-8 text-white shadow-sm">
+    <div class="bg-gradient-to-r from-[#BA1826] to-[#8A0F18] rounded-[12px] p-6 mb-8 text-white shadow-gomad">
         <div class="flex items-center justify-between">
             <div>
                 <h1 class="text-2xl font-bold">Dashboard Rental</h1>
@@ -30,39 +30,39 @@
 
     {{-- Stat Cards --}}
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        <div class="bg-white border border-[#E5E5E5] rounded-[12px] p-5 shadow-sm">
+        <div class="bg-white border border-[#E5E7EB] rounded-[12px] p-5 shadow-gomad">
             <div class="flex items-center gap-3">
-                <div class="w-10 h-10 bg-yellow-50 rounded-[12px] flex items-center justify-center text-xl border border-yellow-200">⏳</div>
+                <div class="w-10 h-10 bg-yellow-50 rounded-[10px] flex items-center justify-center text-xl border border-yellow-200">⏳</div>
                 <div>
                     <p class="text-[10px] font-mono uppercase tracking-wider text-gray-400">Pending</p>
-                    <p class="text-2xl font-bold text-[#111111]">{{ $stats['pending'] }}</p>
+                    <p class="text-2xl font-bold text-[#111827]">{{ $stats['pending'] }}</p>
                 </div>
             </div>
         </div>
-        <div class="bg-white border border-[#E5E5E5] rounded-[12px] p-5 shadow-sm">
+        <div class="bg-white border border-[#E5E7EB] rounded-[12px] p-5 shadow-gomad">
             <div class="flex items-center gap-3">
-                <div class="w-10 h-10 bg-blue-50 rounded-[12px] flex items-center justify-center text-xl border border-blue-200">🚗</div>
+                <div class="w-10 h-10 bg-blue-50 rounded-[10px] flex items-center justify-center text-xl border border-blue-200">🚗</div>
                 <div>
                     <p class="text-[10px] font-mono uppercase tracking-wider text-gray-400">Siap Diambil</p>
-                    <p class="text-2xl font-bold text-[#111111]">{{ $rentals->where('status', 'paid')->count() }}</p>
+                    <p class="text-2xl font-bold text-[#111827]">{{ $rentals->where('status', 'paid')->count() }}</p>
                 </div>
             </div>
         </div>
-        <div class="bg-white border border-[#E5E5E5] rounded-[12px] p-5 shadow-sm">
+        <div class="bg-white border border-[#E5E7EB] rounded-[12px] p-5 shadow-gomad">
             <div class="flex items-center gap-3">
-                <div class="w-10 h-10 bg-indigo-50 rounded-[12px] flex items-center justify-center text-xl border border-indigo-200">🏃</div>
+                <div class="w-10 h-10 bg-indigo-50 rounded-[10px] flex items-center justify-center text-xl border border-indigo-200">🏃</div>
                 <div>
                     <p class="text-[10px] font-mono uppercase tracking-wider text-gray-400">Sedang Disewa</p>
-                    <p class="text-2xl font-bold text-[#111111]">{{ $stats['active'] }}</p>
+                    <p class="text-2xl font-bold text-[#111827]">{{ $stats['active'] }}</p>
                 </div>
             </div>
         </div>
-        <div class="bg-white border border-[#E5E5E5] rounded-[12px] p-5 shadow-sm">
+        <div class="bg-white border border-[#E5E7EB] rounded-[12px] p-5 shadow-gomad">
             <div class="flex items-center gap-3">
-                <div class="w-10 h-10 bg-green-50 rounded-[12px] flex items-center justify-center text-xl border border-green-200">💰</div>
+                <div class="w-10 h-10 bg-green-50 rounded-[10px] flex items-center justify-center text-xl border border-green-200">💰</div>
                 <div>
                     <p class="text-[10px] font-mono uppercase tracking-wider text-gray-400">Revenue</p>
-                    <p class="text-lg font-bold text-[#C1121F]">Rp {{ number_format($stats['total_revenue'], 0, ',', '.') }}</p>
+                    <p class="text-lg font-bold text-[#BA1826]">Rp {{ number_format($stats['total_revenue'], 0, ',', '.') }}</p>
                 </div>
             </div>
         </div>
@@ -70,29 +70,29 @@
 
     {{-- Quick Actions --}}
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        <a href="{{ route('agency.rental.vehicles') }}" class="bg-white border border-[#E5E5E5] rounded-[12px] p-6 text-center shadow-sm hover:border-[#C1121F] transition-colors group">
-            <div class="w-12 h-12 bg-[#C1121F]/5 rounded-[12px] flex items-center justify-center text-xl mx-auto mb-3 group-hover:scale-110 transition-transform border border-[#E5E5E5]">🚗</div>
-            <p class="font-semibold text-[#111111] text-sm">Setup Kendaraan</p>
+        <a href="{{ route('agency.rental.vehicles') }}" class="bg-white border border-[#E5E7EB] rounded-[12px] p-6 text-center shadow-gomad hover:border-[#BA1826] transition-colors group">
+            <div class="w-12 h-12 bg-[#BA1826]/5 rounded-[10px] flex items-center justify-center text-xl mx-auto mb-3 group-hover:scale-110 transition-transform border border-[#E5E7EB]">🚗</div>
+            <p class="font-semibold text-[#111827] text-sm">Setup Kendaraan</p>
         </a>
-        <a href="{{ route('agency.rental.index') }}" class="bg-white border border-[#E5E5E5] rounded-[12px] p-6 text-center shadow-sm hover:border-[#C1121F] transition-colors group">
-            <div class="w-12 h-12 bg-[#C1121F]/5 rounded-[12px] flex items-center justify-center text-xl mx-auto mb-3 group-hover:scale-110 transition-transform border border-[#E5E5E5]">🎫</div>
-            <p class="font-semibold text-[#111111] text-sm">Semua Rental</p>
+        <a href="{{ route('agency.rental.index') }}" class="bg-white border border-[#E5E7EB] rounded-[12px] p-6 text-center shadow-gomad hover:border-[#BA1826] transition-colors group">
+            <div class="w-12 h-12 bg-[#BA1826]/5 rounded-[10px] flex items-center justify-center text-xl mx-auto mb-3 group-hover:scale-110 transition-transform border border-[#E5E7EB]">🎫</div>
+            <p class="font-semibold text-[#111827] text-sm">Semua Rental</p>
         </a>
-        <a href="{{ route('agency.wallet.index') }}" class="bg-white border border-[#E5E5E5] rounded-[12px] p-6 text-center shadow-sm hover:border-[#C1121F] transition-colors group">
-            <div class="w-12 h-12 bg-[#C1121F]/5 rounded-[12px] flex items-center justify-center text-xl mx-auto mb-3 group-hover:scale-110 transition-transform border border-[#E5E5E5]">💰</div>
-            <p class="font-semibold text-[#111111] text-sm">Dompet</p>
+        <a href="{{ route('agency.wallet.index') }}" class="bg-white border border-[#E5E7EB] rounded-[12px] p-6 text-center shadow-gomad hover:border-[#BA1826] transition-colors group">
+            <div class="w-12 h-12 bg-[#BA1826]/5 rounded-[10px] flex items-center justify-center text-xl mx-auto mb-3 group-hover:scale-110 transition-transform border border-[#E5E7EB]">💰</div>
+            <p class="font-semibold text-[#111827] text-sm">Dompet</p>
         </a>
-        <a href="{{ route('agency.reports') }}" class="bg-white border border-[#E5E5E5] rounded-[12px] p-6 text-center shadow-sm hover:border-[#C1121F] transition-colors group">
-            <div class="w-12 h-12 bg-[#C1121F]/5 rounded-[12px] flex items-center justify-center text-xl mx-auto mb-3 group-hover:scale-110 transition-transform border border-[#E5E5E5]">📈</div>
-            <p class="font-semibold text-[#111111] text-sm">Laporan</p>
+        <a href="{{ route('agency.reports') }}" class="bg-white border border-[#E5E7EB] rounded-[12px] p-6 text-center shadow-gomad hover:border-[#BA1826] transition-colors group">
+            <div class="w-12 h-12 bg-[#BA1826]/5 rounded-[10px] flex items-center justify-center text-xl mx-auto mb-3 group-hover:scale-110 transition-transform border border-[#E5E7EB]">📈</div>
+            <p class="font-semibold text-[#111827] text-sm">Laporan</p>
         </a>
     </div>
 
     {{-- Rental Terbaru --}}
-    <div class="bg-white border border-[#E5E5E5] rounded-[12px] p-6 shadow-sm">
-        <div class="flex justify-between items-center mb-4 border-b border-[#E5E5E5] pb-3">
-            <h2 class="font-bold text-lg text-[#111111]">Rental Terbaru</h2>
-            <a href="{{ route('agency.rental.index') }}" class="text-[#C1121F] text-sm hover:underline font-medium">Lihat Semua →</a>
+    <div class="bg-white border border-[#E5E7EB] rounded-[12px] p-6 shadow-gomad">
+        <div class="flex justify-between items-center mb-4 border-b border-[#E5E7EB] pb-3">
+            <h2 class="font-bold text-lg text-[#111827]">Rental Terbaru</h2>
+            <a href="{{ route('agency.rental.index') }}" class="text-[#BA1826] text-sm hover:underline font-medium">Lihat Semua →</a>
         </div>
 
         @if($recentRentals->isEmpty())
@@ -100,7 +100,7 @@
         @else
         <div class="overflow-x-auto">
             <table class="w-full text-sm">
-                <thead class="bg-[#F5F5F5] border-b border-[#E5E5E5]">
+                <thead class="bg-[#F9FAFB] border-b border-[#E5E7EB]">
                     <tr>
                         <th class="px-4 py-3 text-left font-mono uppercase tracking-wider text-xs text-gray-500">Kode</th>
                         <th class="px-4 py-3 text-left font-mono uppercase tracking-wider text-xs text-gray-500">Customer</th>
@@ -110,11 +110,11 @@
                         <th class="px-4 py-3 text-right font-mono uppercase tracking-wider text-xs text-gray-500">Aksi</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-[#E5E5E5]">
+                <tbody class="divide-y divide-[#E5E7EB]">
                     @foreach($recentRentals as $rental)
-                    <tr class="hover:bg-[#F5F5F5]">
-                        <td class="px-4 py-3 font-mono text-xs text-[#111111]">{{ $rental->rental_code }}</td>
-                        <td class="px-4 py-3 text-sm text-[#111111]">{{ $rental->customer->name ?? '-' }}</td>
+                    <tr class="hover:bg-[#F9FAFB]">
+                        <td class="px-4 py-3 font-mono text-xs text-[#111827]">{{ $rental->rental_code }}</td>
+                        <td class="px-4 py-3 text-sm text-[#111827]">{{ $rental->customer->name ?? '-' }}</td>
                         <td class="px-4 py-3 text-sm text-gray-500 font-light font-mono">{{ $rental->vehicle->plate_number ?? '-' }}</td>
                         <td class="px-4 py-3 text-center">
                             <span class="px-2 py-1 rounded-full text-[10px] font-mono uppercase tracking-wider border
@@ -125,9 +125,9 @@
                                 {{ $rental->status_label }}
                             </span>
                         </td>
-                        <td class="px-4 py-3 text-right font-mono text-[#C1121F]">Rp {{ number_format($rental->total_price, 0, ',', '.') }}</td>
+                        <td class="px-4 py-3 text-right font-mono text-[#BA1826]">Rp {{ number_format($rental->total_price, 0, ',', '.') }}</td>
                         <td class="px-4 py-3 text-right">
-                            <a href="{{ route('agency.rental.show', $rental) }}" class="text-[#C1121F] hover:underline text-xs font-medium">Detail</a>
+                            <a href="{{ route('agency.rental.show', $rental) }}" class="text-[#BA1826] hover:underline text-xs font-medium">Detail</a>
                         </td>
                     </tr>
                     @endforeach
