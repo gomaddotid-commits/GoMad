@@ -2,143 +2,142 @@
 
 @section('title', 'Tambah Rute')
 @section('content')
-<div>
+<div x-data="routeForm()">
     <h1 class="text-lg font-bold text-[#111111] mb-6">Tambah Rute Baru</h1>
 
-    <form action="{{ route('admin.routes.store') }}" method="POST" enctype="multipart/form-data" class="bg-white border border-[#E5E5E5] rounded-[12px] p-6 shadow-sm space-y-6">
+    <form action="{{ route('admin.routes.store') }}" method="POST" enctype="multipart/form-data" class="space-y-6">
         @csrf
 
         {{-- Foto Rute --}}
-        <div>
+        <div class="bg-white border border-[#E5E5E5] rounded-[12px] p-6 shadow-sm">
             <label class="block text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-2">🖼️ Foto Rute</label>
             <div class="flex items-center gap-4">
                 <div class="w-40 h-32 bg-[#F5F5F5] border border-[#E5E5E5] rounded-[12px] flex items-center justify-center text-4xl overflow-hidden" id="photoPreview">
                     <span>🗺️</span>
                 </div>
                 <div class="flex-1">
-                    <input type="file" name="photo" id="photoInput" accept="image/*"
-                           class="w-full text-sm" onchange="previewPhoto(event)">
-                    <p class="text-[10px] text-gray-400 mt-1 font-light">Format: JPG, PNG, WEBP. Max 5MB. Rekomendasi: 800x600px</p>
+                    <input type="file" name="photo" accept="image/*" class="w-full text-sm" onchange="previewPhoto(event)">
+                    <p class="text-[10px] text-gray-400 mt-1 font-light">Format: JPG, PNG, WEBP. Max 5MB.</p>
                 </div>
             </div>
         </div>
 
-        {{-- Informasi Dasar --}}
-        <div class="grid md:grid-cols-2 gap-4">
-            <div>
-                <label class="block text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">Nama Rute <span class="text-[#C1121F]">*</span></label>
-                <input type="text" name="route_name" value="{{ old('route_name') }}"
-                       class="w-full px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111] transition"
-                       placeholder="Sumenep - Surabaya" required>
-            </div>
-            <div>
-                <label class="block text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">Jarak (km)</label>
-                <input type="number" name="distance_km" value="{{ old('distance_km') }}" step="0.01"
-                       class="w-full px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111] transition">
-            </div>
-            <div>
-                <label class="block text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">Kota Asal <span class="text-[#C1121F]">*</span></label>
-                <input type="text" name="origin_city" value="{{ old('origin_city') }}"
-                       class="w-full px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111] transition" required>
-            </div>
-            <div>
-                <label class="block text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">Kota Tujuan <span class="text-[#C1121F]">*</span></label>
-                <input type="text" name="destination_city" value="{{ old('destination_city') }}"
-                       class="w-full px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111] transition" required>
-            </div>
-            <div>
-                <label class="block text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">Estimasi Durasi (menit)</label>
-                <input type="number" name="estimated_duration" value="{{ old('estimated_duration') }}"
-                       class="w-full px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111] transition" placeholder="300">
-            </div>
-            <div>
-                <label class="block text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">Status</label>
-                <select name="is_active" class="w-full px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111] transition">
-                    <option value="1">Aktif</option>
-                    <option value="0">Nonaktif</option>
-                </select>
-            </div>
-        </div>
-
-        {{-- Harga & COD --}}
-        <div class="grid md:grid-cols-3 gap-4">
-            <div>
-                <label class="block text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">Maksimal Harga Tiket (Rp)</label>
-                <input type="number" name="max_price" value="{{ old('max_price') }}"
-                    class="w-full px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111] transition"
-                    placeholder="Batas maksimal harga">
-                <p class="text-[10px] text-gray-400 mt-1 font-light">Kosongkan jika tidak ada batas</p>
-            </div>
-            <div>
-                <label class="block text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">Minimal Deposit COD (Rp)</label>
-                <input type="number" name="cod_min_deposit" value="{{ old('cod_min_deposit', 500000) }}"
-                    class="w-full px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111] transition">
-                <p class="text-[10px] text-gray-400 mt-1 font-light">Saldo mengendap agency untuk bisa COD</p>
-            </div>
-            <div>
-                <label class="block text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">COD Tersedia?</label>
-                <select name="cod_available" class="w-full px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111] transition">
-                    <option value="0">Tidak</option>
-                    <option value="1">Ya</option>
-                </select>
-                <p class="text-[10px] text-gray-400 mt-1 font-light">Izinkan pembayaran COD di rute ini</p>
-            </div>
-        </div>
-
-        {{-- Metode Pembayaran --}}
-        <div class="border-t border-[#E5E5E5] pt-6 mt-6">
-            <h3 class="font-mono uppercase tracking-wider text-xs font-bold text-[#111111] mb-3">💳 Metode Pembayaran yang Tersedia</h3>
-            <p class="text-[10px] text-gray-400 mb-4 font-light">Pilih metode pembayaran yang bisa digunakan customer di rute ini. Kosongkan semua untuk mengaktifkan semua metode.</p>
+        {{-- Pilih Kota Asal & Tujuan --}}
+        <div class="bg-white border border-[#E5E5E5] rounded-[12px] p-6 shadow-sm">
+            <h2 class="font-bold text-lg text-[#111111] mb-4">📍 Pilih Kota</h2>
             
-            <div class="grid grid-cols-3 gap-4">
-                <label class="flex items-center gap-3 p-4 border-2 border-[#E5E5E5] rounded-[12px] cursor-pointer hover:border-[#C1121F] transition has-[:checked]:border-[#C1121F] has-[:checked]:bg-[#C1121F]/5">
-                    <input type="checkbox" name="payment_methods[]" value="midtrans" class="w-5 h-5 text-[#C1121F] rounded border-[#E5E5E5] focus:ring-[#C1121F]" checked>
-                    <div>
-                        <span class="text-sm font-semibold text-[#111111]">💳 Online (Midtrans)</span>
-                        <span class="text-[10px] text-gray-400 block font-light">Transfer Bank, VA, QRIS, E-Wallet</span>
-                    </div>
-                </label>
-                
-                <label class="flex items-center gap-3 p-4 border-2 border-[#E5E5E5] rounded-[12px] cursor-pointer hover:border-[#C1121F] transition has-[:checked]:border-[#C1121F] has-[:checked]:bg-[#C1121F]/5">
-                    <input type="checkbox" name="payment_methods[]" value="cash" class="w-5 h-5 text-[#C1121F] rounded border-[#E5E5E5] focus:ring-[#C1121F]" checked>
-                    <div>
-                        <span class="text-sm font-semibold text-[#111111]">🏪 Warung GoMad (Cash)</span>
-                        <span class="text-[10px] text-gray-400 block font-light">Bayar tunai di warung terdekat</span>
-                    </div>
-                </label>
-                
-                <label class="flex items-center gap-3 p-4 border-2 border-[#E5E5E5] rounded-[12px] cursor-pointer hover:border-[#C1121F] transition has-[:checked]:border-[#C1121F] has-[:checked]:bg-[#C1121F]/5">
-                    <input type="checkbox" name="payment_methods[]" value="cod" class="w-5 h-5 text-[#C1121F] rounded border-[#E5E5E5] focus:ring-[#C1121F]">
-                    <div>
-                        <span class="text-sm font-semibold text-[#111111]">🚗 COD (Bayar ke Sopir)</span>
-                        <span class="text-[10px] text-gray-400 block font-light">Bayar tunai saat penjemputan</span>
-                    </div>
-                </label>
-            </div>
-            <p class="text-[10px] text-gray-400 mt-2 font-light">Jika tidak ada yang dicentang, semua metode pembayaran akan tersedia.</p>
-        </div>
-
-        <div>
-            <label class="block text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">Deskripsi Rute</label>
-            <textarea name="description" rows="3" class="w-full px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111] transition"
-                      placeholder="Deskripsi singkat tentang rute ini...">{{ old('description') }}</textarea>
-        </div>
-
-        {{-- Stops --}}
-        <div class="border-t border-[#E5E5E5] pt-6">
-            <h3 class="font-mono uppercase tracking-wider text-xs font-bold text-[#111111] mb-3">🛑 Stops (Minimal 2)</h3>
-            <div id="stopsContainer" class="space-y-3">
-                <div class="stop-item flex gap-3 items-center">
-                    <input type="text" name="stops[0][city_name]" placeholder="Nama Kota" class="flex-1 px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111]" required>
-                    <input type="number" name="stops[0][stop_order]" value="1" class="w-20 px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111]" required>
-                    <input type="number" name="stops[0][latitude]" step="0.0000001" placeholder="Latitude" class="w-32 px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111]">
-                    <input type="number" name="stops[0][longitude]" step="0.0000001" placeholder="Longitude" class="w-32 px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111]">
+            <div class="grid md:grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label class="block text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">
+                        Kota Asal <span class="text-[#C1121F]">*</span>
+                    </label>
+                    <select name="origin_city_code" x-model="origin" @change="loadAvailableStops()" 
+                            class="w-full px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111] transition" required>
+                        <option value="">Pilih Kota Asal</option>
+                        @foreach($cities as $city)
+                        <option value="{{ $city->code }}">{{ $city->name }} ({{ $city->province->name }})</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">
+                        Kota Tujuan <span class="text-[#C1121F]">*</span>
+                    </label>
+                    <select name="destination_city_code" x-model="destination" @change="loadAvailableStops()"
+                            class="w-full px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111] transition" required>
+                        <option value="">Pilih Kota Tujuan</option>
+                        @foreach($cities as $city)
+                        <option value="{{ $city->code }}" :disabled="origin === '{{ $city->code }}'">{{ $city->name }} ({{ $city->province->name }})</option>
+                        @endforeach
+                    </select>
                 </div>
             </div>
-            <button type="button" onclick="addStop()" class="mt-3 text-[#C1121F] text-sm font-medium hover:underline">+ Tambah Stop</button>
+
+            {{-- Nama Rute (auto-generated) --}}
+            <div>
+                <label class="block text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">Nama Rute</label>
+                <input type="text" name="route_name" x-model="routeName" 
+                       class="w-full px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111] transition"
+                       placeholder="Auto-generated dari kota asal & tujuan">
+            </div>
         </div>
 
-        <button type="submit" class="btn-gomad-primary px-8 py-3 rounded-[12px] font-semibold">
+        {{-- Pilih Stop --}}
+        <div class="bg-white border border-[#E5E5E5] rounded-[12px] p-6 shadow-sm" x-show="origin && destination">
+            <h2 class="font-bold text-lg text-[#111111] mb-4">🛑 Pilih Kota Stop (Opsional)</h2>
+            <p class="text-sm text-gray-500 mb-4 font-light">Kota yang tersedia di antara rute:</p>
+
+            <div class="grid md:grid-cols-3 gap-3" x-show="availableStops.length > 0">
+                <template x-for="city in availableStops" :key="city.code">
+                    <label class="flex items-center gap-3 p-4 border-2 border-[#E5E5E5] rounded-[12px] cursor-pointer hover:border-[#C1121F] transition"
+                           :class="selectedStops.includes(city.code) ? 'border-[#C1121F] bg-[#C1121F]/5' : ''">
+                        <input type="checkbox" name="stop_city_codes[]" :value="city.code" x-model="selectedStops"
+                               class="w-4 h-4 text-[#C1121F] rounded border-[#E5E5E5] focus:ring-[#C1121F]">
+                        <div>
+                            <span class="text-sm font-semibold text-[#111111]" x-text="city.name"></span>
+                            <span class="text-[10px] text-gray-400 block font-light" x-text="city.province?.name"></span>
+                        </div>
+                    </label>
+                </template>
+            </div>
+
+            <div x-show="availableStops.length === 0 && origin && destination" class="text-center py-4 text-gray-500 font-light">
+                Tidak ada kota di antara rute ini.
+            </div>
+        </div>
+
+        {{-- Preview Rute --}}
+        <div class="bg-white border border-[#E5E5E5] rounded-[12px] p-6 shadow-sm" x-show="origin && destination">
+            <h3 class="font-mono uppercase tracking-wider text-xs font-bold text-[#111111] mb-3">📋 Preview Rute</h3>
+            <div class="flex items-center gap-2 text-sm font-mono" x-text="previewRoute"></div>
+        </div>
+
+        {{-- Pengaturan Lainnya --}}
+        <div class="bg-white border border-[#E5E5E5] rounded-[12px] p-6 shadow-sm">
+            <h3 class="font-mono uppercase tracking-wider text-xs font-bold text-[#111111] mb-4">⚙️ Pengaturan</h3>
+            
+            <div class="grid md:grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">Maks Harga (Rp)</label>
+                    <input type="number" name="max_price" value="{{ old('max_price') }}"
+                           class="w-full px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111] transition">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">COD Tersedia?</label>
+                    <select name="cod_available" class="w-full px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111] transition">
+                        <option value="0">Tidak</option>
+                        <option value="1">Ya</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">Min Deposit COD (Rp)</label>
+                    <input type="number" name="cod_min_deposit" value="{{ old('cod_min_deposit', 500000) }}"
+                           class="w-full px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111] transition">
+                </div>
+            </div>
+
+            {{-- Metode Pembayaran --}}
+            <div class="mt-4">
+                <label class="block text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-2">Metode Pembayaran</label>
+                <div class="grid grid-cols-3 gap-3">
+                    @foreach(['midtrans' => '💳 Online', 'cash' => '🏪 Warung', 'cod' => '🚗 COD'] as $val => $label)
+                    <label class="flex items-center gap-2 p-3 border border-[#E5E5E5] rounded-[12px] cursor-pointer hover:bg-[#F5F5F5]">
+                        <input type="checkbox" name="payment_methods[]" value="{{ $val }}" checked
+                               class="w-4 h-4 text-[#C1121F] rounded border-[#E5E5E5] focus:ring-[#C1121F]">
+                        <span class="text-sm font-medium text-[#111111]">{{ $label }}</span>
+                    </label>
+                    @endforeach
+                </div>
+            </div>
+
+            <div class="mt-4">
+                <label class="block text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">Deskripsi</label>
+                <textarea name="description" rows="2" class="w-full px-3 py-2 border border-[#E5E5E5] rounded-[12px] focus:border-[#C1121F] outline-none bg-white text-[#111111] transition"
+                          placeholder="Deskripsi singkat...">{{ old('description') }}</textarea>
+            </div>
+        </div>
+
+        <button type="submit" class="w-full btn-gomad-primary py-3 rounded-[12px] font-semibold">
             💾 SIMPAN RUTE
         </button>
     </form>
@@ -146,28 +145,52 @@
 
 @push('scripts')
 <script>
-function previewPhoto(event) {
-    var file = event.target.files[0];
-    if (file) {
-        var reader = new FileReader();
-        reader.onload = function(e) {
-            document.getElementById('photoPreview').innerHTML = '<img src="' + e.target.result + '" class="w-full h-full object-cover">';
-        };
-        reader.readAsDataURL(file);
+function routeForm() {
+    return {
+        origin: '{{ old('origin_city_code', '') }}',
+        destination: '{{ old('destination_city_code', '') }}',
+        selectedStops: @json(old('stop_city_codes', [])),
+        availableStops: [],
+        cities: @json($cities->map(fn($c) => ['code' => $c->code, 'name' => $c->name])),
+
+        get routeName() {
+            if (!this.origin || !this.destination) return '';
+            const originCity = this.cities.find(c => c.code === this.origin);
+            const destCity = this.cities.find(c => c.code === this.destination);
+            if (originCity && destCity) return `${originCity.name} - ${destCity.name}`;
+            return '';
+        },
+
+        get previewRoute() {
+            let stops = [this.origin, ...this.selectedStops, this.destination];
+            return stops.map(code => {
+                const city = this.cities.find(c => c.code === code);
+                return city ? city.name : code;
+            }).join(' → ');
+        },
+
+        async loadAvailableStops() {
+            if (!this.origin || !this.destination) return;
+            try {
+                const res = await fetch(`/api/v1/route-stops/available?origin=${this.origin}&destination=${this.destination}`);
+                const data = await res.json();
+                this.availableStops = data.data || [];
+            } catch (e) {
+                this.availableStops = [];
+            }
+        }
     }
 }
 
-let stopCount = 1;
-function addStop() {
-    const div = document.createElement('div');
-    div.className = 'stop-item flex gap-3 items-center';
-    div.innerHTML = `<input type="text" name="stops[${stopCount}][city_name]" placeholder="Nama Kota" class="flex-1 px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111]" required>
-                     <input type="number" name="stops[${stopCount}][stop_order]" value="${stopCount + 1}" class="w-20 px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111]" required>
-                     <input type="number" name="stops[${stopCount}][latitude]" step="0.0000001" placeholder="Latitude" class="w-32 px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111]">
-                     <input type="number" name="stops[${stopCount}][longitude]" step="0.0000001" placeholder="Longitude" class="w-32 px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111]">
-                     <button type="button" onclick="this.parentElement.remove()" class="text-[#C1121F] text-xl">✕</button>`;
-    document.getElementById('stopsContainer').appendChild(div);
-    stopCount++;
+function previewPhoto(event) {
+    const file = event.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById('photoPreview').innerHTML = `<img src="${e.target.result}" class="w-full h-full object-cover">`;
+        };
+        reader.readAsDataURL(file);
+    }
 }
 </script>
 @endpush

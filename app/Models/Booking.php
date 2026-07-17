@@ -238,6 +238,16 @@ class Booking extends Model
     {
         return $query->where('customer_id', $customerId);
     }
+
+    public function getOriginCityNameAttribute(): string
+    {
+        return $this->originStop?->city?->name ?? '-';
+    }
+
+    public function getDestinationCityNameAttribute(): string
+    {
+        return $this->destinationStop?->city?->name ?? '-';
+    }
 }
 
 // End of file

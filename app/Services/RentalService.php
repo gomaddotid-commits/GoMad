@@ -132,7 +132,7 @@ class RentalService
         });
     }
 
-    public function getAvailableRentalVehicles(?array $filters = []): Collection
+        public function getAvailableRentalVehicles(?array $filters = []): Collection
     {
         $query = VehicleRentalSetting::with(['vehicle.agency'])
             ->where('is_available_for_rental', true)
@@ -151,13 +151,42 @@ class RentalService
             };
         }
 
-        // Filter kendaraan yang sedang tidak disewa (opsional)
+        // ═══════════════════════════════════════
+        // FILTER BY LARAVOLT LOCATION
+        // ═══════════════════════════════════════
+        
+        // Filter by city
+        if (!empty($filters['city_code'])) {
+            $query->whereHas('vehicle.agency', function ($q) use ($filters) {
+                $q->where('city_code', $filters['city_code']);
+            });
+        }
+
+        // Filter by province
+        if (!empty($filters['province_code'])) {
+            $query->whereHas('vehicle.agency', function ($q) use ($filters) {
+                $q->where('province_code', $filters['province_code']);
+            });
+        }
+
+        // Filter by radius
+        if (!empty($filters['latitude']) && !empty($filters['longitude'])) {
+            $radius = $filters['radius'] ?? 50;
+            $query->whereHas('vehicle.agency', function ($q) use ($filters, $radius) {
+                $q->nearby(
+                    (float) $filters['latitude'],
+                    (float) $filters['longitude'],
+                    $radius
+                );
+            });
+        }
+
         if (!empty($filters['date'])) {
             $date = Carbon::parse($filters['date']);
             $query->whereDoesntHave('vehicle.rentals', function ($q) use ($date) {
                 $q->whereNotIn('status', ['cancelled'])
-                  ->where('start_datetime', '<=', $date)
-                  ->where('end_datetime', '>=', $date);
+                ->where('start_datetime', '<=', $date)
+                ->where('end_datetime', '>=', $date);
             });
         }
 
@@ -696,4 +725,8 @@ class RentalService
             return $rental->fresh();
         });
     }
+
+    // Di dalam method getAvailableRentalVehicles(), tambahkan:
+
+
 }

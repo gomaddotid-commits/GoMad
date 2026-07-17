@@ -630,6 +630,26 @@ class ScheduleService
 
         return $destinations;
     }
+
+    /**
+     * Validasi apakah agency melayani semua kota di rute ini
+     */
+    public function validateAgencyCoverage(Agency $agency, Route $route): bool
+    {
+        $allCityCodes = $route->stops->pluck('city_code')->toArray();
+        
+        foreach ($allCityCodes as $cityCode) {
+            if (!$agency->servesCity($cityCode)) {
+                $city = City::find($cityCode);
+                throw new \Exception(
+                    "Agency Anda tidak melayani kota {$city->name}. " .
+                    "Update zona layanan di Profil Agency terlebih dahulu."
+                );
+            }
+        }
+        
+        return true;
+    }
 }
 
 // End of file

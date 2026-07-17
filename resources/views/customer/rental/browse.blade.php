@@ -20,6 +20,19 @@
         };
     }
 
+    // FILTER BY LARAVOLT CITY
+    if (request('city_code')) {
+        $query->whereHas('vehicle.agency', function ($q) {
+            $q->where('city_code', request('city_code'));
+        });
+    }
+
+    if (request('province_code')) {
+        $query->whereHas('vehicle.agency', function ($q) {
+            $q->where('province_code', request('province_code'));
+        });
+    }
+
     if (request('agency_id')) {
         $query->whereHas('vehicle', function ($q) {
             $q->where('agency_id', request('agency_id'));
@@ -63,8 +76,10 @@
 
     $vehicles = $query->paginate(12);
     $agencies = \App\Models\Agency::where('is_verified', true)->orderBy('agency_name')->get();
+    $cities = \App\Models\City::with('province')->orderBy('name')->get();
+    $provinces = \App\Models\Province::orderBy('name')->get();
     
-    $hasFilter = request()->anyFilled(['type', 'date', 'agency_id', 'price_min', 'price_max', 'transmission']);
+    $hasFilter = request()->anyFilled(['type', 'date', 'agency_id', 'price_min', 'price_max', 'transmission', 'city_code', 'province_code']);
 @endphp
 
 <div class="container-magazine py-8" x-data="{ filterOpen: false }">
@@ -76,7 +91,6 @@
             <p class="text-gray-500 font-light">Sewa mobil lepas kunci atau dengan supir. Booking mudah, harga transparan.</p>
         </div>
         
-        {{-- Tombol Filter (Mobile) & Reset --}}
         <div class="flex items-center gap-3">
             @if($hasFilter)
             <a href="{{ route('customer.rental.browse') }}" class="text-xs text-[#C1121F] hover:underline font-medium whitespace-nowrap">Reset Filter</a>
@@ -94,11 +108,9 @@
 
     <div class="grid lg:grid-cols-4 gap-8">
         {{-- ═══════════════════════════════════ --}}
-        {{-- SIDEBAR FILTER (Collapsible) --}}
+        {{-- SIDEBAR FILTER --}}
         {{-- ═══════════════════════════════════ --}}
-        <div class="lg:col-span-1" 
-             :class="filterOpen ? 'block' : 'hidden'"
-             class="lg:block">
+        <div class="lg:col-span-1" :class="filterOpen ? 'block' : 'hidden'" class="lg:block">
             <div class="card-gomad p-5 sticky top-24 border-[#E5E5E5]">
                 <div class="flex items-center justify-between mb-4 border-b border-[#E5E5E5] pb-3">
                     <h3 class="font-bold text-[#111111] font-mono uppercase tracking-wider text-sm">Filter</h3>
@@ -118,6 +130,31 @@
                         </select>
                     </div>
 
+                    {{-- FILTER LOKASI (LARAVOLT) --}}
+                    <div x-data="locationFilter()">
+                        <div>
+                            <label class="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-1">Provinsi</label>
+                            <select name="province_code" x-model="province" @change="loadCities()" 
+                                    class="w-full px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent font-medium text-[#111111] text-sm appearance-none cursor-pointer">
+                                <option value="">Semua Provinsi</option>
+                                @foreach($provinces as $p)
+                                <option value="{{ $p->code }}" {{ request('province_code') == $p->code ? 'selected' : '' }}>{{ $p->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="mt-4">
+                            <label class="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-1">Kota</label>
+                            <select name="city_code" x-model="city" :disabled="!province"
+                                    class="w-full px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent font-medium text-[#111111] text-sm appearance-none cursor-pointer">
+                                <option value="">Semua Kota</option>
+                                <template x-for="c in cities" :key="c.code">
+                                    <option :value="c.code" x-text="c.name"
+                                            :selected="c.code === '{{ request('city_code') }}'"></option>
+                                </template>
+                            </select>
+                        </div>
+                    </div>
+
                     {{-- Tanggal --}}
                     <div>
                         <label class="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-1">Tanggal</label>
@@ -131,7 +168,9 @@
                         <select name="agency_id" class="w-full px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent font-medium text-[#111111] text-sm appearance-none cursor-pointer">
                             <option value="">Semua Agency</option>
                             @foreach($agencies as $agency)
-                            <option value="{{ $agency->id }}" {{ request('agency_id') == $agency->id ? 'selected' : '' }}>{{ $agency->agency_name }}</option>
+                            <option value="{{ $agency->id }}" {{ request('agency_id') == $agency->id ? 'selected' : '' }}>
+                                {{ $agency->agency_name }} ({{ $agency->city_name }})
+                            </option>
                             @endforeach
                         </select>
                     </div>
@@ -176,6 +215,9 @@
                     @if(request('type'))
                     <span class="text-gray-400">• {{ request('type') == 'self_drive' ? 'Lepas Kunci' : 'Dengan Supir' }}</span>
                     @endif
+                    @if(request('city_code'))
+                    <span class="text-gray-400">• {{ \App\Models\City::find(request('city_code'))?->name ?? '' }}</span>
+                    @endif
                 </p>
                 <div class="flex items-center gap-2">
                     <span class="text-xs font-mono uppercase tracking-wider text-gray-500">Urut:</span>
@@ -193,7 +235,6 @@
                     <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                 </div>
                 <p class="text-gray-500 text-lg font-light">Tidak ada mobil ditemukan.</p>
-                <p class="text-gray-400 text-sm mt-2">Coba ubah filter atau reset pencarian.</p>
                 <a href="{{ route('customer.rental.browse') }}" class="inline-block mt-4 text-[#C1121F] hover:underline font-medium">Reset Filter</a>
             </div>
             @else
@@ -207,6 +248,7 @@
                     $bookedDatesJson = json_encode($bookedDates);
                 @endphp
                 <div class="bg-white border border-[#E5E5E5] rounded-[12px] overflow-hidden shadow-sm hover:border-[#C1121F] transition-colors group">
+                    {{-- Foto --}}
                     <div class="h-40 bg-[#F5F5F5] flex items-center justify-center overflow-hidden border-b border-[#E5E5E5] relative">
                         @if($vehicle->vehicle_image)
                         <img src="{{ $vehicle->vehicle_image }}" alt="{{ $vehicle->plate_number }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
@@ -222,18 +264,28 @@
                             @endif
                         </div>
                     </div>
+                    
                     <div class="p-4">
+                        {{-- Agency Info --}}
                         <div class="flex items-center gap-2 mb-2">
                             <div class="w-8 h-8 rounded-full bg-[#F5F5F5] flex items-center justify-center overflow-hidden flex-shrink-0 border border-[#E5E5E5]">
                                 @if($agency->logo)<img src="{{ $agency->logo }}" class="w-full h-full object-cover">@else<span class="text-sm">🏢</span>@endif
                             </div>
                             <div class="min-w-0">
                                 <p class="font-semibold text-xs text-[#111111] truncate">{{ $agency->agency_name }}</p>
-                                <p class="text-[10px] text-gray-400 font-mono">⭐ {{ number_format($agency->rating, 1) }}</p>
+                                <div class="flex items-center gap-1 text-[10px] text-gray-400 font-mono">
+                                    <span>⭐ {{ number_format($agency->rating, 1) }}</span>
+                                    <span>•</span>
+                                    <span>{{ $agency->city_name }}</span>
+                                </div>
                             </div>
                         </div>
+
+                        {{-- Vehicle Info --}}
                         <p class="font-bold text-sm text-[#111111]">{{ $vehicle->brand }} {{ $vehicle->model }}</p>
                         <p class="text-xs text-gray-500 font-mono">{{ $vehicle->plate_number }} • {{ $vehicle->year }}</p>
+
+                        {{-- Specs --}}
                         <div class="flex flex-wrap gap-1 mt-1.5">
                             @php $specs = is_array($setting->specifications) ? $setting->specifications : json_decode($setting->specifications, true) ?? []; @endphp
                             @if(isset($specs['transmission']))
@@ -244,6 +296,8 @@
                             @endif
                             <span class="px-1.5 py-0.5 bg-[#F5F5F5] text-[9px] font-mono uppercase rounded text-gray-500">{{ $vehicle->capacity }} Seat</span>
                         </div>
+
+                        {{-- Price --}}
                         <div class="mt-3 bg-[#F5F5F5] border border-[#E5E5E5] rounded-[12px] p-2.5">
                             <div class="flex justify-between text-xs">
                                 <span class="text-gray-500 font-light">Mulai</span>
@@ -260,6 +314,8 @@
                             </div>
                             @endif
                         </div>
+
+                        {{-- Calendar --}}
                         <div class="mt-2">
                             <div class="flex items-center justify-between mb-1">
                                 <span class="text-[9px] font-mono uppercase tracking-wider text-gray-400">30 Hari</span>
@@ -269,6 +325,8 @@
                                 <span class="text-[9px] text-gray-400">⏳</span>
                             </div>
                         </div>
+
+                        {{-- CTA --}}
                         <a href="{{ route('customer.rental.create', $setting) }}" 
                            class="block w-full text-center bg-[#C1121F] text-white py-2 rounded-[12px] font-semibold hover:bg-[#8A0F18] transition text-xs mt-3">
                             Sewa Sekarang
@@ -283,41 +341,106 @@
     </div>
 </div>
 
-{{-- Modal Kalender --}}
+{{-- ═══════════════════════════════════ --}}
+{{-- MODAL KALENDER BESAR --}}
+{{-- ═══════════════════════════════════ --}}
 <div id="calendarModal" class="fixed inset-0 bg-[#111111]/50 z-50 hidden items-center justify-center p-4" style="display:none;">
-    <div class="bg-white rounded-[12px] shadow-2xl max-w-md w-full max-h-[85vh] overflow-y-auto border border-[#E5E5E5]">
+    <div class="bg-white rounded-[12px] shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto border border-[#E5E5E5]">
+        {{-- Header --}}
         <div class="sticky top-0 bg-white border-b border-[#E5E5E5] p-5 rounded-t-[12px] z-10 flex items-center justify-between">
             <div>
                 <h3 class="font-bold text-lg text-[#111111]" id="modalVehicleName">Kalender Ketersediaan</h3>
                 <p class="text-xs text-gray-500 font-light" id="modalVehiclePlate"></p>
             </div>
-            <button onclick="closeCalendarModal()" class="w-8 h-8 flex items-center justify-center border border-[#E5E5E5] rounded-lg hover:bg-[#F5F5F5]">✕</button>
+            <button onclick="closeCalendarModal()" class="w-8 h-8 flex items-center justify-center border border-[#E5E5E5] rounded-lg hover:bg-[#F5F5F5] transition">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
         </div>
+        
+        {{-- Calendar Container --}}
         <div class="p-5">
+            {{-- Navigation --}}
             <div class="flex items-center justify-between mb-4">
                 <button onclick="modalPrevMonth()" class="w-8 h-8 flex items-center justify-center border border-[#E5E5E5] rounded-lg hover:bg-[#F5F5F5] text-sm">&larr;</button>
                 <span class="font-bold text-[#111111]" id="modalMonthLabel">-</span>
                 <button onclick="modalNextMonth()" class="w-8 h-8 flex items-center justify-center border border-[#E5E5E5] rounded-lg hover:bg-[#F5F5F5] text-sm">&rarr;</button>
             </div>
+            
+            {{-- Day names --}}
             <div class="grid grid-cols-7 gap-1 text-center mb-1">
-                <div class="text-[10px] font-mono uppercase tracking-wider text-gray-500 py-1">Min</div><div class="text-[10px] font-mono uppercase tracking-wider text-gray-500 py-1">Sen</div><div class="text-[10px] font-mono uppercase tracking-wider text-gray-500 py-1">Sel</div><div class="text-[10px] font-mono uppercase tracking-wider text-gray-500 py-1">Rab</div><div class="text-[10px] font-mono uppercase tracking-wider text-gray-500 py-1">Kam</div><div class="text-[10px] font-mono uppercase tracking-wider text-gray-500 py-1">Jum</div><div class="text-[10px] font-mono uppercase tracking-wider text-gray-500 py-1">Sab</div>
+                <div class="text-[10px] font-mono uppercase tracking-wider text-gray-500 py-1">Min</div>
+                <div class="text-[10px] font-mono uppercase tracking-wider text-gray-500 py-1">Sen</div>
+                <div class="text-[10px] font-mono uppercase tracking-wider text-gray-500 py-1">Sel</div>
+                <div class="text-[10px] font-mono uppercase tracking-wider text-gray-500 py-1">Rab</div>
+                <div class="text-[10px] font-mono uppercase tracking-wider text-gray-500 py-1">Kam</div>
+                <div class="text-[10px] font-mono uppercase tracking-wider text-gray-500 py-1">Jum</div>
+                <div class="text-[10px] font-mono uppercase tracking-wider text-gray-500 py-1">Sab</div>
             </div>
-            <div class="grid grid-cols-7 gap-1 text-center" id="modalCalendarGrid"><div class="col-span-7 text-center py-4 text-gray-400">⏳ Memuat...</div></div>
+            
+            {{-- Days Grid --}}
+            <div class="grid grid-cols-7 gap-1 text-center" id="modalCalendarGrid">
+                <div class="col-span-7 text-center py-4 text-gray-400">⏳ Memuat...</div>
+            </div>
+            
+            {{-- Legend --}}
             <div class="flex items-center gap-4 mt-4 text-xs border-t border-[#E5E5E5] pt-4">
-                <div class="flex items-center gap-1"><div class="w-4 h-4 bg-green-100 border border-green-300 rounded"></div><span class="text-gray-500 font-light">Tersedia</span></div>
-                <div class="flex items-center gap-1"><div class="w-4 h-4 bg-red-100 border border-red-300 rounded"></div><span class="text-gray-500 font-light">Dibooking</span></div>
-                <div class="flex items-center gap-1"><div class="w-4 h-4 bg-yellow-100 border border-yellow-300 rounded"></div><span class="text-gray-500 font-light">Hari Ini</span></div>
+                <div class="flex items-center gap-1">
+                    <div class="w-4 h-4 bg-green-100 border border-green-300 rounded"></div>
+                    <span class="text-gray-500 font-light">Tersedia</span>
+                </div>
+                <div class="flex items-center gap-1">
+                    <div class="w-4 h-4 bg-red-100 border border-red-300 rounded"></div>
+                    <span class="text-gray-500 font-light">Dibooking</span>
+                </div>
+                <div class="flex items-center gap-1">
+                    <div class="w-4 h-4 bg-yellow-100 border border-yellow-300 rounded"></div>
+                    <span class="text-gray-500 font-light">Hari Ini</span>
+                </div>
             </div>
         </div>
+        
+        {{-- Footer --}}
         <div class="sticky bottom-0 bg-white border-t border-[#E5E5E5] p-4 rounded-b-[12px] flex gap-3">
-            <button onclick="closeCalendarModal()" class="flex-1 border border-[#E5E5E5] py-2.5 rounded-[12px] font-medium hover:bg-[#F5F5F5] transition text-sm">Tutup</button>
-            <a href="#" id="modalBookNow" class="flex-1 bg-[#C1121F] text-white py-2.5 rounded-[12px] font-semibold hover:bg-[#8A0F18] transition text-sm text-center">Sewa Sekarang</a>
+            <button onclick="closeCalendarModal()" class="flex-1 border border-[#E5E5E5] py-2.5 rounded-[12px] font-medium hover:bg-[#F5F5F5] transition text-sm">
+                Tutup
+            </button>
+            <a href="#" id="modalBookNow" class="flex-1 bg-[#C1121F] text-white py-2.5 rounded-[12px] font-semibold hover:bg-[#8A0F18] transition text-sm text-center">
+                Sewa Sekarang
+            </a>
         </div>
     </div>
 </div>
 
 @push('scripts')
 <script>
+// ═══════════════════════════════════════
+// LOCATION FILTER
+// ═══════════════════════════════════════
+function locationFilter() {
+    return {
+        province: '{{ request('province_code') }}',
+        city: '{{ request('city_code') }}',
+        cities: @json($cities->filter(fn($c) => !request('province_code') || $c->province_code == request('province_code'))->values()),
+
+        async loadCities() {
+            if (!this.province) { this.cities = []; this.city = ''; return; }
+            try {
+                const res = await fetch(`/api/v1/region/cities?province=${this.province}`);
+                const data = await res.json();
+                this.cities = data.data || data || [];
+                if (this.city && !this.cities.find(c => c.code === this.city)) {
+                    this.city = '';
+                }
+            } catch (e) {
+                console.error('Failed to load cities:', e);
+            }
+        }
+    }
+}
+
+// ═══════════════════════════════════════
+// MINI CALENDAR
+// ═══════════════════════════════════════
 document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('[class*="mini-calendar-"]').forEach(function(container) {
         var bookedData = {};
@@ -337,50 +460,110 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
+// ═══════════════════════════════════════
+// MODAL CALENDAR
+// ═══════════════════════════════════════
 var modalVehicleId = null, modalBookedData = {}, modalCurrentMonth = new Date().getMonth(), modalCurrentYear = new Date().getFullYear();
 var allVehicleData = {};
+
 document.querySelectorAll('[class*="mini-calendar-"]').forEach(function(el) {
     var vehicleId = el.className.match(/mini-calendar-(\d+)/)[1];
     var card = el.closest('.bg-white');
     if (card) {
-        var nameEl = card.querySelector('.font-bold'), plateEl = card.querySelector('.text-xs.text-gray-500.font-mono');
-        allVehicleData[vehicleId] = { name: nameEl ? nameEl.textContent.trim() : 'Kendaraan', plate: plateEl ? plateEl.textContent.trim() : '', booked: JSON.parse(el.getAttribute('data-booked') || '{}') };
+        var nameEl = card.querySelector('.font-bold');
+        var plateEl = card.querySelector('.text-xs.text-gray-500.font-mono');
+        allVehicleData[vehicleId] = { 
+            name: nameEl ? nameEl.textContent.trim() : 'Kendaraan', 
+            plate: plateEl ? plateEl.textContent.trim() : '', 
+            booked: JSON.parse(el.getAttribute('data-booked') || '{}') 
+        };
     }
 });
+
 function openCalendarModal(vehicleId) {
     modalVehicleId = vehicleId;
     var data = allVehicleData[vehicleId] || { name: 'Kendaraan', plate: '', booked: {} };
     modalBookedData = data.booked || {};
-    document.getElementById('modalVehicleName').textContent = data.name;
-    document.getElementById('modalVehiclePlate').textContent = data.plate;
-    document.getElementById('modalBookNow').href = '/customer/rentals/create/' + vehicleId;
-    modalCurrentMonth = new Date().getMonth(); modalCurrentYear = new Date().getFullYear();
+    
+    var nameEl = document.getElementById('modalVehicleName');
+    var plateEl = document.getElementById('modalVehiclePlate');
+    if (nameEl) nameEl.textContent = data.name;
+    if (plateEl) plateEl.textContent = data.plate;
+    
+    var bookLink = document.getElementById('modalBookNow');
+    if (bookLink) bookLink.href = '/customer/rentals/create/' + vehicleId;
+    
+    modalCurrentMonth = new Date().getMonth(); 
+    modalCurrentYear = new Date().getFullYear();
     renderModalCalendar();
-    document.getElementById('calendarModal').style.display = 'flex'; document.body.style.overflow = 'hidden';
+    
+    var modal = document.getElementById('calendarModal');
+    if (modal) { modal.style.display = 'flex'; document.body.style.overflow = 'hidden'; }
 }
-function closeCalendarModal() { document.getElementById('calendarModal').style.display = 'none'; document.body.style.overflow = ''; }
-function modalPrevMonth() { if (modalCurrentMonth === 0) { modalCurrentMonth = 11; modalCurrentYear--; } else { modalCurrentMonth--; } renderModalCalendar(); }
-function modalNextMonth() { var today = new Date(); var maxMonth = today.getMonth() + 6, maxYear = today.getFullYear(); if (maxMonth > 11) { maxMonth -= 12; maxYear++; } if (modalCurrentYear < maxYear || (modalCurrentYear === maxYear && modalCurrentMonth < maxMonth)) { if (modalCurrentMonth === 11) { modalCurrentMonth = 0; modalCurrentYear++; } else { modalCurrentMonth++; } } renderModalCalendar(); }
+
+function closeCalendarModal() { 
+    var modal = document.getElementById('calendarModal');
+    if (modal) { modal.style.display = 'none'; document.body.style.overflow = ''; }
+}
+
+function modalPrevMonth() { 
+    if (modalCurrentMonth === 0) { modalCurrentMonth = 11; modalCurrentYear--; } 
+    else { modalCurrentMonth--; } 
+    renderModalCalendar(); 
+}
+
+function modalNextMonth() { 
+    var today = new Date(); 
+    var maxMonth = today.getMonth() + 6, maxYear = today.getFullYear(); 
+    if (maxMonth > 11) { maxMonth -= 12; maxYear++; } 
+    if (modalCurrentYear < maxYear || (modalCurrentYear === maxYear && modalCurrentMonth < maxMonth)) { 
+        if (modalCurrentMonth === 11) { modalCurrentMonth = 0; modalCurrentYear++; } 
+        else { modalCurrentMonth++; } 
+    } 
+    renderModalCalendar(); 
+}
+
 function renderModalCalendar() {
     var months = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
-    var daysInMonth = new Date(modalCurrentYear, modalCurrentMonth + 1, 0).getDate(), startDay = new Date(modalCurrentYear, modalCurrentMonth, 1).getDay();
+    var daysInMonth = new Date(modalCurrentYear, modalCurrentMonth + 1, 0).getDate();
+    var startDay = new Date(modalCurrentYear, modalCurrentMonth, 1).getDay();
     var today = new Date(); today.setHours(0,0,0,0);
-    document.getElementById('modalMonthLabel').textContent = months[modalCurrentMonth] + ' ' + modalCurrentYear;
-    var grid = document.getElementById('modalCalendarGrid'), html = '';
+    
+    var labelEl = document.getElementById('modalMonthLabel');
+    if (labelEl) labelEl.textContent = months[modalCurrentMonth] + ' ' + modalCurrentYear;
+    
+    var grid = document.getElementById('modalCalendarGrid');
+    if (!grid) return;
+    
+    var html = '';
     for (var i = 0; i < startDay; i++) html += '<div class="py-2"></div>';
+    
     for (var day = 1; day <= daysInMonth; day++) {
         var dateStr = modalCurrentYear + '-' + String(modalCurrentMonth+1).padStart(2,'0') + '-' + String(day).padStart(2,'0');
-        var dateObj = new Date(modalCurrentYear, modalCurrentMonth, day), isBooked = modalBookedData[dateStr] !== undefined, isToday = dateObj.getTime() === today.getTime(), isPast = dateObj < today;
+        var dateObj = new Date(modalCurrentYear, modalCurrentMonth, day);
+        var isBooked = modalBookedData[dateStr] !== undefined;
+        var isToday = dateObj.getTime() === today.getTime();
+        var isPast = dateObj < today;
+        
         var bgClass = 'bg-green-50 hover:bg-green-100 border border-green-200';
         if (isBooked) bgClass = 'bg-red-50 border border-red-200 cursor-not-allowed';
         if (isToday) bgClass = 'bg-yellow-100 border border-yellow-300 font-bold';
         if (isPast && !isToday) bgClass = 'bg-gray-100 text-gray-300 border border-gray-200 cursor-not-allowed';
+        
         html += '<div class="py-2 rounded-lg text-sm ' + bgClass + '">' + day + (isBooked ? '<div class="text-[8px] text-red-500 leading-none">📌</div>' : '') + '</div>';
     }
     grid.innerHTML = html;
 }
-document.getElementById('calendarModal').addEventListener('click', function(e) { if (e.target === this) closeCalendarModal(); });
-document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeCalendarModal(); });
+
+// Tutup modal dengan klik overlay
+document.addEventListener('click', function(e) {
+    if (e.target.id === 'calendarModal') closeCalendarModal();
+});
+
+// Tutup modal dengan ESC
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeCalendarModal();
+});
 </script>
 @endpush
 @endsection

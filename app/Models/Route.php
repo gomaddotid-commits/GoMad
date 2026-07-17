@@ -1,10 +1,10 @@
 <?php
-// File: app/Models/Route.php
 
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -14,16 +14,16 @@ class Route extends Model
 
     protected $fillable = [
         'route_name',
-        'origin_city',
-        'destination_city',
+        'origin_city_code',       // FK ke indonesia_cities
+        'destination_city_code',  // FK ke indonesia_cities
         'distance_km',
         'estimated_duration',
-        'payment_methods',    // 👈 TAMBAHKAN
-        'max_price',        // 👈 Tambahkan
-        'cod_min_deposit',  // 👈 Tambahkan
-        'cod_available',    // 👈 Tambahkan
-        'description',   // 👈 Tambahkan
-        'photo',         // 👈 Tambahkan
+        'max_price',
+        'cod_available',
+        'cod_min_deposit',
+        'payment_methods',
+        'description',
+        'photo',
         'is_active',
     ];
 
@@ -33,25 +33,29 @@ class Route extends Model
             'distance_km' => 'decimal:2',
             'estimated_duration' => 'integer',
             'max_price' => 'decimal:2',
-            'cod_min_deposit' => 'decimal:2',
             'cod_available' => 'boolean',
+            'cod_min_deposit' => 'decimal:2',
             'is_active' => 'boolean',
         ];
     }
 
-    // Accessor untuk URL foto
-    public function getPhotoUrlAttribute(): ?string
+    // ═══════════════════════════════════════
+    // RELASI KE LARAVOLT
+    // ═══════════════════════════════════════
+
+    public function originCity(): BelongsTo
     {
-        if (!$this->photo) return null;
-        
-        // Cloudinary URL
-        if (str_starts_with($this->photo, 'http')) {
-            return $this->photo;
-        }
-        
-        // Local storage fallback
-        return asset('storage/' . $this->photo);
+        return $this->belongsTo(City::class, 'origin_city_code', 'code');
     }
+
+    public function destinationCity(): BelongsTo
+    {
+        return $this->belongsTo(City::class, 'destination_city_code', 'code');
+    }
+
+    // ═══════════════════════════════════════
+    // RELASI KE TABEL LAIN
+    // ═══════════════════════════════════════
 
     public function stops(): HasMany
     {
@@ -63,42 +67,44 @@ class Route extends Model
         return $this->hasMany(Schedule::class);
     }
 
-    public function scopeActive(Builder $query): Builder
+    // ═══════════════════════════════════════
+    // ACCESSORS
+    // ═══════════════════════════════════════
+
+    public function getOriginCityNameAttribute(): string
     {
-        return $query->where('is_active', true);
+        return $this->originCity?->name ?? 'Unknown';
     }
 
-    public function scopeByCities(Builder $query, string $origin, string $destination): Builder
+    public function getDestinationCityNameAttribute(): string
     {
-        return $query->where(function (Builder $q) use ($origin, $destination) {
-            $q->where('origin_city', $origin)
-              ->where('destination_city', $destination);
-        });
+        return $this->destinationCity?->name ?? 'Unknown';
     }
 
-    // 👇 TAMBAHKAN ACCESSOR
+    public function getPhotoUrlAttribute(): ?string
+    {
+        if (!$this->photo) return null;
+        if (str_starts_with($this->photo, 'http')) return $this->photo;
+        return asset('storage/' . $this->photo);
+    }
+
+    // ═══════════════════════════════════════
+    // PAYMENT METHODS
+    // ═══════════════════════════════════════
+
     public function getPaymentMethodsArrayAttribute(): array
     {
         $value = $this->attributes['payment_methods'] ?? null;
-        
-        if (empty($value)) {
-            return ['midtrans', 'cash', 'cod']; // Default: semua tersedia
-        }
-        
-        if (is_array($value)) {
-            return $value;
-        }
-        
+        if (empty($value)) return ['midtrans', 'cash', 'cod'];
+        if (is_array($value)) return $value;
         return explode(',', $value);
     }
 
-    // 👇 TAMBAHKAN METHOD UNTUK CEK
     public function isPaymentMethodAvailable(string $method): bool
     {
         return in_array($method, $this->payment_methods_array);
     }
 
-    // 👇 TAMBAHKAN MUTATOR
     public function setPaymentMethodsAttribute($value): void
     {
         if (is_array($value)) {
@@ -111,6 +117,22 @@ class Route extends Model
         }
     }
 
-}
+    // ═══════════════════════════════════════
+    // SCOPES
+    // ═══════════════════════════════════════
 
-// End of file
+    public function scopeActive(Builder $query): Builder
+    {
+        return $query->where('is_active', true);
+    }
+
+    public function scopeByOriginCity(Builder $query, string $cityCode): Builder
+    {
+        return $query->where('origin_city_code', $cityCode);
+    }
+
+    public function scopeByDestinationCity(Builder $query, string $cityCode): Builder
+    {
+        return $query->where('destination_city_code', $cityCode);
+    }
+}

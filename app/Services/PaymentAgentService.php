@@ -34,8 +34,9 @@ class PaymentAgentService
                 'guard_name' => $data['guard_name'] ?? null,
                 'guard_phone' => $data['guard_phone'] ?? null,
                 'address' => $data['address'],
-                'kecamatan' => $data['kecamatan'] ?? null,
-                'maps_link' => $data['maps_link'] ?? null,
+                'province_code' => $data['province_code'],
+                'city_code' => $data['city_code'],
+                'district_code' => $data['district_code'] ?? null,                'maps_link' => $data['maps_link'] ?? null,
                 'latitude' => $data['latitude'] ?? null,
                 'longitude' => $data['longitude'] ?? null,
                 'pin' => Hash::make($data['pin']),
@@ -119,27 +120,7 @@ class PaymentAgentService
 
     public function getNearbyAgents(float $latitude, float $longitude, float $radiusKm = 10): Collection
     {
-        // Using Haversine formula to find nearby agents
-        $agents = PaymentAgent::where('is_active', true)
-            ->where('is_verified', true)
-            ->whereNotNull('latitude')
-            ->whereNotNull('longitude')
-            ->get();
-
-        $nearbyAgents = $agents->filter(function ($agent) use ($latitude, $longitude, $radiusKm) {
-            $distance = $this->calculateDistance(
-                $latitude,
-                $longitude,
-                (float) $agent->latitude,
-                (float) $agent->longitude
-            );
-            
-            $agent->distance_km = round($distance, 2);
-            
-            return $distance <= $radiusKm;
-        });
-
-        return $nearbyAgents->sortBy('distance_km')->values();
+        return PaymentAgent::nearby($latitude, $longitude, $radiusKm)->get();
     }
 
     public function calculateDistance(float $lat1, float $lon1, float $lat2, float $lon2): float

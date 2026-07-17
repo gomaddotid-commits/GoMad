@@ -3,19 +3,34 @@
 @section('title', 'Cari Jadwal')
 @section('content')
 @php
-    $allCities = \App\Models\RouteStop::select('city_name')->distinct()->orderBy('city_name')->get();
+    $allCities = \App\Models\City::with('province')->orderBy('name')->get();
     $agencies = \App\Models\Agency::where('is_verified', true)->orderBy('agency_name')->get();
     
-    $query = \App\Models\Schedule::with(['route', 'agency', 'vehicle'])
+    $query = \App\Models\Schedule::with(['route.originCity', 'route.destinationCity', 'agency', 'vehicle'])
         ->where('is_active', true)
         ->where('departure_date', '>=', now()->toDateString());
 
+    // Filter by text (old way)
     if (request('origin')) {
-        $query->whereHas('route', fn($q) => $q->where('origin_city', 'like', '%' . request('origin') . '%'));
+        $query->whereHas('route.stops', fn($q) => $q->whereHas('city', fn($sq) => $sq->where('name', 'like', '%' . request('origin') . '%')));
     }
     if (request('destination')) {
-        $query->whereHas('route', fn($q) => $q->where('destination_city', 'like', '%' . request('destination') . '%'));
+        $query->whereHas('route.stops', fn($q) => $q->whereHas('city', fn($sq) => $sq->where('name', 'like', '%' . request('destination') . '%')));
     }
+    
+    // Filter by city_code (new way - Laravolt)
+    if (request('origin_city_code')) {
+        $query->whereHas('route.stops', fn($q) => $q->where('city_code', request('origin_city_code')));
+    }
+    if (request('destination_city_code')) {
+        $query->whereHas('route.stops', fn($q) => $q->where('city_code', request('destination_city_code')));
+    }
+    
+    // Filter by agency location
+    if (request('agency_city_code')) {
+        $query->whereHas('agency', fn($q) => $q->where('city_code', request('agency_city_code')));
+    }
+
     if (request('date')) {
         $query->whereDate('departure_date', request('date'));
     }
@@ -44,10 +59,10 @@
     $viewMode = request('view', 'grid');
     $schedules = $query->paginate(12);
     
-    $hasFilter = request()->anyFilled(['origin', 'destination', 'date', 'travel_class', 'agency_id', 'price_min', 'price_max']);
+    $hasFilter = request()->anyFilled(['origin', 'destination', 'origin_city_code', 'destination_city_code', 'date', 'travel_class', 'agency_id', 'price_min', 'price_max']);
 @endphp
 
-<div class="container-magazine py-8" x-data="{ filterOpen: false }">
+<div class="container-magazine py-8" x-data="{ filterOpen: false, searchMode: '{{ request('origin_city_code') || request('destination_city_code') ? 'city' : 'text' }}' }">
     
     {{-- Header --}}
     <div class="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-8">
@@ -73,11 +88,9 @@
 
     <div class="grid lg:grid-cols-4 gap-8">
         {{-- ═══════════════════════════════════ --}}
-        {{-- SIDEBAR FILTER (Collapsible) --}}
+        {{-- SIDEBAR FILTER --}}
         {{-- ═══════════════════════════════════ --}}
-        <div class="lg:col-span-1" 
-             :class="filterOpen ? 'block' : 'hidden'"
-             class="lg:block">
+        <div class="lg:col-span-1" :class="filterOpen ? 'block' : 'hidden'" class="lg:block">
             <div class="card-gomad p-5 sticky top-24 border-[#E5E5E5]">
                 <div class="flex items-center justify-between mb-4 border-b border-[#E5E5E5] pb-3">
                     <h3 class="font-bold text-[#111111] font-mono uppercase tracking-wider text-sm">Filter</h3>
@@ -87,53 +100,93 @@
                 </div>
                 
                 <form action="{{ route('customer.search') }}" method="GET" class="space-y-4">
-                    {{-- Asal --}}
-                    <div>
-                        <label class="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-1">Kota Asal</label>
-                        <select name="origin" class="w-full px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent font-medium text-[#111111] appearance-none cursor-pointer">
-                            <option value="">Semua Kota</option>
-                            @foreach($allCities as $city)
-                            <option value="{{ $city->city_name }}" {{ request('origin') == $city->city_name ? 'selected' : '' }}>{{ $city->city_name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
                     
-                    {{-- Tujuan --}}
+                    {{-- Mode Pencarian --}}
                     <div>
-                        <label class="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-1">Kota Tujuan</label>
-                        <select name="destination" class="w-full px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent font-medium text-[#111111] appearance-none cursor-pointer">
-                            <option value="">Semua Kota</option>
-                            @foreach($allCities as $city)
-                            <option value="{{ $city->city_name }}" {{ request('destination') == $city->city_name ? 'selected' : '' }}>{{ $city->city_name }}</option>
-                            @endforeach
-                        </select>
+                        <label class="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-2">Mode Pencarian</label>
+                        <div class="flex bg-[#F5F5F5] rounded-lg p-1">
+                            <button type="button" @click="searchMode = 'text'" 
+                                    :class="searchMode === 'text' ? 'bg-white shadow text-[#C1121F]' : 'text-gray-500'"
+                                    class="flex-1 py-2 text-xs font-semibold rounded-md transition">
+                                📝 Nama Kota
+                            </button>
+                            <button type="button" @click="searchMode = 'city'" 
+                                    :class="searchMode === 'city' ? 'bg-white shadow text-[#C1121F]' : 'text-gray-500'"
+                                    class="flex-1 py-2 text-xs font-semibold rounded-md transition">
+                                🏙️ Pilih Kota
+                            </button>
+                        </div>
                     </div>
-                    
+
+                    {{-- Mode Text (Cara Lama) --}}
+                    <div x-show="searchMode === 'text'">
+                        <div>
+                            <label class="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-1">Kota Asal</label>
+                            <input type="text" name="origin" value="{{ request('origin') }}" 
+                                   class="w-full px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111] transition text-sm"
+                                   placeholder="Ketik nama kota...">
+                        </div>
+                        <div class="mt-4">
+                            <label class="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-1">Kota Tujuan</label>
+                            <input type="text" name="destination" value="{{ request('destination') }}"
+                                   class="w-full px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111] transition text-sm"
+                                   placeholder="Ketik nama kota...">
+                        </div>
+                    </div>
+
+                    {{-- Mode City (Laravolt Select) --}}
+                    <div x-show="searchMode === 'city'" x-cloak>
+                        <div>
+                            <label class="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-1">Kota Asal</label>
+                            <select name="origin_city_code" class="w-full px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111] text-sm transition">
+                                <option value="">Semua Kota</option>
+                                @foreach($allCities as $city)
+                                <option value="{{ $city->code }}" {{ request('origin_city_code') == $city->code ? 'selected' : '' }}>
+                                    {{ $city->name }} ({{ $city->province->name }})
+                                </option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="mt-4">
+                            <label class="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-1">Kota Tujuan</label>
+                            <select name="destination_city_code" class="w-full px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111] text-sm transition">
+                                <option value="">Semua Kota</option>
+                                @foreach($allCities as $city)
+                                <option value="{{ $city->code }}" {{ request('destination_city_code') == $city->code ? 'selected' : '' }}>
+                                    {{ $city->name }} ({{ $city->province->name }})
+                                </option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+
                     {{-- Tanggal --}}
                     <div>
                         <label class="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-1">Tanggal</label>
                         <input type="date" name="date" value="{{ request('date') }}" 
-                               class="w-full px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent font-medium text-[#111111] cursor-pointer">
+                               class="w-full px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111] text-sm cursor-pointer">
                     </div>
-                    
+
                     {{-- Kelas --}}
                     <div>
                         <label class="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-1">Kelas</label>
-                        <select name="travel_class" class="w-full px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent font-medium text-[#111111] appearance-none cursor-pointer">
+                        <select name="travel_class" class="w-full px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111] text-sm transition">
                             <option value="">Semua Kelas</option>
                             <option value="economy" {{ request('travel_class') == 'economy' ? 'selected' : '' }}>Ekonomi</option>
                             <option value="premium" {{ request('travel_class') == 'premium' ? 'selected' : '' }}>Premium</option>
                             <option value="charter" {{ request('travel_class') == 'charter' ? 'selected' : '' }}>Charter</option>
                         </select>
                     </div>
-                    
+
                     {{-- Agency --}}
                     <div>
                         <label class="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-1">Agency</label>
-                        <select name="agency_id" class="w-full px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent font-medium text-[#111111] appearance-none cursor-pointer">
+                        <select name="agency_id" class="w-full px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111] text-sm transition">
                             <option value="">Semua Agency</option>
                             @foreach($agencies as $agency)
-                            <option value="{{ $agency->id }}" {{ request('agency_id') == $agency->id ? 'selected' : '' }}>{{ $agency->agency_name }}</option>
+                            <option value="{{ $agency->id }}" {{ request('agency_id') == $agency->id ? 'selected' : '' }}>
+                                {{ $agency->agency_name }} ({{ $agency->city_name }})
+                            </option>
                             @endforeach
                         </select>
                     </div>
@@ -143,11 +196,11 @@
                         <label class="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-1">Harga/Seat (Rp)</label>
                         <div class="flex gap-2 items-center">
                             <input type="number" name="price_min" value="{{ request('price_min') }}" 
-                                   class="w-full px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent font-medium text-[#111111] text-sm"
+                                   class="w-full px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111] text-sm"
                                    placeholder="Min" min="0">
                             <span class="text-gray-400">-</span>
                             <input type="number" name="price_max" value="{{ request('price_max') }}" 
-                                   class="w-full px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent font-medium text-[#111111] text-sm"
+                                   class="w-full px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111] text-sm"
                                    placeholder="Max" min="0">
                         </div>
                     </div>
@@ -165,11 +218,16 @@
             <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6 border-b border-[#E5E5E5] pb-4">
                 <p class="text-sm text-gray-500 font-light">
                     Menampilkan <strong class="text-[#111111]">{{ $schedules->total() }}</strong> jadwal
-                    @if(request('origin') || request('destination'))
+                    @php
+                        $activeFilter = request('origin_city_code') || request('destination_city_code') 
+                            ? [\App\Models\City::find(request('origin_city_code'))?->name, \App\Models\City::find(request('destination_city_code'))?->name]
+                            : [request('origin'), request('destination')];
+                    @endphp
+                    @if($activeFilter[0] || $activeFilter[1])
                     <span class="text-gray-400">
-                        {{ request('origin') ? 'dari ' . request('origin') : '' }}
-                        {{ request('origin') && request('destination') ? ' ke ' : '' }}
-                        {{ request('destination') ? request('destination') : '' }}
+                        {{ $activeFilter[0] ? 'dari ' . $activeFilter[0] : '' }}
+                        {{ $activeFilter[0] && $activeFilter[1] ? ' ke ' : '' }}
+                        {{ $activeFilter[1] ? $activeFilter[1] : '' }}
                     </span>
                     @endif
                 </p>
@@ -211,26 +269,47 @@
                 @if($viewMode == 'grid')
                 <div class="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
                     @foreach($schedules as $s)
-                    <div class="bg-white border border-[#E5E5E5] rounded-[12px] p-4 shadow-sm hover:border-[#C1121F] transition-colors">
+                    <div class="bg-white border border-[#E5E5E5] rounded-[12px] p-4 shadow-sm hover:border-[#C1121F] transition-colors group">
+                        {{-- Agency Info --}}
                         <div class="flex items-center gap-3 mb-3">
                             <div class="w-10 h-10 rounded-full bg-[#F5F5F5] flex items-center justify-center overflow-hidden flex-shrink-0 border border-[#E5E5E5]">
                                 @if($s->agency->logo)<img src="{{ $s->agency->logo }}" class="w-full h-full object-cover">@else<span class="text-lg">🏢</span>@endif
                             </div>
                             <div class="min-w-0">
                                 <p class="font-semibold text-sm text-[#111111] truncate">{{ $s->agency->agency_name }}</p>
-                                <p class="text-xs text-gray-400 font-mono">⭐ {{ number_format($s->agency->rating, 1) }}</p>
+                                <div class="flex items-center gap-1 text-xs text-gray-400 font-mono">
+                                    <span>⭐ {{ number_format($s->agency->rating, 1) }}</span>
+                                    <span>•</span>
+                                    <span>{{ $s->agency->city_name }}</span>
+                                </div>
                             </div>
                         </div>
+
+                        {{-- Route Info --}}
                         <p class="text-sm font-medium text-[#111111] mb-1">{{ $s->route->route_name }}</p>
-                        <p class="text-xs text-gray-500 font-light mb-3">{{ $s->route->origin_city }} → {{ $s->route->destination_city }}</p>
+                        <p class="text-xs text-gray-500 font-light mb-3">
+                            {{ $s->route->origin_city_name }} → {{ $s->route->destination_city_name }}
+                        </p>
+
+                        {{-- Schedule Info --}}
                         <div class="bg-[#F5F5F5] border border-[#E5E5E5] rounded-[12px] p-3 mb-3">
-                            <div class="flex justify-between text-sm"><span class="text-[#111111] font-mono">{{ $s->departure_date->format('d M Y') }}</span><span class="font-mono">{{ $s->departure_time }}</span></div>
-                            <div class="flex justify-between text-xs text-gray-500 mt-1 font-mono uppercase tracking-wider"><span>{{ $s->vehicle->plate_number ?? '-' }}</span><span class="text-[#C1121F]">{{ $s->travel_class }}</span></div>
+                            <div class="flex justify-between text-sm">
+                                <span class="font-medium text-[#111111]">{{ $s->departure_date->format('d M Y') }}</span>
+                                <span class="font-mono">{{ $s->departure_time }}</span>
+                            </div>
+                            <div class="flex justify-between text-xs text-gray-500 mt-1 font-mono uppercase tracking-wider">
+                                <span>{{ $s->vehicle->plate_number ?? '-' }}</span>
+                                <span class="text-[#C1121F]">{{ $s->travel_class }}</span>
+                            </div>
                         </div>
+
+                        {{-- Price & Booking --}}
                         <div class="flex justify-between items-center border-t border-[#E5E5E5] pt-3">
                             <div>
                                 <p class="font-bold text-[#C1121F] font-mono">Rp {{ number_format($s->price_per_seat, 0, ',', '.') }}</p>
-                                <p class="text-xs {{ $s->available_seats > 0 ? 'text-green-600' : 'text-[#C1121F]' }} font-mono uppercase tracking-wider">{{ $s->available_seats > 0 ? $s->available_seats . ' kursi' : 'Penuh' }}</p>
+                                <p class="text-xs {{ $s->available_seats > 0 ? 'text-green-600' : 'text-[#C1121F]' }} font-mono uppercase tracking-wider">
+                                    {{ $s->available_seats > 0 ? $s->available_seats . ' kursi' : 'Penuh' }}
+                                </p>
                             </div>
                             @if($s->available_seats > 0)
                             <a href="{{ route('customer.booking.create', $s) }}" class="btn-gomad-primary text-sm py-2 px-4 rounded-[12px]">Booking</a>
@@ -240,6 +319,7 @@
                     @endforeach
                 </div>
                 @else
+                {{-- List View --}}
                 <div class="space-y-3">
                     @foreach($schedules as $s)
                     <div class="bg-white border border-[#E5E5E5] rounded-[12px] p-4 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 shadow-sm hover:border-[#C1121F] transition-colors">
@@ -248,18 +328,28 @@
                                 @if($s->agency->logo)<img src="{{ $s->agency->logo }}" class="w-full h-full object-cover">@else<span class="text-xl">🏢</span>@endif
                             </div>
                             <div>
-                                <p class="font-bold text-[#111111]">{{ $s->agency->agency_name }}</p>
+                                <div class="flex items-center gap-2">
+                                    <p class="font-bold text-[#111111]">{{ $s->agency->agency_name }}</p>
+                                    <span class="text-xs text-gray-400 font-mono">⭐ {{ number_format($s->agency->rating, 1) }}</span>
+                                    <span class="text-xs text-gray-400">{{ $s->agency->city_name }}</span>
+                                </div>
                                 <p class="text-sm text-gray-500 font-light">{{ $s->route->route_name }}</p>
-                                <p class="text-xs text-gray-400 font-mono">{{ $s->departure_date->format('d M Y') }} {{ $s->departure_time }} | {{ $s->vehicle->plate_number }}</p>
+                                <p class="text-xs text-gray-400 font-mono">
+                                    {{ $s->departure_date->format('d M Y') }} {{ $s->departure_time }} | 
+                                    {{ $s->vehicle->plate_number }} | 
+                                    <span class="text-[#C1121F] uppercase">{{ $s->travel_class }}</span>
+                                </p>
                             </div>
                         </div>
-                        <div class="flex items-center gap-4">
+                        <div class="flex items-center gap-4 flex-shrink-0">
                             <div class="text-right">
                                 <p class="font-bold text-[#C1121F] font-mono text-lg">Rp {{ number_format($s->price_per_seat, 0, ',', '.') }}</p>
-                                <p class="text-xs {{ $s->available_seats > 0 ? 'text-green-600' : 'text-[#C1121F]' }} font-mono uppercase tracking-wider">{{ $s->available_seats }} kursi</p>
+                                <p class="text-xs {{ $s->available_seats > 0 ? 'text-green-600' : 'text-[#C1121F]' }} font-mono uppercase tracking-wider">
+                                    {{ $s->available_seats > 0 ? $s->available_seats . ' kursi' : 'Penuh' }}
+                                </p>
                             </div>
                             @if($s->available_seats > 0)
-                            <a href="{{ route('customer.booking.create', $s) }}" class="btn-gomad-primary text-sm py-2 px-4 rounded-[12px]">Booking</a>
+                            <a href="{{ route('customer.booking.create', $s) }}" class="btn-gomad-primary text-sm py-2 px-5 rounded-[12px] whitespace-nowrap">Booking</a>
                             @endif
                         </div>
                     </div>

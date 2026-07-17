@@ -32,7 +32,7 @@ class HomeController extends Controller
         $stats = [
             'total_agencies' => Agency::where('is_verified', true)->count(),
             'total_routes' => Route::where('is_active', true)->count(),
-            'total_cities' => \App\Models\RouteStop::distinct('city_name')->count('city_name'),
+            'total_cities' => \App\Models\City::count(),
             'app_downloads' => PlatformSetting::getValue('total_app_downloads', 0),
         ];
 

@@ -133,6 +133,21 @@ Route::prefix('v1')->group(function () {
     | Authenticated Routes
     |--------------------------------------------------------------------------
     */
+    // Di dalam prefix('v1'), tambahkan:
+    // ═══════════════════════════════════════
+    // REGION API (LARAVOLT)
+    // ═══════════════════════════════════════
+    Route::prefix('region')->group(function () {
+        Route::get('/provinces', [\App\Http\Controllers\Api\RegionController::class, 'provinces']);
+        Route::get('/cities', [\App\Http\Controllers\Api\RegionController::class, 'cities']);
+        Route::get('/districts', [\App\Http\Controllers\Api\RegionController::class, 'districts']);
+        Route::get('/search', [\App\Http\Controllers\Api\RegionController::class, 'search']);
+        Route::get('/all-cities', [\App\Http\Controllers\Api\RegionController::class, 'allCities']);
+    });
+
+    // Available route stops
+    Route::get('/route-stops/available', [\App\Http\Controllers\Web\Admin\RouteController::class, 'availableStops']);
+
     Route::middleware(['auth:sanctum', \App\Http\Middleware\Api\ApiAuthenticate::class])->group(function () {
 
         // Device Token

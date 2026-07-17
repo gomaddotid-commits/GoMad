@@ -203,6 +203,16 @@ class Schedule extends Model
     {
         return $this->hasMany(PassengerTransfer::class, 'to_schedule_id');
     }
+
+    public function getRouteOriginCityAttribute(): string
+    {
+        return $this->route?->originCity?->name ?? '-';
+    }
+
+    public function getRouteDestinationCityAttribute(): string
+    {
+        return $this->route?->destinationCity?->name ?? '-';
+    }
 }
 
 // End of file

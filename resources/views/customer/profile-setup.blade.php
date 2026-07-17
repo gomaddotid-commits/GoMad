@@ -16,46 +16,25 @@
         </div>
         @endif
 
-        @if(!auth()->user()->phone)
-        <div class="bg-[#F5F5F5] border border-blue-200 rounded-[12px] p-4 mb-6 text-sm text-blue-800">
-            <p class="font-medium flex items-center gap-2 font-mono uppercase tracking-wider text-xs">
-                <span>📱</span> Nomor WhatsApp Diperlukan
-            </p>
-            <p class="mt-1 font-light">Nomor WhatsApp digunakan untuk notifikasi booking, kontak driver, dan pengiriman E-Ticket.</p>
-        </div>
-        @endif
-
         <form action="{{ route('customer.setup.save') }}" method="POST" class="space-y-4">
             @csrf
             <div>
                 <label class="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-1">Nama Lengkap <span class="text-[#C1121F]">*</span></label>
-                <input type="text" name="name" value="{{ old('name', $user->name) }}" 
+                <input type="text" name="name" value="{{ old('name', auth()->user()->name) }}" 
                        class="w-full px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111] transition" required>
             </div>
             <div>
                 <label class="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-1">Alamat Email</label>
-                <input type="email" value="{{ $user->email }}" disabled
+                <input type="email" value="{{ auth()->user()->email }}" disabled
                        class="w-full px-0 py-2 border-b-2 border-[#E5E5E5] bg-transparent text-gray-400 cursor-not-allowed">
-                <p class="text-[10px] text-gray-400 mt-1 font-light">Email yang digunakan saat pendaftaran</p>
             </div>
             <div>
                 <label class="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-1">
-                    Nomor WhatsApp 
-                    @if(!auth()->user()->phone)
-                    <span class="text-[#C1121F]">*</span>
-                    @endif
+                    Nomor WhatsApp <span class="text-[#C1121F]">*</span>
                 </label>
-                <input type="text" name="phone" value="{{ old('phone', $user->phone) }}" 
+                <input type="text" name="phone" value="{{ old('phone', auth()->user()->phone) }}" 
                        class="w-full px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111] transition" 
-                       placeholder="081234567890"
-                       {{ auth()->user()->phone ? '' : 'required' }}>
-                <p class="text-[10px] text-gray-400 mt-1 font-light">
-                    @if(auth()->user()->phone)
-                    Nomor WhatsApp Anda saat ini
-                    @else
-                    Wajib diisi untuk menerima notifikasi booking
-                    @endif
-                </p>
+                       placeholder="081234567890" required>
             </div>
 
             <button type="submit" class="w-full btn-gomad-primary mt-2 text-base py-3 rounded-[12px]">
@@ -63,16 +42,14 @@
             </button>
         </form>
 
-        @if(auth()->user()->phone)
         <form action="{{ route('customer.setup.save') }}" method="POST" class="mt-3">
             @csrf
-            <input type="hidden" name="name" value="{{ $user->name }}">
+            <input type="hidden" name="name" value="{{ auth()->user()->name }}">
             <input type="hidden" name="skip" value="1">
             <button type="submit" class="w-full border border-[#E5E5E5] text-gray-600 py-3 rounded-[12px] font-medium hover:bg-[#F5F5F5] transition">
                 ⏭️ LEWATI (ISI NANTI)
             </button>
         </form>
-        @endif
     </div>
 </div>
 @endsection

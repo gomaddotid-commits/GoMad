@@ -116,7 +116,7 @@
                         {{-- Nama --}}
                         <div>
                             <label class="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-1">
-                                <span x-text="role === 'payment_agent' ? 'Nama Pemilik Warung' : 'Nama Lengkap'"></span>
+                                Nama Lengkap
                                 <span class="text-[#C1121F]">*</span>
                             </label>
                             <input type="text" name="name" value="{{ old('name') }}"
@@ -135,57 +135,12 @@
                         {{-- HP --}}
                         <div>
                             <label class="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-1">
-                                <span x-text="role === 'payment_agent' ? 'Nomor HP Pemilik' : 'Nomor HP (WhatsApp)'"></span>
+                                Nomor HP (WhatsApp)
                                 <span class="text-[#C1121F]">*</span>
                             </label>
                             <input type="text" name="phone" value="{{ old('phone') }}"
                                    class="w-full px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111] transition"
                                    placeholder="081234567890" required>
-                        </div>
-
-                        {{-- Agency Fields --}}
-                        <div x-show="role === 'agency'" x-cloak class="space-y-5">
-                            <div>
-                                <label class="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-1">Nama Agency <span class="text-[#C1121F]">*</span></label>
-                                <input type="text" name="agency_name" value="{{ old('agency_name') }}"
-                                       class="w-full px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111] transition"
-                                       placeholder="Contoh: Travel Jaya Abadi" required>
-                            </div>
-                            <div>
-                                <label class="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-1">Alamat Agency <span class="text-[#C1121F]">*</span></label>
-                                <textarea name="address" rows="2"
-                                          class="w-full px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111] transition"
-                                          placeholder="Alamat lengkap agency" required>{{ old('address') }}</textarea>
-                            </div>
-                            <div>
-                                <label class="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-1">Kontak Person <span class="text-[#C1121F]">*</span></label>
-                                <input type="text" name="contact_person" value="{{ old('contact_person') }}"
-                                       class="w-full px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111] transition"
-                                       placeholder="Nama kontak person" required>
-                            </div>
-                        </div>
-
-                        {{-- Warung Fields --}}
-                        <div x-show="role === 'payment_agent'" x-cloak class="space-y-5">
-                            <div>
-                                <label class="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-1">Nama Warung <span class="text-[#C1121F]">*</span></label>
-                                <input type="text" name="agent_name" value="{{ old('agent_name') }}"
-                                       class="w-full px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111] transition"
-                                       placeholder="Contoh: Warung Berkah" required>
-                            </div>
-                            <div>
-                                <label class="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-1">Alamat Warung <span class="text-[#C1121F]">*</span></label>
-                                <textarea name="address" rows="2"
-                                          class="w-full px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111] transition"
-                                          placeholder="Alamat lengkap warung" required>{{ old('address') }}</textarea>
-                            </div>
-                            <div>
-                                <label class="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-1">PIN Konfirmasi <span class="text-[#C1121F]">*</span></label>
-                                <input type="password" name="pin" maxlength="6"
-                                       class="w-full px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111] text-center text-lg tracking-widest transition"
-                                       placeholder="6 digit angka" required>
-                                <p class="text-xs text-gray-500 mt-1 font-light">PIN 6 digit digunakan untuk konfirmasi setiap pembayaran</p>
-                            </div>
                         </div>
 
                         {{-- Password --}}
@@ -227,7 +182,7 @@
                             </div>
                         </div>
 
-                        {{-- Referral (Hanya Customer) --}}
+                        {{-- Referral (HANYA UNTUK CUSTOMER) --}}
                         <div x-show="role === 'customer'" x-cloak>
                             <label class="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-1">
                                 Kode Referral <span class="text-xs text-gray-400 font-light">(Opsional)</span>
@@ -238,7 +193,7 @@
                             <p class="text-xs text-gray-400 mt-1 font-light">Dapatkan diskon dengan kode referral dari teman Anda</p>
                         </div>
 
-                        {{-- Google Register (Hanya Customer) --}}
+                        {{-- Google Register (HANYA UNTUK CUSTOMER) --}}
                         <div x-show="role === 'customer'" x-cloak>
                             <div class="relative my-6">
                                 <div class="absolute inset-0 flex items-center">

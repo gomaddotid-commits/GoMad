@@ -1,6 +1,4 @@
 <?php
-// File: app/Models/PaymentAgent.php
-// Deskripsi: PaymentAgent model untuk Warung GoMad
 
 namespace App\Models;
 
@@ -17,12 +15,14 @@ class PaymentAgent extends Model
     protected $fillable = [
         'user_id',
         'agent_name',
+        'province_code',      // FK ke indonesia_provinces
+        'city_code',          // FK ke indonesia_cities
+        'district_code',      // FK ke indonesia_districts
         'owner_name',
         'owner_phone',
         'guard_name',
         'guard_phone',
         'address',
-        'kecamatan',
         'maps_link',
         'latitude',
         'longitude',
@@ -42,9 +42,7 @@ class PaymentAgent extends Model
         'last_settlement_at',
     ];
 
-    protected $hidden = [
-        'pin',
-    ];
+    protected $hidden = ['pin'];
 
     protected function casts(): array
     {
@@ -61,6 +59,29 @@ class PaymentAgent extends Model
             'verified_at' => 'datetime',
         ];
     }
+
+    // ═══════════════════════════════════════
+    // RELASI KE LARAVOLT
+    // ═══════════════════════════════════════
+
+    public function province(): BelongsTo
+    {
+        return $this->belongsTo(Province::class, 'province_code', 'code');
+    }
+
+    public function city(): BelongsTo
+    {
+        return $this->belongsTo(City::class, 'city_code', 'code');
+    }
+
+    public function district(): BelongsTo
+    {
+        return $this->belongsTo(District::class, 'district_code', 'code');
+    }
+
+    // ═══════════════════════════════════════
+    // RELASI KE TABEL LAIN
+    // ═══════════════════════════════════════
 
     public function user(): BelongsTo
     {
@@ -82,6 +103,39 @@ class PaymentAgent extends Model
         return $this->hasMany(Settlement::class);
     }
 
+    // ═══════════════════════════════════════
+    // ACCESSORS
+    // ═══════════════════════════════════════
+
+    public function getProvinceNameAttribute(): string
+    {
+        return $this->province?->name ?? '-';
+    }
+
+    public function getCityNameAttribute(): string
+    {
+        return $this->city?->name ?? '-';
+    }
+
+    public function getDistrictNameAttribute(): string
+    {
+        return $this->district?->name ?? '-';
+    }
+
+    public function getFullAddressAttribute(): string
+    {
+        $parts = [];
+        if ($this->address) $parts[] = $this->address;
+        if ($this->district_name !== '-') $parts[] = 'Kec. ' . $this->district_name;
+        $parts[] = $this->city_name;
+        $parts[] = $this->province_name;
+        return implode(', ', $parts);
+    }
+
+    // ═══════════════════════════════════════
+    // SCOPES
+    // ═══════════════════════════════════════
+
     public function scopeActive(Builder $query): Builder
     {
         return $query->where('is_active', true);
@@ -92,10 +146,29 @@ class PaymentAgent extends Model
         return $query->where('is_verified', true);
     }
 
-    public function scopeByKecamatan(Builder $query, string $kecamatan): Builder
+    public function scopeInCity(Builder $query, string $cityCode): Builder
     {
-        return $query->where('kecamatan', $kecamatan);
+        return $query->where('city_code', $cityCode);
+    }
+
+    public function scopeInDistrict(Builder $query, string $districtCode): Builder
+    {
+        return $query->where('district_code', $districtCode);
+    }
+
+    public function scopeNearby(Builder $query, float $lat, float $lng, float $radiusKm = 10): Builder
+    {
+        return $query->selectRaw("
+            payment_agents.*,
+            (6371 * acos(
+                cos(radians(?)) * cos(radians(latitude)) * 
+                cos(radians(longitude) - radians(?)) + 
+                sin(radians(?)) * sin(radians(latitude))
+            )) AS distance
+        ", [$lat, $lng, $lat])
+        ->whereNotNull('latitude')
+        ->whereNotNull('longitude')
+        ->having('distance', '<=', $radiusKm)
+        ->orderBy('distance');
     }
 }
-
-// End of file

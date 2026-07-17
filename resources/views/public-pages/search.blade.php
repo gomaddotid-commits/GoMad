@@ -6,33 +6,25 @@
 
 @section('content')
 @php
-    $allCities = \App\Models\RouteStop::select('city_name')->distinct()->orderBy('city_name')->get();
+    $allCities = \App\Models\City::with('province')->orderBy('name')->get();
     $agencies = \App\Models\Agency::where('is_verified', true)->orderBy('agency_name')->get();
     $months = [];
     for ($m = 1; $m <= 12; $m++) {
         $months[] = ['value' => $m, 'label' => \Carbon\Carbon::create()->month($m)->locale('id')->monthName];
     }
     
-    $query = \App\Models\Schedule::with(['route', 'agency', 'vehicle'])
+    $query = \App\Models\Schedule::with(['route.originCity', 'route.destinationCity', 'agency', 'vehicle'])
         ->where('is_active', true)
         ->where('departure_date', '>=', now()->toDateString());
 
     if (request('origin')) {
-        $query->whereHas('route', function($q) {
-            $q->where('origin_city', 'like', '%' . request('origin') . '%');
-        });
+        $query->whereHas('route.stops', fn($q) => $q->whereHas('city', fn($sq) => $sq->where('name', 'like', '%' . request('origin') . '%')));
     }
     if (request('destination')) {
-        $query->whereHas('route', function($q) {
-            $q->where('destination_city', 'like', '%' . request('destination') . '%');
-        });
+        $query->whereHas('route.stops', fn($q) => $q->whereHas('city', fn($sq) => $sq->where('name', 'like', '%' . request('destination') . '%')));
     }
     if (request('date')) {
         $query->whereDate('departure_date', request('date'));
-    }
-    if (request('month')) {
-        $query->whereMonth('departure_date', request('month'))
-              ->whereYear('departure_date', request('year', now()->year));
     }
     if (request('travel_class')) {
         $query->where('travel_class', request('travel_class'));
@@ -60,7 +52,7 @@
                 <div class="card-gomad p-5 sticky top-24 border-[#E5E5E5]">
                     <div class="flex items-center justify-between mb-4 border-b border-[#E5E5E5] pb-3">
                         <h3 class="font-bold text-[#111111] font-mono uppercase tracking-wider text-sm">Filter</h3>
-                        @if(request()->anyFilled(['origin', 'destination', 'month', 'travel_class', 'agency_id']))
+                        @if(request()->anyFilled(['origin', 'destination', 'travel_class', 'agency_id']))
                         <a href="{{ route('search') }}" class="text-xs text-[#C1121F] hover:underline font-medium">Reset</a>
                         @endif
                     </div>
@@ -71,7 +63,7 @@
                             <select name="origin" class="w-full px-3 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent font-medium text-[#111111] appearance-none cursor-pointer">
                                 <option value="">Semua Kota</option>
                                 @foreach($allCities as $city)
-                                <option value="{{ $city->city_name }}" {{ request('origin') == $city->city_name ? 'selected' : '' }}>{{ $city->city_name }}</option>
+                                <option value="{{ $city->name }}" {{ request('origin') == $city->name ? 'selected' : '' }}>{{ $city->name }}</option>
                                 @endforeach
                             </select>
                         </div>
@@ -80,7 +72,7 @@
                             <select name="destination" class="w-full px-3 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent font-medium text-[#111111] appearance-none cursor-pointer">
                                 <option value="">Semua Kota</option>
                                 @foreach($allCities as $city)
-                                <option value="{{ $city->city_name }}" {{ request('destination') == $city->city_name ? 'selected' : '' }}>{{ $city->city_name }}</option>
+                                <option value="{{ $city->name }}" {{ request('destination') == $city->name ? 'selected' : '' }}>{{ $city->name }}</option>
                                 @endforeach
                             </select>
                         </div>
@@ -147,12 +139,10 @@
                         <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                     </div>
                     <p class="text-gray-500 text-lg font-light">Tidak ada jadwal ditemukan.</p>
-                    <p class="text-gray-400 text-sm mt-2">Coba ubah filter atau cari dengan kata kunci berbeda.</p>
                     <a href="{{ route('search') }}" class="inline-block mt-4 text-[#C1121F] hover:underline font-medium">Reset Filter</a>
                 </div>
                 @else
                     @if($viewMode == 'grid')
-                    {{-- GRID VIEW --}}
                     <div class="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
                         @foreach($schedules as $schedule)
                         <div class="card-gomad p-5 group border-[#E5E5E5] hover:border-[#C1121F]">
@@ -176,7 +166,7 @@
                             </div>
 
                             <p class="text-sm font-medium text-[#111111] mb-1">{{ $schedule->route->route_name }}</p>
-                            <p class="text-xs text-gray-500 mb-3 font-mono tracking-wider">{{ $schedule->route->origin_city }} → {{ $schedule->route->destination_city }}</p>
+                            <p class="text-xs text-gray-500 mb-3 font-mono tracking-wider">{{ $schedule->route->origin_city_name }} → {{ $schedule->route->destination_city_name }}</p>
 
                             <div class="bg-[#F5F5F5] rounded-[12px] p-3 mb-3 border border-[#E5E5E5]">
                                 <div class="flex justify-between text-sm">
@@ -210,7 +200,6 @@
                         @endforeach
                     </div>
                     @else
-                    {{-- LIST VIEW --}}
                     <div class="space-y-3">
                         @foreach($schedules as $schedule)
                         <div class="card-gomad p-5 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 group border-[#E5E5E5] hover:border-[#C1121F]">
@@ -257,7 +246,6 @@
                     </div>
                     @endif
 
-                    {{-- PAGINATION --}}
                     <div class="mt-8">
                         {{ $schedules->appends(request()->query())->links() }}
                     </div>

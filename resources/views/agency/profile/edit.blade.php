@@ -4,6 +4,8 @@
 @section('content')
 @php
     $agency = auth()->user()->agency;
+    $provinces = \App\Models\Province::orderBy('name')->get();
+    $allCities = \App\Models\City::with('province')->orderBy('name')->get();
 
     function arr($data) {
         if (is_array($data)) return $data;
@@ -15,6 +17,34 @@
     }
 
     $gallery = arr($agency->gallery ?? []);
+    
+    // Coverage data
+    $coverageSelected = old('coverage_cities', $agency->coverage_cities ?? [$agency->city_code]);
+    $allCitiesData = $allCities->map(function($c) {
+        return [
+            'code' => $c->code,
+            'name' => $c->name,
+            'province_name' => $c->province->name ?? '',
+        ];
+    })->values()->toArray();
+
+    // Pre-load cities & districts untuk chained select
+    $preloadedCities = [];
+    $preloadedDistricts = [];
+
+    if ($agency->province_code) {
+        $preloadedCities = \App\Models\City::where('province_code', $agency->province_code)
+            ->orderBy('name')
+            ->get(['code', 'name'])
+            ->toArray();
+    }
+
+    if ($agency->city_code) {
+        $preloadedDistricts = \App\Models\District::where('city_code', $agency->city_code)
+            ->orderBy('name')
+            ->get(['code', 'name'])
+            ->toArray();
+    }
 @endphp
 
 <div>
@@ -122,21 +152,18 @@
     </div>
 
     {{-- FORM PROFIL --}}
-    <form action="{{ route('agency.profile.update') }}" method="POST" class="bg-white border border-[#E5E5E5] rounded-[12px] p-6 shadow-sm space-y-6">
+    <form action="{{ route('agency.profile.update') }}" method="POST" class="space-y-6">
         @csrf
         @method('PUT')
 
-        <div>
+        {{-- Informasi Dasar --}}
+        <div class="bg-white border border-[#E5E5E5] rounded-[12px] p-6 shadow-sm">
             <h3 class="font-mono uppercase tracking-wider text-xs font-bold text-[#111111] mb-4">📋 Informasi Dasar</h3>
             <div class="space-y-4">
                 <div>
                     <label class="block text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">Nama Agency <span class="text-[#C1121F]">*</span></label>
                     <input type="text" name="agency_name" value="{{ old('agency_name', $agency->agency_name) }}"
                            class="w-full px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111] transition" required>
-                </div>
-                <div>
-                    <label class="block text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">Alamat Lengkap <span class="text-[#C1121F]">*</span></label>
-                    <textarea name="address" rows="3" class="w-full px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111] transition" required>{{ old('address', $agency->address) }}</textarea>
                 </div>
                 <div>
                     <label class="block text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">Deskripsi</label>
@@ -164,6 +191,99 @@
                                class="w-full px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111] transition">
                     </div>
                 </div>
+            </div>
+        </div>
+
+        {{-- ═══════════════════════════════════════ --}}
+        {{-- LOKASI AGENCY (LARAVOLT) --}}
+        {{-- ═══════════════════════════════════════ --}}
+        <div class="bg-white border-2 border-[#C1121F] rounded-[12px] p-6 shadow-sm">
+            <h3 class="font-mono uppercase tracking-wider text-xs font-bold text-[#C1121F] mb-4">📍 Lokasi Agency</h3>
+            
+            <div x-data="locationSelect()" class="space-y-4">
+                {{-- Provinsi --}}
+                <div>
+                    <label class="block text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">Provinsi <span class="text-[#C1121F]">*</span></label>
+                    <select name="province_code" x-model="province" @change="loadCities()" 
+                            class="w-full px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111] transition" required>
+                        <option value="">Pilih Provinsi</option>
+                        @foreach($provinces as $p)
+                        <option value="{{ $p->code }}" {{ old('province_code', $agency->province_code) == $p->code ? 'selected' : '' }}>
+                            {{ $p->name }}
+                        </option>
+                        @endforeach
+                    </select>
+                </div>
+
+                {{-- Kab/Kota --}}
+                <div>
+                    <label class="block text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">Kabupaten/Kota <span class="text-[#C1121F]">*</span></label>
+                    <select name="city_code" x-model="city" @change="loadDistricts()" :disabled="!province"
+                            class="w-full px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111] transition" required>
+                        <option value="">Pilih Kab/Kota</option>
+                        <template x-for="c in cities" :key="c.code">
+                            <option :value="c.code" x-text="c.name"
+                                    :selected="c.code === '{{ old('city_code', $agency->city_code) }}'"></option>
+                        </template>
+                    </select>
+                </div>
+
+                {{-- Kecamatan --}}
+                <div>
+                    <label class="block text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">Kecamatan</label>
+                    <select name="district_code" x-model="district" :disabled="!city"
+                            class="w-full px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111] transition">
+                        <option value="">Pilih Kecamatan</option>
+                        <template x-for="d in districts" :key="d.code">
+                            <option :value="d.code" x-text="d.name"
+                                    :selected="d.code === '{{ old('district_code', $agency->district_code) }}'"></option>
+                        </template>
+                    </select>
+                </div>
+
+                {{-- Alamat Detail --}}
+                <div>
+                    <label class="block text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">Alamat Detail (Jalan, RT/RW) <span class="text-[#C1121F]">*</span></label>
+                    <textarea name="address" rows="2" class="w-full px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111] transition"
+                              placeholder="Jl. Trunojoyo No. 45, RT 02/RW 03" required>{{ old('address', $agency->address) }}</textarea>
+                </div>
+            </div>
+        </div>
+
+        {{-- ═══════════════════════════════════════ --}}
+        {{-- ZONA LAYANAN (COVERAGE) --}}
+        {{-- ═══════════════════════════════════════ --}}
+        <div class="bg-white border border-[#E5E5E5] rounded-[12px] p-6 shadow-sm" x-data="coverageSelect()">
+            <h3 class="font-mono uppercase tracking-wider text-xs font-bold text-[#111111] mb-4">🗺️ Zona Layanan (Coverage)</h3>
+            <p class="text-sm text-gray-500 mb-4 font-light">Pilih kota mana saja yang dilayani agency Anda.</p>
+
+            {{-- Search Filter --}}
+            <div class="mb-4">
+                <input type="text" x-model="searchQuery" placeholder="🔍 Filter kota..." 
+                       class="w-full px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111] transition text-sm">
+            </div>
+
+            <div class="mb-3 text-sm text-gray-500 font-light">
+                Terpilih: <strong x-text="selected.length" class="text-[#C1121F]"></strong> kota
+            </div>
+
+            <div class="grid md:grid-cols-3 gap-3 max-h-80 overflow-y-auto">
+                <template x-for="city in filteredCities" :key="city.code">
+                    <label class="flex items-center gap-3 p-3 border-2 border-[#E5E5E5] rounded-[12px] cursor-pointer hover:border-[#C1121F] transition"
+                           :class="selected.includes(city.code) ? 'border-[#C1121F] bg-[#C1121F]/5' : ''">
+                        <input type="checkbox" name="coverage_cities[]" :value="city.code" x-model="selected"
+                               class="w-4 h-4 text-[#C1121F] rounded border-[#E5E5E5] focus:ring-[#C1121F]">
+                        <div>
+                            <span class="text-sm font-medium text-[#111111]" x-text="city.name"></span>
+                            <span class="text-[10px] text-gray-400 block font-light" x-text="city.province_name"></span>
+                        </div>
+                    </label>
+                </template>
+            </div>
+
+            <div class="flex gap-2 mt-3">
+                <button type="button" @click="selectAll()" class="text-xs text-[#C1121F] hover:underline font-medium">Pilih Semua</button>
+                <button type="button" @click="selected = []" class="text-xs text-gray-500 hover:underline font-medium">Reset</button>
             </div>
         </div>
 
@@ -200,4 +320,89 @@
         <p class="text-[10px] text-gray-400 mt-1 font-light">Klik + untuk menambah foto (max 10). Hover foto untuk hapus.</p>
     </div>
 </div>
+
+@push('scripts')
+<script>
+// ═══════════════════════════════════════
+// LOCATION SELECT (CHAINED DROPDOWN)
+// ═══════════════════════════════════════
+function locationSelect() {
+    return {
+        province: '{{ old('province_code', $agency->province_code) }}',
+        city: '{{ old('city_code', $agency->city_code) }}',
+        district: '{{ old('district_code', $agency->district_code) }}',
+        cities: @json($preloadedCities),
+        districts: @json($preloadedDistricts),
+
+        async loadCities() {
+            if (!this.province) { 
+                this.cities = []; 
+                this.city = ''; 
+                this.district = ''; 
+                return; 
+            }
+            try {
+                const res = await fetch(`/api/v1/region/cities?province=${this.province}`);
+                const data = await res.json();
+                this.cities = data.data || data || [];
+                // Jangan reset city kalau masih dalam province yang sama
+                if (this.city && !this.cities.find(c => c.code === this.city)) {
+                    this.city = '';
+                    this.district = '';
+                }
+            } catch (e) {
+                console.error('Failed to load cities:', e);
+            }
+        },
+
+        async loadDistricts() {
+            if (!this.city) { 
+                this.districts = []; 
+                this.district = ''; 
+                return; 
+            }
+            try {
+                const res = await fetch(`/api/v1/region/districts?city=${this.city}`);
+                const data = await res.json();
+                this.districts = data.data || data || [];
+                // Jangan reset district kalau masih dalam city yang sama
+                if (this.district && !this.districts.find(d => d.code === this.district)) {
+                    this.district = '';
+                }
+            } catch (e) {
+                console.error('Failed to load districts:', e);
+            }
+        },
+
+        init() {
+            // Data sudah pre-loaded dari server
+        }
+    }
+}
+
+// ═══════════════════════════════════════
+// COVERAGE SELECT
+// ═══════════════════════════════════════
+function coverageSelect() {
+    return {
+        selected: @json($coverageSelected),
+        searchQuery: '',
+        allCities: @json($allCitiesData),
+
+        get filteredCities() {
+            if (!this.searchQuery) return this.allCities;
+            const q = this.searchQuery.toLowerCase();
+            return this.allCities.filter(city => 
+                city.name.toLowerCase().includes(q) || 
+                city.province_name.toLowerCase().includes(q)
+            );
+        },
+
+        selectAll() {
+            this.selected = this.allCities.map(c => c.code);
+        }
+    }
+}
+</script>
+@endpush
 @endsection

@@ -1,6 +1,4 @@
 <?php
-// File: app/Models/RouteStop.php
-// Deskripsi: RouteStop model untuk titik pemberhentian dalam rute
 
 namespace App\Models;
 
@@ -15,7 +13,7 @@ class RouteStop extends Model
 
     protected $fillable = [
         'route_id',
-        'city_name',
+        'city_code',       // FK ke indonesia_cities
         'stop_order',
         'latitude',
         'longitude',
@@ -31,6 +29,19 @@ class RouteStop extends Model
             'distance_from_origin' => 'decimal:2',
         ];
     }
+
+    // ═══════════════════════════════════════
+    // RELASI KE LARAVOLT
+    // ═══════════════════════════════════════
+
+    public function city(): BelongsTo
+    {
+        return $this->belongsTo(City::class, 'city_code', 'code');
+    }
+
+    // ═══════════════════════════════════════
+    // RELASI KE TABEL LAIN
+    // ═══════════════════════════════════════
 
     public function route(): BelongsTo
     {
@@ -61,6 +72,30 @@ class RouteStop extends Model
     {
         return $this->hasMany(Booking::class, 'destination_stop_id');
     }
-}
 
-// End of file
+    // ═══════════════════════════════════════
+    // ACCESSORS
+    // ═══════════════════════════════════════
+
+    public function getCityNameAttribute(): string
+    {
+        return $this->city?->name ?? 'Unknown';
+    }
+
+    public function getProvinceNameAttribute(): string
+    {
+        return $this->city?->province?->name ?? 'Unknown';
+    }
+
+    public function isFirst(): bool
+    {
+        $minOrder = RouteStop::where('route_id', $this->route_id)->min('stop_order');
+        return $this->stop_order === $minOrder;
+    }
+
+    public function isLast(): bool
+    {
+        $maxOrder = RouteStop::where('route_id', $this->route_id)->max('stop_order');
+        return $this->stop_order === $maxOrder;
+    }
+}

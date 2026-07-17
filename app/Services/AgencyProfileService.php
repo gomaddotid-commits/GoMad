@@ -139,4 +139,34 @@ class AgencyProfileService
             'business_hours' => $agency->business_hours ?? [],
         ];
     }
+
+    // Di dalam class AgencyProfileService, tambahkan:
+
+    /**
+     * Dapatkan daftar provinsi
+     */
+    public function getProvinces(): Collection
+    {
+        return \App\Models\Province::orderBy('name')->get();
+    }
+
+    /**
+     * Dapatkan daftar kota berdasarkan provinsi
+     */
+    public function getCitiesByProvince(string $provinceCode): Collection
+    {
+        return \App\Models\City::where('province_code', $provinceCode)
+            ->orderBy('name')
+            ->get();
+    }
+
+    /**
+     * Dapatkan daftar kecamatan berdasarkan kota
+     */
+    public function getDistrictsByCity(string $cityCode): Collection
+    {
+        return \App\Models\District::where('city_code', $cityCode)
+            ->orderBy('name')
+            ->get();
+    }
 }

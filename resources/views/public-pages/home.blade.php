@@ -6,8 +6,12 @@
 
 @section('content')
 @php
-    $cities = \App\Models\RouteStop::select('city_name')->distinct()->orderBy('city_name')->get();
-    $popularRoutes = \App\Models\Route::withCount('schedules')->orderByDesc('schedules_count')->limit(6)->get();
+    $cities = \App\Models\City::with('province')->orderBy('name')->get();
+    $popularRoutes = \App\Models\Route::with(['originCity', 'destinationCity'])
+        ->withCount('schedules')
+        ->orderByDesc('schedules_count')
+        ->limit(6)
+        ->get();
     
     // Statistik rental
     $rentalVehiclesCount = \App\Models\VehicleRentalSetting::where('is_available_for_rental', true)
@@ -113,14 +117,18 @@
                     <label class="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-1">Asal</label>
                     <select name="origin" class="w-full px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent font-medium text-[#111111] appearance-none cursor-pointer transition-colors duration-300">
                         <option value="">Semua Kota</option>
-                        @foreach($cities as $city)<option value="{{ $city->city_name }}">{{ $city->city_name }}</option>@endforeach
+                        @foreach($cities as $city)
+                        <option value="{{ $city->name }}">{{ $city->name }}</option>
+                        @endforeach
                     </select>
                 </div>
                 <div class="col-span-1">
                     <label class="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-1">Tujuan</label>
                     <select name="destination" class="w-full px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent font-medium text-[#111111] appearance-none cursor-pointer transition-colors duration-300">
                         <option value="">Semua Kota</option>
-                        @foreach($cities as $city)<option value="{{ $city->city_name }}">{{ $city->city_name }}</option>@endforeach
+                        @foreach($cities as $city)
+                        <option value="{{ $city->name }}">{{ $city->name }}</option>
+                        @endforeach
                     </select>
                 </div>
                 <div class="col-span-1">
@@ -208,12 +216,13 @@
         <h2 class="text-3xl font-bold tracking-tight text-[#111111]">Rute Populer</h2>
     </div>
 
-    @if(isset($popularRoutes) && $popularRoutes->isNotEmpty())
+    @if($popularRoutes->isNotEmpty())
     <div class="relative w-full overflow-hidden group/slider">
         <div class="flex gap-4 md:gap-6 animate-scroll hover:pause">
             
             @foreach($popularRoutes as $route)
-            <div class="card-gomad overflow-hidden flex-shrink-0 flex flex-row w-[calc(100%-1rem)] sm:w-[calc(50%-0.75rem)] lg:w-[calc(33.333%-1rem)] cursor-pointer p-0 h-32 md:h-40 group/card">
+            <a href="{{ route('search', ['origin' => $route->origin_city_name, 'destination' => $route->destination_city_name]) }}" 
+               class="card-gomad overflow-hidden flex-shrink-0 flex flex-row w-[calc(100%-1rem)] sm:w-[calc(50%-0.75rem)] lg:w-[calc(33.333%-1rem)] cursor-pointer p-0 h-32 md:h-40 group/card">
                 <div class="w-1/3 h-full overflow-hidden bg-[#F5F5F5] flex-shrink-0">
                     @if($route->photo)
                     <img src="{{ $route->photo }}" alt="{{ $route->route_name }}" class="w-full h-full object-cover transition-transform duration-500 group-hover/card:scale-105">
@@ -225,19 +234,20 @@
                 <div class="w-2/3 p-4 flex flex-col justify-between">
                     <div>
                         <h3 class="font-bold text-[#111111] text-base md:text-lg truncate">{{ $route->route_name }}</h3>
-                        <p class="text-xs md:text-sm text-gray-500 truncate">{{ $route->origin_city }} → {{ $route->destination_city }}</p>
+                        <p class="text-xs md:text-sm text-gray-500 truncate">{{ $route->origin_city_name }} → {{ $route->destination_city_name }}</p>
                     </div>
                     <div class="flex justify-between items-center border-t border-[#E5E5E5] pt-2 mt-2">
                         <p class="text-[10px] md:text-xs font-mono uppercase tracking-wider text-[#C1121F] font-medium">{{ $route->schedules_count ?? 0 }} jadwal</p>
                         <span class="text-[#C1121F] group-hover/card:translate-x-1 transition-transform">→</span>
                     </div>
                 </div>
-            </div>
+            </a>
             @endforeach
 
             {{-- Duplikasi untuk infinite scroll --}}
             @foreach($popularRoutes as $route)
-            <div class="card-gomad overflow-hidden flex-shrink-0 flex flex-row w-[calc(100%-1rem)] sm:w-[calc(50%-0.75rem)] lg:w-[calc(33.333%-1rem)] cursor-pointer p-0 h-32 md:h-40 group/card">
+            <a href="{{ route('search', ['origin' => $route->origin_city_name, 'destination' => $route->destination_city_name]) }}" 
+               class="card-gomad overflow-hidden flex-shrink-0 flex flex-row w-[calc(100%-1rem)] sm:w-[calc(50%-0.75rem)] lg:w-[calc(33.333%-1rem)] cursor-pointer p-0 h-32 md:h-40 group/card">
                 <div class="w-1/3 h-full overflow-hidden bg-[#F5F5F5] flex-shrink-0">
                     @if($route->photo)
                     <img src="{{ $route->photo }}" alt="{{ $route->route_name }}" class="w-full h-full object-cover transition-transform duration-500 group-hover/card:scale-105">
@@ -248,14 +258,14 @@
                 <div class="w-2/3 p-4 flex flex-col justify-between">
                     <div>
                         <h3 class="font-bold text-[#111111] text-base md:text-lg truncate">{{ $route->route_name }}</h3>
-                        <p class="text-xs md:text-sm text-gray-500 truncate">{{ $route->origin_city }} → {{ $route->destination_city }}</p>
+                        <p class="text-xs md:text-sm text-gray-500 truncate">{{ $route->origin_city_name }} → {{ $route->destination_city_name }}</p>
                     </div>
                     <div class="flex justify-between items-center border-t border-[#E5E5E5] pt-2 mt-2">
                         <p class="text-[10px] md:text-xs font-mono uppercase tracking-wider text-[#C1121F] font-medium">{{ $route->schedules_count ?? 0 }} jadwal</p>
                         <span class="text-[#C1121F] group-hover/card:translate-x-1 transition-transform">→</span>
                     </div>
                 </div>
-            </div>
+            </a>
             @endforeach
 
         </div>

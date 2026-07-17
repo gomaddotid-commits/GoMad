@@ -14,6 +14,8 @@ use App\Http\Controllers\Web\Public\RentalController as WebPublicRentalControlle
 // Auth Controllers
 use App\Http\Controllers\Web\Auth\LoginController as WebAuthLoginController;
 use App\Http\Controllers\Web\Auth\RegisterController as WebAuthRegisterController;
+use Illuminate\Foundation\Auth\EmailVerificationRequest;
+use Illuminate\Http\Request;
 
 // Customer Controllers
 use App\Http\Controllers\Web\Customer\HomeController as WebCustomerHomeController;
@@ -61,12 +63,29 @@ use App\Http\Controllers\Web\Admin\ReportController as WebAdminReportController;
 use App\Http\Controllers\Web\Admin\SettingController as WebAdminSettingController;
 use App\Http\Controllers\Web\Admin\RentalController as WebAdminRentalController;
 use App\Http\Controllers\Web\Admin\RentalDocumentController as WebAdminRentalDocumentController;
+
+// Email Verification Routes
+Route::get('/email/verify', function () {
+    return view('auth.verify-email');
+})->middleware('auth')->name('verification.notice');
+
+Route::get('/email/verify/{id}/{hash}', function (EmailVerificationRequest $request) {
+    $request->fulfill();
+    return redirect()->route('customer.home')
+        ->with('success', 'Email berhasil diverifikasi!');
+})->middleware(['auth', 'signed'])->name('verification.verify');
+
+Route::post('/email/verification-notification', function (Request $request) {
+    $request->user()->sendEmailVerificationNotification();
+    return back()->with('success', 'Link verifikasi telah dikirim ulang!');
+})->middleware(['auth', 'throttle:6,1'])->name('verification.send');
+
 /*
 |--------------------------------------------------------------------------
 | Customer Routes
 |--------------------------------------------------------------------------
 */
-Route::middleware(['auth', \App\Http\Middleware\Web\CustomerMiddleware::class])
+Route::middleware(['auth', 'verified', \App\Http\Middleware\Web\CustomerMiddleware::class])
     ->prefix('customer')
     ->name('customer.')
     ->group(function () {
@@ -126,7 +145,7 @@ Route::middleware(['auth', \App\Http\Middleware\Web\CustomerMiddleware::class])
 | Agency Routes
 |--------------------------------------------------------------------------
 */
-Route::middleware(['auth', \App\Http\Middleware\Web\AgencyMiddleware::class])
+Route::middleware(['auth', 'verified', \App\Http\Middleware\Web\AgencyMiddleware::class])
     ->prefix('agency')
     ->name('agency.')
     ->group(function () {
@@ -222,7 +241,7 @@ Route::middleware(['auth', \App\Http\Middleware\Web\AgencyMiddleware::class])
 | Driver Routes
 |--------------------------------------------------------------------------
 */
-Route::middleware(['auth', \App\Http\Middleware\Web\DriverMiddleware::class])
+Route::middleware(['auth', 'verified', \App\Http\Middleware\Web\DriverMiddleware::class])
     ->prefix('driver')
     ->name('driver.')
     ->group(function () {
@@ -248,7 +267,7 @@ Route::middleware(['auth', \App\Http\Middleware\Web\DriverMiddleware::class])
 | Payment Agent Routes
 |--------------------------------------------------------------------------
 */
-Route::middleware(['auth', \App\Http\Middleware\Web\PaymentAgentMiddleware::class])
+Route::middleware(['auth', 'verified', \App\Http\Middleware\Web\PaymentAgentMiddleware::class])
     ->prefix('payment-agent')
     ->name('payment-agent.')
     ->group(function () {
@@ -270,7 +289,7 @@ Route::middleware(['auth', \App\Http\Middleware\Web\PaymentAgentMiddleware::clas
 | Admin Routes
 |--------------------------------------------------------------------------
 */
-Route::middleware(['auth', \App\Http\Middleware\Web\AdminMiddleware::class])
+Route::middleware(['auth', 'verified', \App\Http\Middleware\Web\AdminMiddleware::class])
     ->prefix('admin')
     ->name('admin.')
     ->group(function () {

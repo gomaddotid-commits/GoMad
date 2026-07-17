@@ -3,40 +3,48 @@
 @section('title', 'Buat Jadwal')
 @section('content')
 @php
-    $routes = \App\Models\Route::where('is_active', true)->with('stops')->get();
+    $routes = \App\Models\Route::where('is_active', true)
+        ->with(['stops.city', 'originCity', 'destinationCity'])
+        ->get();
     $vehicles = auth()->user()->agency->vehicles()->where('is_active', true)->get();
     $drivers = auth()->user()->agency->drivers()->where('is_active', true)->get();
     $minDays = app()->environment('local') ? 1 : 30;
     $minDate = now()->addDays($minDays)->toDateString();
-    
-    $routesData = $routes->map(function($route) {
-        return [
-            'id' => $route->id,
-            'route_name' => $route->route_name,
-            'origin_city' => $route->origin_city,
-            'destination_city' => $route->destination_city,
-            'max_price' => (float) ($route->max_price ?? 0),
-            'cod_available' => (bool) $route->cod_available,
-            'cod_min_deposit' => (float) ($route->cod_min_deposit ?? 500000),
-            'payment_methods' => $route->payment_methods_array,
-            'stops' => $route->stops()->orderBy('stop_order')->get()->map(function($stop, $index) use ($route) {
-                $totalStops = $route->stops->count();
-                return [
-                    'id' => $stop->id,
-                    'city_name' => $stop->city_name,
-                    'stop_order' => $stop->stop_order,
-                    'is_first' => $index === 0,
-                    'is_last' => $index === $totalStops - 1,
-                ];
-            })->values()->toArray(),
-        ];
-    })->values()->toArray();
     
     $walletService = app(\App\Services\WalletService::class);
     $agency = auth()->user()->agency;
     $depositBalance = (float) ($agency->wallet->deposit_balance ?? 0);
     $codHold = (float) ($agency->wallet->cod_hold_balance ?? 0);
     $availableDeposit = $depositBalance - $codHold;
+
+    // Prepare routes data for JavaScript
+    $routesData = $routes->map(function($route) {
+        $stops = $route->stops->map(function($stop, $index) use ($route) {
+            $totalStops = $route->stops->count();
+            return [
+                'id' => $stop->id,
+                'city_code' => $stop->city_code,
+                'city_name' => $stop->city_name,
+                'stop_order' => $stop->stop_order,
+                'is_first' => $stop->isFirst(),
+                'is_last' => $stop->isLast(),
+                'latitude' => (float) $stop->latitude,
+                'longitude' => (float) $stop->longitude,
+            ];
+        })->values()->toArray();
+        
+        return [
+            'id' => $route->id,
+            'route_name' => $route->route_name,
+            'origin_city' => $route->origin_city_name,
+            'destination_city' => $route->destination_city_name,
+            'max_price' => (float) ($route->max_price ?? 0),
+            'cod_available' => (bool) $route->cod_available,
+            'cod_min_deposit' => (float) ($route->cod_min_deposit ?? 500000),
+            'payment_methods' => $route->payment_methods_array,
+            'stops' => $stops,
+        ];
+    })->values()->toArray();
 @endphp
 
 <div class="max-w-5xl mx-auto" id="scheduleFormApp">
@@ -61,7 +69,9 @@
                     <select name="route_id" id="routeSelect" class="w-full px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111] transition" required>
                         <option value="">Pilih Rute</option>
                         @foreach($routes as $route)
-                        <option value="{{ $route->id }}" {{ old('route_id') == $route->id ? 'selected' : '' }}>{{ $route->route_name }}</option>
+                        <option value="{{ $route->id }}" {{ old('route_id') == $route->id ? 'selected' : '' }}>
+                            {{ $route->route_name }}
+                        </option>
                         @endforeach
                     </select>
                 </div>
@@ -87,7 +97,9 @@
                     </select>
                 </div>
                 <div>
-                    <label class="block text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">Tanggal (min {{ \Carbon\Carbon::parse($minDate)->format('d M Y') }}) <span class="text-[#C1121F]">*</span></label>
+                    <label class="block text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">
+                        Tanggal (min {{ \Carbon\Carbon::parse($minDate)->format('d M Y') }}) <span class="text-[#C1121F]">*</span>
+                    </label>
                     <input type="date" name="departure_date" min="{{ $minDate }}" value="{{ old('departure_date') }}" 
                            class="w-full px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111] transition" required>
                 </div>
@@ -139,14 +151,17 @@
                 </ol>
             </div>
 
+            {{-- Coverage Check --}}
+            <div id="coverageCheck" class="mb-4" style="display:none;"></div>
+
             <div class="overflow-x-auto mb-4">
                 <table class="w-full text-sm">
                     <thead class="bg-[#F5F5F5] border-b border-[#E5E5E5]">
                         <tr>
                             <th class="px-4 py-3 text-left font-mono uppercase tracking-wider text-xs text-gray-500">Stop</th>
+                            <th class="px-4 py-3 text-left font-mono uppercase tracking-wider text-xs text-gray-500">Kota</th>
                             <th class="px-4 py-3 text-center w-24 font-mono uppercase tracking-wider text-xs text-gray-500">Pickup</th>
                             <th class="px-4 py-3 text-center w-24 font-mono uppercase tracking-wider text-xs text-gray-500">Dropoff</th>
-                            <th class="px-4 py-3 text-left font-mono uppercase tracking-wider text-xs text-gray-500">Keterangan</th>
                         </tr>
                     </thead>
                     <tbody id="stopsTableBody">
@@ -206,10 +221,6 @@
                     </div>
                 </div>
             </div>
-            
-            <div id="unavailablePaymentsInfo" class="mt-4 bg-[#F5F5F5] rounded-[12px] p-3 text-sm text-gray-500 hidden">
-                <p class="font-light">ℹ️ Beberapa metode pembayaran tidak tersedia untuk rute ini berdasarkan pengaturan admin.</p>
-            </div>
         </div>
 
         {{-- Hidden inputs --}}
@@ -217,8 +228,8 @@
         <input type="hidden" name="pricing" id="pricingInput" value="[]">
 
         <div class="flex gap-4">
-            <button type="button" onclick="submitForm()" class="btn-gomad-primary">Buat Jadwal</button>
-            <a href="{{ route('agency.schedules.index') }}" class="btn-gomad-outline">Batal</a>
+            <button type="button" onclick="submitForm()" class="btn-gomad-primary px-8 py-3 rounded-[12px] font-semibold">Buat Jadwal</button>
+            <a href="{{ route('agency.schedules.index') }}" class="border border-[#E5E5E5] text-gray-700 px-6 py-3 rounded-[12px] font-semibold hover:bg-[#F5F5F5] transition">Batal</a>
         </div>
     </form>
 </div>
@@ -239,6 +250,7 @@
 @push('scripts')
 <script>
 var routesData = @json($routesData);
+var agencyCoverage = @json($agency->coverage_cities ?? [$agency->city_code]);
 var availableDeposit = {{ $availableDeposit }};
 var selectedRouteId = null;
 var stops = [];
@@ -258,12 +270,14 @@ var modalInfo = document.getElementById('modalInfo');
 var modalPairsDiv = document.getElementById('modalPairs');
 var basePriceInput = document.getElementById('basePrice');
 var maxPriceInfo = document.getElementById('maxPriceInfo');
+var coverageCheckDiv = document.getElementById('coverageCheck');
 
 routeSelect.addEventListener('change', function() {
     selectedRouteId = parseInt(this.value);
     if (!selectedRouteId) {
         stopConfigSection.style.display = 'none';
         document.getElementById('paymentSection').style.display = 'none';
+        coverageCheckDiv.style.display = 'none';
         return;
     }
     loadStops(selectedRouteId);
@@ -275,6 +289,9 @@ function loadStops(routeId) {
     
     pricingList = [];
     
+    // Check coverage
+    checkAgencyCoverage(route);
+    
     // Tampilkan max price info
     if (route.max_price > 0) {
         maxPriceInfo.textContent = 'Maksimal harga: Rp ' + formatRupiah(route.max_price);
@@ -285,83 +302,40 @@ function loadStops(routeId) {
     }
     
     // ========================================
-    // TAMPILKAN/SEMBUNYIKAN METODE PEMBAYARAN
+    // SETUP PAYMENT METHODS
     // ========================================
     var paymentMethods = route.payment_methods || ['midtrans', 'cash', 'cod'];
     var paymentSection = document.getElementById('paymentSection');
     var onlineCard = document.getElementById('onlinePaymentCard');
     var cashCard = document.getElementById('cashPaymentCard');
     var codCard = document.getElementById('codPaymentCard');
-    var unavailableInfo = document.getElementById('unavailablePaymentsInfo');
     var codInfo = document.getElementById('codInfo');
     var codWarning = document.getElementById('codWarning');
     var allowCod = document.getElementById('allowCod');
     var codMinDepositLabel = document.getElementById('codMinDepositLabel');
     
-    // Reset semua
-    onlineCard.style.display = 'none';
-    cashCard.style.display = 'none';
-    codCard.style.display = 'none';
-    allowCod.checked = false;
-    allowCod.disabled = false;
-    codInfo.style.display = 'none';
-    codWarning.classList.add('hidden');
-    unavailableInfo.classList.add('hidden');
+    onlineCard.style.display = paymentMethods.includes('midtrans') ? 'block' : 'none';
+    cashCard.style.display = paymentMethods.includes('cash') ? 'block' : 'none';
     
-    var hasUnavailable = false;
-    
-    // Online (Midtrans)
-    if (paymentMethods.includes('midtrans')) {
-        onlineCard.style.display = 'block';
-    } else {
-        hasUnavailable = true;
-    }
-    
-    // Warung GoMad (Cash)
-    if (paymentMethods.includes('cash')) {
-        cashCard.style.display = 'block';
-    } else {
-        hasUnavailable = true;
-    }
-    
-    // COD
     if (paymentMethods.includes('cod') && route.cod_available) {
         codCard.style.display = 'block';
-        
         var requiredDeposit = route.cod_min_deposit || 500000;
         codMinDepositLabel.textContent = 'Rp ' + formatRupiah(requiredDeposit);
         
-        // Tampilkan info COD saat checkbox dicentang
-        allowCod.addEventListener('change', function() {
-            if (this.checked) {
-                codInfo.style.display = 'block';
-            } else {
-                codInfo.style.display = 'none';
-            }
-        });
+        allowCod.onchange = function() {
+            codInfo.style.display = this.checked ? 'block' : 'none';
+        };
         
         if (availableDeposit < requiredDeposit) {
             codWarning.classList.remove('hidden');
-            codWarning.innerHTML = '⚠️ Saldo deposit tersedia: <strong>Rp ' + formatRupiah(availableDeposit) + '</strong>. Tidak mencukupi (butuh Rp ' + formatRupiah(requiredDeposit) + '). <a href="{{ route("agency.wallet.topup") }}" target="_blank" class="text-red-600 underline font-medium">Top Up sekarang</a>';
+            codWarning.innerHTML = '⚠️ Saldo deposit: <strong>Rp ' + formatRupiah(availableDeposit) + '</strong>. Butuh Rp ' + formatRupiah(requiredDeposit) + '. <a href="{{ route("agency.wallet.topup") }}" target="_blank" class="text-red-600 underline font-medium">Top Up</a>';
             allowCod.disabled = true;
         } else {
             codWarning.classList.add('hidden');
             allowCod.disabled = false;
         }
-    } else if (paymentMethods.includes('cod') && !route.cod_available) {
-        hasUnavailable = true;
-    } else if (!paymentMethods.includes('cod')) {
-        hasUnavailable = true;
-    }
-    
-    // Tampilkan info jika ada metode yang tidak tersedia
-    if (hasUnavailable) {
-        unavailableInfo.classList.remove('hidden');
-        var unavailableList = [];
-        if (!paymentMethods.includes('midtrans')) unavailableList.push('Online (Midtrans)');
-        if (!paymentMethods.includes('cash')) unavailableList.push('Warung GoMad');
-        if (!paymentMethods.includes('cod')) unavailableList.push('COD');
-        unavailableInfo.innerHTML = '<p>ℹ️ Metode tidak tersedia untuk rute ini: <strong>' + unavailableList.join(', ') + '</strong></p>';
+    } else {
+        codCard.style.display = 'none';
     }
     
     paymentSection.style.display = 'block';
@@ -372,6 +346,7 @@ function loadStops(routeId) {
     stops = route.stops.map(function(stop, index) {
         return {
             id: stop.id,
+            city_code: stop.city_code,
             city_name: stop.city_name,
             stop_order: stop.stop_order,
             is_pickup_available: stop.is_first ? true : false,
@@ -380,6 +355,7 @@ function loadStops(routeId) {
             is_dropoff_fixed: stop.is_last,
             is_first: stop.is_first,
             is_last: stop.is_last,
+            in_coverage: agencyCoverage.includes(stop.city_code),
         };
     });
     
@@ -400,18 +376,45 @@ function loadStops(routeId) {
     updatePricingSummary();
 }
 
+function checkAgencyCoverage(route) {
+    var uncoveredCities = [];
+    
+    route.stops.forEach(function(stop) {
+        if (!agencyCoverage.includes(stop.city_code)) {
+            uncoveredCities.push(stop.city_name);
+        }
+    });
+    
+    if (uncoveredCities.length > 0) {
+        coverageCheckDiv.style.display = 'block';
+        coverageCheckDiv.innerHTML = 
+            '<div class="bg-red-50 border border-red-200 rounded-[12px] p-4 text-sm text-red-700">' +
+            '<p class="font-medium">⚠️ Agency Anda tidak melayani kota berikut:</p>' +
+            '<ul class="list-disc list-inside mt-2 font-light">' +
+            uncoveredCities.map(function(c) { return '<li>' + c + '</li>'; }).join('') +
+            '</ul>' +
+            '<p class="mt-2 font-light">Update <a href="{{ route("agency.profile.edit") }}" class="underline font-medium">Zona Layanan</a> terlebih dahulu.</p>' +
+            '</div>';
+    } else {
+        coverageCheckDiv.style.display = 'none';
+        coverageCheckDiv.innerHTML = '';
+    }
+}
+
 function renderStopsTable() {
     var html = '';
     stops.forEach(function(stop) {
         html += '<tr class="border-t">';
-        html += '<td class="px-4 py-3"><span class="font-medium">' + stop.city_name + '</span><span class="text-xs text-gray-400 ml-1">(Stop ' + stop.stop_order + ')</span></td>';
-        html += '<td class="px-4 py-3 text-center"><input type="checkbox" ' + (stop.is_pickup_available ? 'checked' : '') + ' ' + (stop.is_pickup_fixed ? 'disabled' : '') + ' onchange="toggleStop(' + stop.id + ', \'pickup\', this.checked)" class="w-5 h-5 text-primary-600 rounded"></td>';
-        html += '<td class="px-4 py-3 text-center"><input type="checkbox" ' + (stop.is_dropoff_available ? 'checked' : '') + ' ' + (stop.is_dropoff_fixed ? 'disabled' : '') + ' onchange="toggleStop(' + stop.id + ', \'dropoff\', this.checked)" class="w-5 h-5 text-primary-600 rounded"></td>';
-        html += '<td class="px-4 py-3 text-xs text-gray-500">';
-        if (stop.is_first) html += 'Pickup wajib';
-        else if (stop.is_last) html += 'Dropoff wajib';
-        else html += 'Dapat dikonfigurasi';
-        html += '</td></tr>';
+        html += '<td class="px-4 py-3"><span class="text-xs font-mono text-gray-400">Stop ' + stop.stop_order + '</span></td>';
+        html += '<td class="px-4 py-3">';
+        html += '<span class="font-medium">' + stop.city_name + '</span>';
+        if (!stop.in_coverage) {
+            html += ' <span class="text-[10px] text-red-500 font-mono">⚠️ Di luar coverage</span>';
+        }
+        html += '</td>';
+        html += '<td class="px-4 py-3 text-center"><input type="checkbox" ' + (stop.is_pickup_available ? 'checked' : '') + ' ' + (stop.is_pickup_fixed ? 'disabled' : '') + ' onchange="toggleStop(' + stop.id + ', \'pickup\', this.checked)" class="w-5 h-5 text-[#C1121F] rounded"></td>';
+        html += '<td class="px-4 py-3 text-center"><input type="checkbox" ' + (stop.is_dropoff_available ? 'checked' : '') + ' ' + (stop.is_dropoff_fixed ? 'disabled' : '') + ' onchange="toggleStop(' + stop.id + ', \'dropoff\', this.checked)" class="w-5 h-5 text-[#C1121F] rounded"></td>';
+        html += '</tr>';
     });
     stopsTableBody.innerHTML = html;
 }
@@ -464,7 +467,7 @@ function showModal(pairs) {
     modalInfo.textContent = 'Isi harga untuk ' + pairs.length + ' kombinasi baru:';
     var html = '';
     pairs.forEach(function(pair, idx) {
-        html += '<div class="mb-3 bg-gray-50 rounded-xl p-3">';
+        html += '<div class="mb-3 bg-[#F5F5F5] rounded-xl p-3">';
         html += '<p class="text-sm font-medium mb-1">' + pair.origin_city + ' → ' + pair.destination_city + '</p>';
         html += '<input type="number" id="modalPrice' + idx + '" value="' + (pair.price || '') + '" placeholder="Harga (Rp)" class="w-full px-3 py-2 border rounded-lg text-sm bg-white" min="1000">';
         html += '</div>';
