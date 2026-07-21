@@ -37,7 +37,7 @@
 {{-- HERO SECTION --}}
 <section class="relative bg-[#BA1826] overflow-hidden py-12 md:py-20 min-h-[40vh] md:min-h-[60vh] flex items-center justify-center">
     
-    <div class="container-magazine relative z-10 w-full flex justify-center">
+    <div class="container-magazine relative z-10 w-full mt-12 flex justify-center">
         <div class="text-white space-y-6 md:space-y-8 max-w-3xl text-center mt-[-4rem] md:mt-[-6rem]">
             
             <h1 class="text-4xl md:text-7xl lg:text-8xl font-bold tracking-tight leading-[0.9]">

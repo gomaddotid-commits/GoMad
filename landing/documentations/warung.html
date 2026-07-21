@@ -1,0 +1,365 @@
+<!-- ═══════════════════════════════════ -->
+<!-- DOCUMENTATION LAYOUT -->
+<!-- ═══════════════════════════════════ -->
+<div class="container-landing py-12">
+    <div class="grid lg:grid-cols-4 gap-8">
+        
+        <!-- Sidebar -->
+        <div class="lg:col-span-1">
+            <div class="doc-sidebar">
+                <div class="flex items-center gap-2 mb-6">
+                    <span class="text-2xl">🏪</span>
+                    <h3 class="font-bold text-lg">Panduan Warung</h3>
+                </div>
+                <nav class="space-y-1">
+                    <a href="#overview" class="doc-sidebar-link active" onclick="scrollToSection(event, 'overview')">📋 Overview</a>
+                    <a href="#register" class="doc-sidebar-link" onclick="scrollToSection(event, 'register')">📝 Pendaftaran</a>
+                    <a href="#confirm" class="doc-sidebar-link" onclick="scrollToSection(event, 'confirm')">💳 Konfirmasi Bayar</a>
+                    <a href="#pin" class="doc-sidebar-link" onclick="scrollToSection(event, 'pin')">🔐 PIN Keamanan</a>
+                    <a href="#settlement" class="doc-sidebar-link" onclick="scrollToSection(event, 'settlement')">📋 Settlement</a>
+                    <a href="#commission" class="doc-sidebar-link" onclick="scrollToSection(event, 'commission')">💰 Komisi</a>
+                    <a href="#faq" class="doc-sidebar-link" onclick="scrollToSection(event, 'faq')">❓ FAQ</a>
+                </nav>
+                
+                <div class="mt-8 pt-6 border-t border-gray-200 dark:border-gray-800">
+                    <a href="#/docs" class="text-sm text-gray-500 dark:text-gray-400 hover:text-[#C1121F] transition-colors flex items-center gap-1">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                        </svg>
+                        Kembali ke Dokumentasi
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Content -->
+        <div class="lg:col-span-3 space-y-16">
+            
+            <!-- Overview -->
+            <div id="overview">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="h-px w-8 bg-[#C1121F]/40"></div>
+                    <h2 class="text-2xl font-bold">📋 Overview Warung GoMad</h2>
+                </div>
+                
+                <div class="card">
+                    <p class="text-gray-500 dark:text-gray-400 font-light leading-relaxed mb-4">
+                        Warung GoMad adalah mitra resmi yang menerima pembayaran <strong>CASH</strong> dari customer. 
+                        Anda cukup mengkonfirmasi kode bayar dengan PIN, terima uang, dan settlement tiap Senin.
+                    </p>
+                    
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
+                        <div class="bg-[#F5F5F5] dark:bg-[#1a1a1a] rounded-xl p-3 text-center">
+                            <span class="text-2xl block mb-1">🏪</span>
+                            <span class="text-xs font-semibold">Mitra Resmi</span>
+                        </div>
+                        <div class="bg-[#F5F5F5] dark:bg-[#1a1a1a] rounded-xl p-3 text-center">
+                            <span class="text-2xl block mb-1">💰</span>
+                            <span class="text-xs font-semibold">Komisi 2%</span>
+                        </div>
+                        <div class="bg-[#F5F5F5] dark:bg-[#1a1a1a] rounded-xl p-3 text-center">
+                            <span class="text-2xl block mb-1">📋</span>
+                            <span class="text-xs font-semibold">Settlement Senin</span>
+                        </div>
+                        <div class="bg-[#F5F5F5] dark:bg-[#1a1a1a] rounded-xl p-3 text-center">
+                            <span class="text-2xl block mb-1">🔐</span>
+                            <span class="text-xs font-semibold">PIN 6 Digit</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Register -->
+            <div id="register">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="h-px w-8 bg-[#C1121F]/40"></div>
+                    <h2 class="text-2xl font-bold">📝 Pendaftaran Warung</h2>
+                </div>
+                
+                <div class="space-y-4">
+                    <div class="card">
+                        <div class="flex items-start gap-4">
+                            <div class="w-10 h-10 bg-[#C1121F] text-white rounded-xl flex items-center justify-center font-bold text-lg flex-shrink-0">1</div>
+                            <div>
+                                <h3 class="font-bold text-lg mb-2">Daftar Akun</h3>
+                                <p class="text-gray-500 dark:text-gray-400 font-light text-sm leading-relaxed">
+                                    Buka halaman <strong>Daftar</strong> → pilih <strong>Warung GoMad</strong>. 
+                                    Isi email, password, nama warung, dan alamat.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="flex items-start gap-4">
+                            <div class="w-10 h-10 bg-[#C1121F] text-white rounded-xl flex items-center justify-center font-bold text-lg flex-shrink-0">2</div>
+                            <div>
+                                <h3 class="font-bold text-lg mb-2">Lengkapi Profil</h3>
+                                <p class="text-gray-500 dark:text-gray-400 font-light text-sm leading-relaxed">
+                                    Setelah login, Anda akan diarahkan ke halaman <strong>Setup Profil</strong>. Isi:
+                                </p>
+                                <ul class="list-disc list-inside text-sm text-gray-500 dark:text-gray-400 font-light mt-2 space-y-1">
+                                    <li><strong>Nama Warung</strong> — Nama toko/warung Anda</li>
+                                    <li><strong>PIN 6 digit</strong> — Untuk konfirmasi setiap transaksi</li>
+                                    <li><strong>Lokasi</strong> — Pilih Provinsi → Kab/Kota → Kecamatan</li>
+                                    <li><strong>Alamat Lengkap</strong> — Alamat detail + link Google Maps</li>
+                                    <li><strong>Info Pemilik</strong> — Nama & nomor HP</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="flex items-start gap-4">
+                            <div class="w-10 h-10 bg-[#C1121F] text-white rounded-xl flex items-center justify-center font-bold text-lg flex-shrink-0">3</div>
+                            <div>
+                                <h3 class="font-bold text-lg mb-2">Tunggu Verifikasi</h3>
+                                <p class="text-gray-500 dark:text-gray-400 font-light text-sm leading-relaxed">
+                                    Admin akan memverifikasi data warung Anda dalam <strong>1-3 hari kerja</strong>. 
+                                    Status bisa dicek di halaman Dashboard.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Confirm -->
+            <div id="confirm">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="h-px w-8 bg-[#C1121F]/40"></div>
+                    <h2 class="text-2xl font-bold">💳 Konfirmasi Pembayaran</h2>
+                </div>
+                
+                <div class="card">
+                    <p class="text-gray-500 dark:text-gray-400 font-light text-sm leading-relaxed mb-4">
+                        Customer datang membawa <strong>kode bayar</strong> (format: WM-YYYYMMDD-XXXXXX). 
+                        Anda tinggal masukkan kode + PIN untuk konfirmasi.
+                    </p>
+                    
+                    <div class="space-y-3">
+                        <div class="flex items-start gap-3 p-4 bg-[#F5F5F5] dark:bg-[#1a1a1a] rounded-xl">
+                            <div class="w-8 h-8 bg-[#C1121F] text-white rounded-lg flex items-center justify-center font-bold text-sm flex-shrink-0">1</div>
+                            <div>
+                                <p class="font-medium text-sm">Customer tunjukkan kode bayar</p>
+                                <p class="text-xs text-gray-500 dark:text-gray-400 font-light mt-1">Format: WM-YYYYMMDD-XXXXXX. Contoh: WM-20260721-A3B7X9</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-3 p-4 bg-[#F5F5F5] dark:bg-[#1a1a1a] rounded-xl">
+                            <div class="w-8 h-8 bg-[#C1121F] text-white rounded-lg flex items-center justify-center font-bold text-sm flex-shrink-0">2</div>
+                            <div>
+                                <p class="font-medium text-sm">Masukkan kode bayar di dashboard</p>
+                                <p class="text-xs text-gray-500 dark:text-gray-400 font-light mt-1">Sistem akan menampilkan detail booking: rute, nama customer, jumlah.</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-3 p-4 bg-[#F5F5F5] dark:bg-[#1a1a1a] rounded-xl">
+                            <div class="w-8 h-8 bg-[#C1121F] text-white rounded-lg flex items-center justify-center font-bold text-sm flex-shrink-0">3</div>
+                            <div>
+                                <p class="font-medium text-sm">Terima uang CASH dari customer</p>
+                                <p class="text-xs text-gray-500 dark:text-gray-400 font-light mt-1">Pastikan jumlah sesuai dengan yang tertera di sistem.</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-3 p-4 bg-[#F5F5F5] dark:bg-[#1a1a1a] rounded-xl">
+                            <div class="w-8 h-8 bg-[#C1121F] text-white rounded-lg flex items-center justify-center font-bold text-sm flex-shrink-0">4</div>
+                            <div>
+                                <p class="font-medium text-sm">Masukkan PIN 6 digit & klik Konfirmasi</p>
+                                <p class="text-xs text-gray-500 dark:text-gray-400 font-light mt-1">Transaksi tercatat, booking customer langsung aktif, komisi Anda bertambah.</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4 bg-red-50 dark:bg-red-900/20 border-2 border-red-300 dark:border-red-700 rounded-xl p-4">
+                        <p class="text-sm text-red-800 dark:text-red-400 font-bold mb-1">⚠️ PERINGATAN PENTING</p>
+                        <p class="text-sm text-red-700 dark:text-red-400 font-light">
+                            JANGAN PERNAH konfirmasi pembayaran sebelum menerima uang CASH dari customer. 
+                            Konfirmasi bersifat <strong>FINAL</strong> dan tidak bisa dibatalkan.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- PIN -->
+            <div id="pin">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="h-px w-8 bg-[#C1121F]/40"></div>
+                    <h2 class="text-2xl font-bold">🔐 PIN Keamanan</h2>
+                </div>
+                
+                <div class="card">
+                    <p class="text-gray-500 dark:text-gray-400 font-light leading-relaxed mb-4">
+                        PIN 6 digit adalah kunci keamanan transaksi Anda. Jaga kerahasiaannya.
+                    </p>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="bg-[#F5F5F5] dark:bg-[#1a1a1a] rounded-xl p-4">
+                            <h3 class="font-bold text-sm mb-2">✅ Tips PIN Aman</h3>
+                            <ul class="text-sm text-gray-500 dark:text-gray-400 font-light space-y-1 list-disc list-inside">
+                                <li>Buat PIN yang sulit ditebak</li>
+                                <li>Jangan gunakan tanggal lahir</li>
+                                <li>Jangan 123456 atau 000000</li>
+                                <li>Ganti PIN secara berkala</li>
+                            </ul>
+                        </div>
+                        <div class="bg-[#F5F5F5] dark:bg-[#1a1a1a] rounded-xl p-4">
+                            <h3 class="font-bold text-sm mb-2">❌ Yang Tidak Boleh</h3>
+                            <ul class="text-sm text-gray-500 dark:text-gray-400 font-light space-y-1 list-disc list-inside">
+                                <li>Memberitahu PIN ke siapapun</li>
+                                <li>Menulis PIN di tempat umum</li>
+                                <li>Menggunakan PIN yang sama dengan akun lain</li>
+                                <li>Membiarkan orang lain mengakses akun Anda</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Settlement -->
+            <div id="settlement">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="h-px w-8 bg-[#C1121F]/40"></div>
+                    <h2 class="text-2xl font-bold">📋 Settlement Mingguan</h2>
+                </div>
+                
+                <div class="card">
+                    <p class="text-gray-500 dark:text-gray-400 font-light text-sm leading-relaxed mb-4">
+                        Setiap hari <strong>Senin pukul 00:01</strong>, sistem akan generate tagihan settlement untuk transaksi seminggu terakhir.
+                    </p>
+                    
+                    <div class="bg-[#F5F5F5] dark:bg-[#1a1a1a] rounded-xl p-4 mb-4">
+                        <p class="text-sm font-medium mb-2">Rumus Settlement:</p>
+                        <div class="text-center font-mono text-lg">
+                            <span>Total Uang Diterima</span>
+                            <span class="text-gray-400 mx-2">−</span>
+                            <span>Komisi (2%)</span>
+                            <span class="text-gray-400 mx-2">=</span>
+                            <span class="text-[#C1121F] font-bold">Jumlah Disetor</span>
+                        </div>
+                    </div>
+                    
+                    <div class="space-y-3">
+                        <div class="flex items-start gap-3 p-3 bg-[#F5F5F5] dark:bg-[#1a1a1a] rounded-xl">
+                            <div class="w-8 h-8 bg-[#C1121F] text-white rounded-lg flex items-center justify-center font-bold text-sm flex-shrink-0">1</div>
+                            <div>
+                                <p class="font-medium text-sm">Cek halaman Settlement</p>
+                                <p class="text-xs text-gray-500 dark:text-gray-400 font-light mt-1">Tagihan muncul setiap Senin. Lihat detail: jumlah transaksi, total, komisi, jumlah disetor.</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-3 p-3 bg-[#F5F5F5] dark:bg-[#1a1a1a] rounded-xl">
+                            <div class="w-8 h-8 bg-[#C1121F] text-white rounded-lg flex items-center justify-center font-bold text-sm flex-shrink-0">2</div>
+                            <div>
+                                <p class="font-medium text-sm">Bayar via Midtrans</p>
+                                <p class="text-xs text-gray-500 dark:text-gray-400 font-light mt-1">Klik <strong>Bayar Sekarang</strong> → Pilih metode pembayaran → Transfer/Virtual Account.</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-3 p-3 bg-[#F5F5F5] dark:bg-[#1a1a1a] rounded-xl">
+                            <div class="w-8 h-8 bg-[#C1121F] text-white rounded-lg flex items-center justify-center font-bold text-sm flex-shrink-0">3</div>
+                            <div>
+                                <p class="font-medium text-sm">Admin Verifikasi</p>
+                                <p class="text-xs text-gray-500 dark:text-gray-400 font-light mt-1">Setelah pembayaran terkonfirmasi, admin akan memverifikasi. Status: <strong>Lunas</strong>.</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-3">
+                        <p class="text-xs text-yellow-700 dark:text-yellow-400 font-light">
+                            ⚠️ Settlement yang tidak dibayar dalam 7 hari akan berstatus <strong>Overdue</strong>. 
+                            Segera selesaikan pembayaran untuk menghindari penalti.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Commission -->
+            <div id="commission">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="h-px w-8 bg-[#C1121F]/40"></div>
+                    <h2 class="text-2xl font-bold">💰 Komisi & Keuntungan</h2>
+                </div>
+                
+                <div class="card">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                        <div class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl p-4 text-center">
+                            <span class="text-3xl block mb-2">💵</span>
+                            <p class="font-bold text-green-700 dark:text-green-400 text-lg">2%</p>
+                            <p class="text-xs text-green-600 dark:text-green-400 font-light mt-1">Komisi per Transaksi</p>
+                        </div>
+                        <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4 text-center">
+                            <span class="text-3xl block mb-2">📊</span>
+                            <p class="font-bold text-blue-700 dark:text-blue-400 text-lg">Real-time</p>
+                            <p class="text-xs text-blue-600 dark:text-blue-400 font-light mt-1">Dashboard Live</p>
+                        </div>
+                        <div class="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-xl p-4 text-center">
+                            <span class="text-3xl block mb-2">🏪</span>
+                            <p class="font-bold text-purple-700 dark:text-purple-400 text-lg">0 Modal</p>
+                            <p class="text-xs text-purple-600 dark:text-purple-400 font-light mt-1">Terima Cash Customer</p>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-[#F5F5F5] dark:bg-[#1a1a1a] rounded-xl p-4">
+                        <p class="text-sm font-medium mb-2">Contoh Perhitungan:</p>
+                        <div class="space-y-2 text-sm font-mono">
+                            <div class="flex justify-between">
+                                <span>Customer bayar</span>
+                                <span>Rp 150.000</span>
+                            </div>
+                            <div class="flex justify-between text-[#C1121F]">
+                                <span>Komisi Anda (2%)</span>
+                                <span class="font-bold">Rp 3.000</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>Harus disetor</span>
+                                <span>Rp 147.000</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- FAQ -->
+            <div id="faq">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="h-px w-8 bg-[#C1121F]/40"></div>
+                    <h2 class="text-2xl font-bold">❓ FAQ Warung</h2>
+                </div>
+                
+                <div class="space-y-3">
+                    <div class="card">
+                        <h3 class="font-bold mb-2">Apakah perlu modal untuk jadi Warung GoMad?</h3>
+                        <p class="text-sm text-gray-500 dark:text-gray-400 font-light">Tidak. Anda hanya menerima uang cash dari customer. Tidak perlu setor modal.</p>
+                    </div>
+                    <div class="card">
+                        <h3 class="font-bold mb-2">Bagaimana jika lupa PIN?</h3>
+                        <p class="text-sm text-gray-500 dark:text-gray-400 font-light">Hubungi admin GoMad untuk reset PIN. Anda akan diminta verifikasi identitas.</p>
+                    </div>
+                    <div class="card">
+                        <h3 class="font-bold mb-2">Kapan settlement harus dibayar?</h3>
+                        <p class="text-sm text-gray-500 dark:text-gray-400 font-light">Settlement muncul setiap Senin. Harus dibayar dalam 7 hari. Lebih dari itu status jadi Overdue.</p>
+                    </div>
+                    <div class="card">
+                        <h3 class="font-bold mb-2">Apakah bisa menolak transaksi?</h3>
+                        <p class="text-sm text-gray-500 dark:text-gray-400 font-light">Tidak bisa. Jika kode bayar valid, Anda wajib memprosesnya.</p>
+                    </div>
+                    <div class="card">
+                        <h3 class="font-bold mb-2">Bagaimana cara cek komisi yang sudah terkumpul?</h3>
+                        <p class="text-sm text-gray-500 dark:text-gray-400 font-light">Buka Dashboard → lihat "Komisi Hari Ini" dan "Total Komisi". Juga bisa di halaman Profil.</p>
+                    </div>
+                </div>
+            </div>
+            
+        </div>
+    </div>
+</div>
+
+<script>
+function scrollToSection(event, id) {
+    event.preventDefault();
+    const element = document.getElementById(id);
+    if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    document.querySelectorAll('.doc-sidebar-link').forEach(link => {
+        link.classList.remove('active');
+    });
+    event.target.classList.add('active');
+}
+</script>

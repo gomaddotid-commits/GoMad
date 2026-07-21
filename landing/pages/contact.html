@@ -1,0 +1,224 @@
+<!-- ═══════════════════════════════════ -->
+<!-- PAGE HEADER -->
+<!-- ═══════════════════════════════════ -->
+<section class="page-header">
+    <div class="container-landing">
+        <div class="flex items-center justify-center gap-3 mb-6">
+            <div class="h-px w-8 bg-[#C1121F]/40"></div>
+            <span class="label">Kontak</span>
+            <div class="h-px w-8 bg-[#C1121F]/40"></div>
+        </div>
+        <h1>Hubungi Kami</h1>
+        <p>Punya pertanyaan, saran, atau butuh bantuan? Kami siap membantu.</p>
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════ -->
+<!-- CONTACT CARDS -->
+<!-- ═══════════════════════════════════ -->
+<section class="section">
+    <div class="container-landing max-w-4xl">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mb-12">
+            <!-- Email -->
+            <div class="card card-center fade-in-up group">
+                <div class="w-16 h-16 bg-[#C1121F]/5 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-4 group-hover:bg-[#C1121F]/10 group-hover:scale-110 transition-all">
+                    📧
+                </div>
+                <h3 class="font-bold text-lg mb-2">Email</h3>
+                <p class="text-sm text-gray-500 dark:text-gray-400 font-light mb-1">support@gomad.id</p>
+                <p class="text-xs text-gray-400 font-light">Respon dalam 1×24 jam</p>
+                <a href="mailto:support@gomad.id" 
+                   class="inline-block mt-4 text-[#C1121F] text-sm font-medium hover:underline">
+                    Kirim Email →
+                </a>
+            </div>
+            
+            <!-- Telepon -->
+            <div class="card card-center fade-in-up group">
+                <div class="w-16 h-16 bg-[#C1121F]/5 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-4 group-hover:bg-[#C1121F]/10 group-hover:scale-110 transition-all">
+                    📞
+                </div>
+                <h3 class="font-bold text-lg mb-2">Telepon</h3>
+                <p class="text-sm text-gray-500 dark:text-gray-400 font-light mb-1">0812-3456-7890</p>
+                <p class="text-xs text-gray-400 font-light">Sen–Sab, 08:00–17:00 WIB</p>
+                <a href="tel:+6281234567890" 
+                   class="inline-block mt-4 text-[#C1121F] text-sm font-medium hover:underline">
+                    Hubungi Sekarang →
+                </a>
+            </div>
+            
+            <!-- WhatsApp -->
+            <div class="card card-center fade-in-up group">
+                <div class="w-16 h-16 bg-[#25D366]/10 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-4 group-hover:bg-[#25D366]/20 group-hover:scale-110 transition-all">
+                    💬
+                </div>
+                <h3 class="font-bold text-lg mb-2">WhatsApp</h3>
+                <p class="text-sm text-gray-500 dark:text-gray-400 font-light mb-1">0812-3456-7890</p>
+                <p class="text-xs text-gray-400 font-light">Respon cepat</p>
+                <a href="https://wa.me/6281234567890" target="_blank" 
+                   class="inline-block mt-4 text-[#25D366] text-sm font-medium hover:underline">
+                    Chat WhatsApp →
+                </a>
+            </div>
+        </div>
+        
+        <!-- Contact Form -->
+        <div class="card p-6 md:p-8">
+            <div class="max-w-lg mx-auto">
+                <div class="text-center mb-8">
+                    <h3 class="text-2xl font-bold mb-2">Kirim Pesan</h3>
+                    <p class="text-gray-500 dark:text-gray-400 font-light text-sm">
+                        Isi form di bawah ini dan kami akan menghubungi Anda segera.
+                    </p>
+                </div>
+                
+                <form class="space-y-6" onsubmit="handleContactForm(event)">
+                    <!-- Nama -->
+                    <div>
+                        <label class="block text-[10px] font-mono uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1">
+                            Nama Lengkap <span class="text-[#C1121F]">*</span>
+                        </label>
+                        <input type="text" required 
+                               class="w-full px-0 py-2 border-b-2 border-gray-200 dark:border-gray-700 focus:border-[#C1121F] outline-none bg-transparent text-[#111111] dark:text-white transition-colors"
+                               placeholder="Nama Anda">
+                    </div>
+                    
+                    <!-- Email -->
+                    <div>
+                        <label class="block text-[10px] font-mono uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1">
+                            Email <span class="text-[#C1121F]">*</span>
+                        </label>
+                        <input type="email" required 
+                               class="w-full px-0 py-2 border-b-2 border-gray-200 dark:border-gray-700 focus:border-[#C1121F] outline-none bg-transparent text-[#111111] dark:text-white transition-colors"
+                               placeholder="nama@email.com">
+                    </div>
+                    
+                    <!-- Subjek -->
+                    <div>
+                        <label class="block text-[10px] font-mono uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1">
+                            Subjek <span class="text-[#C1121F]">*</span>
+                        </label>
+                        <select required 
+                                class="w-full px-0 py-2 border-b-2 border-gray-200 dark:border-gray-700 focus:border-[#C1121F] outline-none bg-transparent text-[#111111] dark:text-white transition-colors">
+                            <option value="">Pilih subjek</option>
+                            <option value="pertanyaan">Pertanyaan Umum</option>
+                            <option value="agency">Pendaftaran Agency</option>
+                            <option value="warung">Pendaftaran Warung</option>
+                            <option value="teknis">Bantuan Teknis</option>
+                            <option value="kerjasama">Kerjasama</option>
+                            <option value="lainnya">Lainnya</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Pesan -->
+                    <div>
+                        <label class="block text-[10px] font-mono uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1">
+                            Pesan <span class="text-[#C1121F]">*</span>
+                        </label>
+                        <textarea rows="5" required 
+                                  class="w-full px-3 py-3 border border-gray-200 dark:border-gray-700 rounded-xl focus:border-[#C1121F] outline-none bg-transparent text-[#111111] dark:text-white transition-colors resize-none"
+                                  placeholder="Tulis pesan Anda di sini..."></textarea>
+                    </div>
+                    
+                    <!-- Submit -->
+                    <button type="submit" 
+                            class="btn-primary w-full text-center py-3.5 text-base rounded-xl">
+                        Kirim Pesan →
+                    </button>
+                </form>
+                
+                <!-- Success Message -->
+                <div id="contact-success" class="hidden mt-6 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl text-green-700 dark:text-green-400 text-sm text-center font-medium">
+                    ✅ Pesan berhasil dikirim! Kami akan menghubungi Anda segera.
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════ -->
+<!-- FAQ QUICK LINKS -->
+<!-- ═══════════════════════════════════ -->
+<section class="section section-bg">
+    <div class="container-landing">
+        <div class="section-header">
+            <span class="label">Bantuan</span>
+            <h2>Pertanyaan Umum</h2>
+            <p>Sebelum menghubungi kami, cek dulu dokumentasi atau FAQ di bawah ini.</p>
+        </div>
+        
+        <div class="grid grid-cols-2 md:grid-cols-3 gap-4 max-w-3xl mx-auto">
+            <a href="#/docs/customer" 
+               class="card text-center hover:border-[#C1121F] transition-colors group">
+                <span class="text-3xl block mb-3 group-hover:scale-110 transition-transform">👤</span>
+                <h3 class="font-bold text-sm mb-1">Panduan Customer</h3>
+                <p class="text-xs text-gray-500 dark:text-gray-400 font-light">Cara booking, bayar, E-Ticket</p>
+            </a>
+            <a href="#/docs/agency" 
+               class="card text-center hover:border-[#C1121F] transition-colors group">
+                <span class="text-3xl block mb-3 group-hover:scale-110 transition-transform">🏢</span>
+                <h3 class="font-bold text-sm mb-1">Panduan Agency</h3>
+                <p class="text-xs text-gray-500 dark:text-gray-400 font-light">Setup profil, jadwal, dompet</p>
+            </a>
+            <a href="#/docs/driver" 
+               class="card text-center hover:border-[#C1121F] transition-colors group">
+                <span class="text-3xl block mb-3 group-hover:scale-110 transition-transform">👨‍✈️</span>
+                <h3 class="font-bold text-sm mb-1">Panduan Driver</h3>
+                <p class="text-xs text-gray-500 dark:text-gray-400 font-light">Jemput, antar, konfirmasi COD</p>
+            </a>
+            <a href="#/docs/warung" 
+               class="card text-center hover:border-[#C1121F] transition-colors group">
+                <span class="text-3xl block mb-3 group-hover:scale-110 transition-transform">🏪</span>
+                <h3 class="font-bold text-sm mb-1">Panduan Warung</h3>
+                <p class="text-xs text-gray-500 dark:text-gray-400 font-light">Konfirmasi bayar, settlement</p>
+            </a>
+            <a href="#/docs/flow" 
+               class="card text-center hover:border-[#C1121F] transition-colors group">
+                <span class="text-3xl block mb-3 group-hover:scale-110 transition-transform">📊</span>
+                <h3 class="font-bold text-sm mb-1">Diagram Alur</h3>
+                <p class="text-xs text-gray-500 dark:text-gray-400 font-light">Visualisasi alur bisnis</p>
+            </a>
+            <a href="#/platform" 
+               class="card text-center hover:border-[#C1121F] transition-colors group">
+                <span class="text-3xl block mb-3 group-hover:scale-110 transition-transform">🚀</span>
+                <h3 class="font-bold text-sm mb-1">Platform</h3>
+                <p class="text-xs text-gray-500 dark:text-gray-400 font-light">Fitur & layanan GoMad</p>
+            </a>
+        </div>
+    </div>
+</section>
+
+<script>
+function handleContactForm(event) {
+    event.preventDefault();
+    
+    const form = event.target;
+    const btn = form.querySelector('button[type="submit"]');
+    const originalText = btn.textContent;
+    
+    // Disable button
+    btn.disabled = true;
+    btn.textContent = '⏳ Mengirim...';
+    btn.classList.add('opacity-70', 'cursor-not-allowed');
+    
+    // Simulate sending
+    setTimeout(() => {
+        form.reset();
+        btn.disabled = false;
+        btn.textContent = originalText;
+        btn.classList.remove('opacity-70', 'cursor-not-allowed');
+        
+        // Show success
+        const successEl = document.getElementById('contact-success');
+        successEl.classList.remove('hidden');
+        
+        // Scroll to success message
+        successEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        
+        // Hide after 5 seconds
+        setTimeout(() => {
+            successEl.classList.add('hidden');
+        }, 5000);
+    }, 1500);
+}
+</script>

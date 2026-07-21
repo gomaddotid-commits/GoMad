@@ -1,383 +1,136 @@
 <!DOCTYPE html>
-<!-- File: landing/index.html -->
-<!-- Deskripsi: Landing page GoMad - gomad.id -->
-<html lang="id">
+<html lang="id" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="GoMad - Mobilitas orèng Madhurâ. Platform booking travel antar kota di Madura. Dijemput di rumah, diantar ke tujuan.">
-    <meta name="keywords" content="GoMad, travel madura, booking travel, sumenep surabaya, travel antar kota">
-    <title>GoMad - Mobilitas orèng Madhurâ | Booking Travel Madura</title>
+    
+    <!-- SEO Meta -->
+    <meta name="description" content="GoMad - Platform travel & rental door-to-door. Booking travel antar kota, sewa mobil, bayar di warung terdekat.">
+    <meta name="keywords" content="GoMad, travel, rental, booking, antar kota, sewa mobil, warung, Madura">
+    <meta name="author" content="GoMad">
+    <meta name="robots" content="index, follow">
+    
+    <!-- Open Graph -->
+    <meta property="og:title" content="GoMad - Mobilitas orèng Madhurâ">
+    <meta property="og:description" content="Travel & Rental Door to Door Service. Booking mudah, dijemput di rumah, diantar ke tujuan.">
+    <meta property="og:image" content="/assets/images/og-image.jpg">
+    <meta property="og:url" content="https://gomad.cloud">
+    <meta property="og:type" content="website">
+    
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="GoMad - Mobilitas orèng Madhurâ">
+    <meta name="twitter:description" content="Travel & Rental Door to Door Service">
+    <meta name="twitter:image" content="/assets/images/og-image.jpg">
+    
+    <!-- Canonical -->
+    <link rel="canonical" href="https://gomad.cloud">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="/assets/images/favicon.ico">
+    
+    <title>GoMad - Mobilitas orèng Madhurâ | Travel & Rental Door to Door</title>
+    
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
+            darkMode: ['selector', '[data-theme="dark"]'],
             theme: {
                 extend: {
                     colors: {
-                        primary: '#DC2626',
-                        'primary-dark': '#B91C1C',
-                        'primary-light': '#FEE2E2',
+                        gomad: { red: '#C1121F', dark: '#111111', light: '#F5F5F5', border: '#E5E5E5' }
+                    },
+                    fontFamily: {
+                        sans: ['Geist Sans', 'Inter', 'system-ui', 'sans-serif'],
+                        mono: ['Geist Mono', 'JetBrains Mono', 'monospace'],
                     }
                 }
             }
         }
     </script>
+    
+    <!-- Custom CSS -->
     <link rel="stylesheet" href="css/style.css">
+    
+    <!-- Mermaid.js -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
 </head>
-<body class="bg-white font-sans">
-    <!-- Navbar -->
-    <nav class="bg-white shadow-sm sticky top-0 z-50">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between items-center h-16">
-                <div class="flex items-center">
-                    <a href="/" class="text-2xl font-bold text-primary">Go<span class="text-gray-800">Mad</span></a>
-                </div>
-                <div class="hidden md:flex items-center space-x-8">
-                    <a href="#beranda" class="text-gray-600 hover:text-primary transition">Beranda</a>
-                    <a href="#layanan" class="text-gray-600 hover:text-primary transition">Layanan</a>
-                    <a href="#rute" class="text-gray-600 hover:text-primary transition">Rute</a>
-                    <a href="#warung" class="text-gray-600 hover:text-primary transition">Warung GoMad</a>
-                    <a href="#kontak" class="text-gray-600 hover:text-primary transition">Kontak</a>
-                    <a href="http://web.gomad.test" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary-dark transition font-medium">
-                        BUKA APLIKASI
-                    </a>
-                </div>
-                <button class="md:hidden text-gray-600" onclick="toggleMobileMenu()">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
-                    </svg>
-                </button>
+<body class="bg-gomad-light dark:bg-gomad-dark text-gomad-dark dark:text-gomad-light font-sans antialiased transition-colors duration-300">
+    
+    <!-- Floating Header Container -->
+    <div id="header-container"></div>
+    
+    <!-- Main Content -->
+    <main id="main-content" class="w-full">
+        <!-- SPA content loaded here -->
+        <div class="flex items-center justify-center h-64">
+            <div class="text-center">
+                <div class="animate-spin w-10 h-10 border-4 border-gomad-red border-t-transparent rounded-full mx-auto mb-4"></div>
+                <p class="text-gray-500 dark:text-gray-400 font-light">Memuat...</p>
             </div>
         </div>
-        <div id="mobileMenu" class="hidden md:hidden bg-white border-t">
-            <div class="px-4 py-3 space-y-3">
-                <a href="#beranda" class="block text-gray-600">Beranda</a>
-                <a href="#layanan" class="block text-gray-600">Layanan</a>
-                <a href="#rute" class="block text-gray-600">Rute</a>
-                <a href="#warung" class="block text-gray-600">Warung GoMad</a>
-                <a href="#kontak" class="block text-gray-600">Kontak</a>
-                <a href="http://web.gomad.test" class="block bg-primary text-white px-4 py-2 rounded-lg text-center">BUKA APLIKASI</a>
-            </div>
+    </main>
+    
+    <!-- Floating WhatsApp Button -->
+    <div id="whatsapp-float" class="fixed bottom-6 right-4 md:right-6 z-40 flex flex-col items-end gap-2">
+        <div id="wa-tooltip" class="bg-white dark:bg-gray-800 text-sm px-4 py-2 rounded-xl shadow-lg opacity-0 transition-all duration-300 pointer-events-none whitespace-nowrap border border-gray-200 dark:border-gray-700">
+            💬 Butuh bantuan? Chat kami!
         </div>
-    </nav>
-
-    <!-- Hero Section -->
-    <section id="beranda" class="bg-gradient-to-br from-primary-light to-white py-16 md:py-24">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="grid md:grid-cols-2 gap-12 items-center">
-                <div>
-                    <h1 class="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 mb-4">
-                        Mobilitas <span class="text-primary">orèng Madhurâ</span>
-                    </h1>
-                    <p class="text-lg md:text-xl text-gray-600 mb-8">
-                        Dijemput di rumah, diantar ke tujuan. Bayar online atau cash di warung terdekat. Platform booking travel antar kota di Madura yang aman dan terpercaya.
-                    </p>
-                    <div class="flex flex-col sm:flex-row gap-4">
-                        <a href="http://web.gomad.test/search" class="bg-primary text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-primary-dark transition text-center">
-                            PESAN SEKARANG
-                        </a>
-                        <a href="#download" class="border-2 border-primary text-primary px-8 py-4 rounded-lg text-lg font-semibold hover:bg-primary hover:text-white transition text-center">
-                            DOWNLOAD APP
-                        </a>
-                    </div>
-                    <div class="mt-8 flex items-center space-x-4">
-                        <div class="flex -space-x-2">
-                            <div class="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center text-white text-sm font-bold border-2 border-white">4.8</div>
-                        </div>
-                        <div>
-                            <div class="flex text-yellow-400">★★★★★</div>
-                            <p class="text-sm text-gray-500">Dipercaya 10.000+ pelanggan</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="hidden md:block">
-                    <div class="bg-white rounded-2xl shadow-xl p-6">
-                        <div class="bg-primary-light rounded-xl p-4 mb-4">
-                            <h3 class="font-semibold text-gray-800 mb-2">Cari Travel</h3>
-                            <div class="space-y-3">
-                                <input type="text" placeholder="Kota asal" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary">
-                                <input type="text" placeholder="Kota tujuan" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary">
-                                <input type="date" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary">
-                                <button class="w-full bg-primary text-white py-3 rounded-lg font-semibold hover:bg-primary-dark transition">CARI JADWAL</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Features Section -->
-    <section id="layanan" class="py-16 md:py-20 bg-gray-50">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="text-center mb-12">
-                <h2 class="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Layanan GoMad</h2>
-                <p class="text-lg text-gray-600 max-w-3xl mx-auto">Pilih layanan yang sesuai dengan kebutuhan perjalanan Anda</p>
-            </div>
-            <div class="grid md:grid-cols-2 lg:grid-cols-5 gap-6">
-                <div class="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition">
-                    <div class="w-14 h-14 bg-primary-light rounded-full flex items-center justify-center mb-4">
-                        <span class="text-2xl">🚐</span>
-                    </div>
-                    <h3 class="text-lg font-bold text-gray-900 mb-2">Ekonomi</h3>
-                    <p class="text-sm text-gray-600">Mobil 8 seat, max overload +2, bagasi 15kg/orang. Harga terjangkau.</p>
-                </div>
-                <div class="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition">
-                    <div class="w-14 h-14 bg-primary-light rounded-full flex items-center justify-center mb-4">
-                        <span class="text-2xl">🚗</span>
-                    </div>
-                    <h3 class="text-lg font-bold text-gray-900 mb-2">Premium</h3>
-                    <p class="text-sm text-gray-600">8 seat strict, bagasi 20kg/orang. Kenyamanan lebih untuk perjalanan Anda.</p>
-                </div>
-                <div class="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition">
-                    <div class="w-14 h-14 bg-primary-light rounded-full flex items-center justify-center mb-4">
-                        <span class="text-2xl">🚙</span>
-                    </div>
-                    <h3 class="text-lg font-bold text-gray-900 mb-2">Charter</h3>
-                    <p class="text-sm text-gray-600">Sewa mobil + supir. Harga flat per mobil, bebas tentukan rute.</p>
-                </div>
-                <div class="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition">
-                    <div class="w-14 h-14 bg-primary-light rounded-full flex items-center justify-center mb-4">
-                        <span class="text-2xl">🔑</span>
-                    </div>
-                    <h3 class="text-lg font-bold text-gray-900 mb-2">Rental</h3>
-                    <p class="text-sm text-gray-600">Sewa mobil tanpa supir. Harga flat, bebas berkendara sendiri.</p>
-                </div>
-                <div class="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition border-2 border-primary">
-                    <div class="w-14 h-14 bg-primary-light rounded-full flex items-center justify-center mb-4">
-                        <span class="text-2xl">🏪</span>
-                    </div>
-                    <h3 class="text-lg font-bold text-gray-900 mb-2">Warung GoMad</h3>
-                    <p class="text-sm text-gray-600">Bayar cash di warung terdekat. Praktis, tidak perlu rekening!</p>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- How It Works -->
-    <section class="py-16 md:py-20">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="text-center mb-12">
-                <h2 class="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Cara Pesan GoMad</h2>
-                <p class="text-lg text-gray-600">Mudah, cepat, dan aman dalam 4 langkah</p>
-            </div>
-            <div class="grid md:grid-cols-4 gap-8">
-                <div class="text-center">
-                    <div class="w-20 h-20 bg-primary text-white rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">1</div>
-                    <h3 class="text-lg font-bold text-gray-900 mb-2">Cari Jadwal</h3>
-                    <p class="text-gray-600">Cari jadwal travel sesuai rute dan tanggal keberangkatan Anda</p>
-                </div>
-                <div class="text-center">
-                    <div class="w-20 h-20 bg-primary text-white rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">2</div>
-                    <h3 class="text-lg font-bold text-gray-900 mb-2">Pilih & Isi Data</h3>
-                    <p class="text-gray-600">Pilih titik jemput dan tujuan, isi data penumpang dan alamat lengkap</p>
-                </div>
-                <div class="text-center">
-                    <div class="w-20 h-20 bg-primary text-white rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">3</div>
-                    <h3 class="text-lg font-bold text-gray-900 mb-2">Bayar</h3>
-                    <p class="text-gray-600">Bayar online via Midtrans atau cash di Warung GoMad terdekat</p>
-                </div>
-                <div class="text-center">
-                    <div class="w-20 h-20 bg-primary text-white rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">4</div>
-                    <h3 class="text-lg font-bold text-gray-900 mb-2">Berangkat!</h3>
-                    <p class="text-gray-600">Dapatkan E-Ticket, dijemput di rumah, dan selamat menikmati perjalanan</p>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Popular Routes -->
-    <section id="rute" class="py-16 md:py-20 bg-gray-50">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="text-center mb-12">
-                <h2 class="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Rute Populer</h2>
-                <p class="text-lg text-gray-600">Rute favorit pelanggan GoMad</p>
-            </div>
-            <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <div class="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition">
-                    <div class="flex items-center justify-between mb-3">
-                        <span class="font-semibold text-gray-900">Sumenep</span>
-                        <span class="text-primary">→</span>
-                        <span class="font-semibold text-gray-900">Surabaya</span>
-                    </div>
-                    <p class="text-sm text-gray-500">Mulai dari <span class="text-primary font-semibold">Rp 150.000</span></p>
-                    <p class="text-xs text-gray-400 mt-1">4-5 jam perjalanan</p>
-                </div>
-                <div class="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition">
-                    <div class="flex items-center justify-between mb-3">
-                        <span class="font-semibold text-gray-900">Sumenep</span>
-                        <span class="text-primary">→</span>
-                        <span class="font-semibold text-gray-900">Malang</span>
-                    </div>
-                    <p class="text-sm text-gray-500">Mulai dari <span class="text-primary font-semibold">Rp 200.000</span></p>
-                    <p class="text-xs text-gray-400 mt-1">6-7 jam perjalanan</p>
-                </div>
-                <div class="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition">
-                    <div class="flex items-center justify-between mb-3">
-                        <span class="font-semibold text-gray-900">Sumenep</span>
-                        <span class="text-primary">→</span>
-                        <span class="font-semibold text-gray-900">Jember</span>
-                    </div>
-                    <p class="text-sm text-gray-500">Mulai dari <span class="text-primary font-semibold">Rp 180.000</span></p>
-                    <p class="text-xs text-gray-400 mt-1">5-6 jam perjalanan</p>
-                </div>
-                <div class="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition">
-                    <div class="flex items-center justify-between mb-3">
-                        <span class="font-semibold text-gray-900">Sumenep</span>
-                        <span class="text-primary">→</span>
-                        <span class="font-semibold text-gray-900">Jakarta</span>
-                    </div>
-                    <p class="text-sm text-gray-500">Mulai dari <span class="text-primary font-semibold">Rp 400.000</span></p>
-                    <p class="text-xs text-gray-400 mt-1">18-20 jam perjalanan</p>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Warung GoMad Section -->
-    <section id="warung" class="py-16 md:py-20 bg-primary text-white">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="grid md:grid-cols-2 gap-12 items-center">
-                <div>
-                    <h2 class="text-3xl md:text-4xl font-bold mb-4">Warung GoMad</h2>
-                    <p class="text-lg mb-6 opacity-90">Tidak punya rekening? Bayar cash di Warung GoMad terdekat!</p>
-                    <ul class="space-y-4">
-                        <li class="flex items-start">
-                            <span class="text-2xl mr-3">✅</span>
-                            <span>Dapatkan kode bayar setelah booking</span>
-                        </li>
-                        <li class="flex items-start">
-                            <span class="text-2xl mr-3">✅</span>
-                            <span>Kunjungi Warung GoMad terdekat</span>
-                        </li>
-                        <li class="flex items-start">
-                            <span class="text-2xl mr-3">✅</span>
-                            <span>Berikan kode bayar dan bayar cash</span>
-                        </li>
-                        <li class="flex items-start">
-                            <span class="text-2xl mr-3">✅</span>
-                            <span>Booking langsung terkonfirmasi!</span>
-                        </li>
-                    </ul>
-                    <a href="http://web.gomad.test" class="inline-block mt-8 bg-white text-primary px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition">
-                        CARI WARUNG TERDEKAT
-                    </a>
-                </div>
-                <div class="hidden md:block">
-                    <div class="bg-white/10 backdrop-blur rounded-2xl p-8">
-                        <div class="text-center">
-                            <span class="text-6xl">🏪</span>
-                            <p class="text-2xl font-bold mt-4">100+ Warung</p>
-                            <p class="opacity-80 mt-2">Tersebar di seluruh Madura dan kota tujuan</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Download App -->
-    <section id="download" class="py-16 md:py-20">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-            <h2 class="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Download Aplikasi GoMad</h2>
-            <p class="text-lg text-gray-600 mb-8">Tersedia di Play Store dan App Store</p>
-            <div class="flex justify-center space-x-4">
-                <a href="#" class="bg-black text-white px-8 py-4 rounded-xl inline-flex items-center space-x-3 hover:bg-gray-800 transition">
-                    <span class="text-2xl">▶</span>
-                    <div class="text-left">
-                        <div class="text-xs">GET IT ON</div>
-                        <div class="text-lg font-semibold">Google Play</div>
-                    </div>
-                </a>
-                <a href="#" class="bg-black text-white px-8 py-4 rounded-xl inline-flex items-center space-x-3 hover:bg-gray-800 transition">
-                    <span class="text-2xl">🍎</span>
-                    <div class="text-left">
-                        <div class="text-xs">DOWNLOAD ON</div>
-                        <div class="text-lg font-semibold">App Store</div>
-                    </div>
-                </a>
-            </div>
-        </div>
-    </section>
-
-    <!-- FAQ -->
-    <section class="py-16 md:py-20 bg-gray-50">
-        <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-            <h2 class="text-3xl md:text-4xl font-bold text-gray-900 text-center mb-12">Pertanyaan Umum</h2>
-            <div class="space-y-4">
-                <div class="bg-white rounded-xl shadow-md p-6">
-                    <h3 class="font-semibold text-gray-900 mb-2">Apa itu GoMad?</h3>
-                    <p class="text-gray-600">GoMad adalah platform booking travel antar kota di Madura dengan sistem door-to-door. Customer dijemput ke rumah dan diantar ke alamat tujuan.</p>
-                </div>
-                <div class="bg-white rounded-xl shadow-md p-6">
-                    <h3 class="font-semibold text-gray-900 mb-2">Bagaimana cara bayar di Warung GoMad?</h3>
-                    <p class="text-gray-600">Setelah booking, Anda akan mendapat kode bayar. Kunjungi Warung GoMad terdekat, berikan kode tersebut, bayar cash, dan booking langsung terkonfirmasi.</p>
-                </div>
-                <div class="bg-white rounded-xl shadow-md p-6">
-                    <h3 class="font-semibold text-gray-900 mb-2">Apakah bisa pilih titik jemput dan tujuan berbeda?</h3>
-                    <p class="text-gray-600">Ya! GoMad mendukung multi-stop routes. Anda bisa naik dan turun di kota yang berbeda sepanjang rute. Harga disesuaikan dengan kombinasi naik-turun yang dipilih.</p>
-                </div>
-                <div class="bg-white rounded-xl shadow-md p-6">
-                    <h3 class="font-semibold text-gray-900 mb-2">Berapa kapasitas bagasi?</h3>
-                    <p class="text-gray-600">Kelas Ekonomi: 15kg/orang. Kelas Premium: 20kg/orang. Charter: 25kg/orang.</p>
-                </div>
-                <div class="bg-white rounded-xl shadow-md p-6">
-                    <h3 class="font-semibold text-gray-900 mb-2">Bagaimana cara mendaftar sebagai agency?</h3>
-                    <p class="text-gray-600">Daftar melalui aplikasi GoMad, lengkapi profil agency, dan ajukan verifikasi. Admin kami akan mereview pengajuan Anda dalam 1-3 hari kerja.</p>
-                </div>
-                <div class="bg-white rounded-xl shadow-md p-6">
-                    <h3 class="font-semibold text-gray-900 mb-2">Apakah ada biaya admin untuk penarikan dana agency?</h3>
-                    <p class="text-gray-600">Ya, biaya admin penarikan dana adalah Rp 5.000 per transaksi. Minimal penarikan Rp 100.000. Penarikan di bawah Rp 5.000.000 akan auto-approve.</p>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Footer -->
-    <footer id="kontak" class="bg-gray-900 text-white py-12">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="grid md:grid-cols-4 gap-8">
-                <div>
-                    <h3 class="text-2xl font-bold mb-4">Go<span class="text-primary">Mad</span></h3>
-                    <p class="text-gray-400 mb-4">Mobilitas orèng Madhurâ</p>
-                    <p class="text-gray-400">Platform booking travel antar kota di Madura. Door-to-door service.</p>
-                </div>
-                <div>
-                    <h4 class="font-semibold mb-4">Layanan</h4>
-                    <ul class="space-y-2 text-gray-400">
-                        <li>Ekonomi</li>
-                        <li>Premium</li>
-                        <li>Charter</li>
-                        <li>Rental</li>
-                        <li>Warung GoMad</li>
-                    </ul>
-                </div>
-                <div>
-                    <h4 class="font-semibold mb-4">Tautan</h4>
-                    <ul class="space-y-2 text-gray-400">
-                        <li><a href="#beranda" class="hover:text-white">Beranda</a></li>
-                        <li><a href="#layanan" class="hover:text-white">Layanan</a></li>
-                        <li><a href="#rute" class="hover:text-white">Rute</a></li>
-                        <li><a href="#warung" class="hover:text-white">Warung GoMad</a></li>
-                        <li><a href="#download" class="hover:text-white">Download App</a></li>
-                        <li><a href="http://web.gomad.test/e-ticket" class="hover:text-white">Cek E-Ticket</a></li>
-                    </ul>
-                </div>
-                <div>
-                    <h4 class="font-semibold mb-4">Kontak</h4>
-                    <ul class="space-y-2 text-gray-400">
-                        <li>📞 0812-3456-7890</li>
-                        <li>✉️ support@gomad.id</li>
-                        <li>📍 Sumenep, Madura</li>
-                    </ul>
-                </div>
-            </div>
-            <div class="border-t border-gray-800 mt-8 pt-8 text-center text-gray-500">
-                <p>&copy; 2024 GoMad. All rights reserved.</p>
-            </div>
-        </div>
-    </footer>
-
+        <a href="https://wa.me/6281234567890" target="_blank" rel="noopener noreferrer"
+           id="wa-button"
+           class="w-14 h-14 bg-[#25D366] rounded-full shadow-lg flex items-center justify-center hover:scale-110 active:scale-95 transition-all duration-300"
+           aria-label="Chat WhatsApp">
+            <svg class="w-7 h-7 text-white" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+            </svg>
+        </a>
+    </div>
+    
+    <!-- Floating Theme Toggle -->
+    <button id="theme-toggle" 
+            class="fixed bottom-6 left-4 md:left-6 z-40 w-12 h-12 bg-white dark:bg-gray-800 rounded-full shadow-lg flex items-center justify-center hover:scale-110 active:scale-95 transition-all duration-300 border border-gray-200 dark:border-gray-700"
+            aria-label="Toggle theme"
+            onclick="theme.toggle()">
+        <svg id="theme-icon-sun" class="w-5 h-5 hidden dark:block text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
+        </svg>
+        <svg id="theme-icon-moon" class="w-5 h-5 block dark:hidden text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
+        </svg>
+    </button>
+    
+    <!-- Footer Container -->
+    <div id="footer-container"></div>
+    
+    <!-- Custom JS -->
     <script src="js/main.js"></script>
+    
+    <!-- Init -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Load header & footer
+            fetch('components/header.html').then(r => r.text()).then(html => {
+                document.getElementById('header-container').innerHTML = html;
+            });
+            fetch('components/footer.html').then(r => r.text()).then(html => {
+                document.getElementById('footer-container').innerHTML = html;
+            });
+            
+            // Init theme
+            theme.init();
+            
+            // Init router
+            const hash = location.hash.slice(1) || '/';
+            router.load(hash);
+            
+            // WA tooltip
+            setTimeout(() => {
+                const tooltip = document.getElementById('wa-tooltip');
+                tooltip.style.opacity = '1';
+                setTimeout(() => { tooltip.style.opacity = '0'; }, 5000);
+            }, 3000);
+        });
+    </script>
 </body>
 </html>
