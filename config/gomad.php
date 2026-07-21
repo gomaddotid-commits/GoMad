@@ -10,7 +10,7 @@ return [
     |--------------------------------------------------------------------------
     */
     'name' => env('APP_NAME', 'GoMad'),
-    'tagline' => 'Mobilitas orèng Madhurâ',
+    'tagline' => 'Solusi transportasi Anda.',
     'description' => 'Platform booking tiket travel online antar kota. Door-to-door service.',
 
     /*
