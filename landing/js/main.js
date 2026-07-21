@@ -42,16 +42,16 @@ const theme = {
         const logo = document.getElementById('header-logo');
         if (logo) {
             logo.src = mode === 'dark' 
-                ? '/assets/images/logo-putih.png' 
-                : '/assets/images/logo-merah.png';
+                ? '/landing/assets/images/logo-putih.png' 
+                : '/landing/assets/images/logo-merah.png';
         }
         
         // Update mobile logo
         const mobileLogo = document.getElementById('mobile-logo');
         if (mobileLogo) {
             mobileLogo.src = mode === 'dark' 
-                ? '/assets/images/logo-putih.png' 
-                : '/assets/images/logo-merah.png';
+                ? '/landing/assets/images/logo-putih.png' 
+                : '/landing/assets/images/logo-merah.png';
         }
         
         // Update mermaid theme if loaded
