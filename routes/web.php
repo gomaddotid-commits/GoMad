@@ -85,7 +85,7 @@ Route::post('/email/verification-notification', function (Request $request) {
 | Customer Routes
 |--------------------------------------------------------------------------
 */
-Route::middleware(['auth', 'verified', \App\Http\Middleware\Web\CustomerMiddleware::class])
+Route::middleware(['auth', \App\Http\Middleware\Web\CustomerMiddleware::class])
     ->prefix('customer')
     ->name('customer.')
     ->group(function () {
@@ -145,7 +145,7 @@ Route::middleware(['auth', 'verified', \App\Http\Middleware\Web\CustomerMiddlewa
 | Agency Routes
 |--------------------------------------------------------------------------
 */
-Route::middleware(['auth', 'verified', \App\Http\Middleware\Web\AgencyMiddleware::class])
+Route::middleware(['auth', \App\Http\Middleware\Web\AgencyMiddleware::class])
     ->prefix('agency')
     ->name('agency.')
     ->group(function () {
@@ -241,7 +241,7 @@ Route::middleware(['auth', 'verified', \App\Http\Middleware\Web\AgencyMiddleware
 | Driver Routes
 |--------------------------------------------------------------------------
 */
-Route::middleware(['auth', 'verified', \App\Http\Middleware\Web\DriverMiddleware::class])
+Route::middleware(['auth', \App\Http\Middleware\Web\DriverMiddleware::class])
     ->prefix('driver')
     ->name('driver.')
     ->group(function () {
@@ -267,7 +267,7 @@ Route::middleware(['auth', 'verified', \App\Http\Middleware\Web\DriverMiddleware
 | Payment Agent Routes
 |--------------------------------------------------------------------------
 */
-Route::middleware(['auth', 'verified', \App\Http\Middleware\Web\PaymentAgentMiddleware::class])
+Route::middleware(['auth', \App\Http\Middleware\Web\PaymentAgentMiddleware::class])
     ->prefix('payment-agent')
     ->name('payment-agent.')
     ->group(function () {
@@ -289,7 +289,7 @@ Route::middleware(['auth', 'verified', \App\Http\Middleware\Web\PaymentAgentMidd
 | Admin Routes
 |--------------------------------------------------------------------------
 */
-Route::middleware(['auth', 'verified', \App\Http\Middleware\Web\AdminMiddleware::class])
+Route::middleware(['auth', \App\Http\Middleware\Web\AdminMiddleware::class])
     ->prefix('admin')
     ->name('admin.')
     ->group(function () {
