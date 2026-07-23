@@ -20,7 +20,7 @@ class NotificationService
     /**
      * Kirim WhatsApp dengan driver yang aktif
      */
-    public function sendWhatsApp(string $phone, string $message): void
+    public function sendWhatsApp(?string $phone, string $message): void
     {
         if (empty($phone)) {
             Log::warning('WhatsApp: Empty phone number, message skipped.');

@@ -152,15 +152,20 @@ class PromoService
         $query = Promo::active()
             ->whereNotIn('id', $usedPromoIds);
 
+        // ═══════════════════════════════════════
+        // ✅ TAMBAHKAN INI: Filter module
+        // ═══════════════════════════════════════
+        $query->where(function ($q) {
+            $q->where('module', 'travel')
+            ->orWhere('module', 'all');
+        });
+
         // Filter berdasarkan tipe
         $query->where(function ($q) use ($user) {
-            // Promo general - tersedia untuk semua
             $q->where('type', 'general');
-            
-            // Promo referral - HANYA yang dibuat untuk user ini
             $q->orWhere(function ($subQ) use ($user) {
                 $subQ->where('type', 'referral')
-                    ->where('created_by', $user->id);  // 👈 HANYA referral milik user ini
+                    ->where('created_by', $user->id);
             });
         });
 
@@ -182,6 +187,11 @@ class PromoService
             })
             ->active()
             ->whereNotIn('id', $usedPromoIds)
+            // ✅ TAMBAHKAN FILTER MODULE JUGA
+            ->where(function ($q) {
+                $q->where('module', 'travel')
+                ->orWhere('module', 'all');
+            })
             ->when($paymentMethod, function ($q) use ($paymentMethod) {
                 $q->where(function ($sq) use ($paymentMethod) {
                     $sq->whereNull('applicable_payment_methods')
@@ -244,7 +254,7 @@ class PromoService
 
         if ($alreadyUsed) return false;
         
-        // 👇 TAMBAHKAN: Promo referral hanya untuk pemiliknya
+        // Promo referral hanya untuk pemiliknya
         if ($promo->type === 'referral' && $promo->created_by !== $user->id) {
             return false;
         }
