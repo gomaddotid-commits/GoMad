@@ -36,7 +36,7 @@ class ScheduleController extends Controller
             'agency',
         ]);
 
-        return view('driver.booking.index', compact('schedule'));
+        return view('driver.booking.show', compact('schedule'));
     }
 
     /**
