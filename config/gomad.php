@@ -19,8 +19,8 @@ return [
     |--------------------------------------------------------------------------
     */
     'api_url' => env('API_URL', 'http://api.gomad.test'),
-    'web_url' => env('APP_URL', 'http://web.gomad.test'),
-    'landing_url' => env('LANDING_URL', 'http://gomad.test'),
+    'web_url' => env('APP_URL', 'http://web.gomad.id'),
+    'landing_url' => env('LANDING_URL', 'http://gomad.id'),
 
     /*
     |--------------------------------------------------------------------------
