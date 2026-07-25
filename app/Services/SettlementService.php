@@ -46,17 +46,21 @@ class SettlementService
     public function generateAgentSettlement(PaymentAgent $agent, Carbon $periodStart, Carbon $periodEnd): ?Settlement
     {
         return DB::transaction(function () use ($agent, $periodStart, $periodEnd) {
-            // Check if settlement already exists for this period
+            // ⚡ PESSIMISTIC LOCK: Cegah double generation
             $existingSettlement = Settlement::where('payment_agent_id', $agent->id)
                 ->where('period_start', $periodStart->toDateString())
                 ->where('period_end', $periodEnd->toDateString())
+                ->lockForUpdate()
                 ->first();
-            
+
             if ($existingSettlement) {
-                Log::info("Settlement already exists for agent {$agent->agent_name} in this period.");
+                Log::info("Settlement already exists for agent {$agent->agent_name} in this period.", [
+                    'settlement_id' => $existingSettlement->id,
+                    'status' => $existingSettlement->status,
+                ]);
                 return $existingSettlement;
             }
-            
+
             // Get all confirmed cash payments in this period that are not yet settled
             $cashPayments = CashPayment::where('payment_agent_id', $agent->id)
                 ->where('status', 'confirmed')
@@ -65,18 +69,28 @@ class SettlementService
                     $periodStart->startOfDay(),
                     $periodEnd->endOfDay(),
                 ])
+                ->lockForUpdate()  // ⚡ Lock payments juga
                 ->get();
-            
+
             if ($cashPayments->isEmpty()) {
                 Log::info("No unsettled cash payments for agent {$agent->agent_name} in this period.");
                 return null;
             }
-            
+
             $totalTransactions = $cashPayments->count();
             $totalAmount = $cashPayments->sum('amount');
             $totalCommission = $cashPayments->sum('agent_commission');
             $amountToSettle = $totalAmount - $totalCommission;
-            
+
+            // ⚡ Validasi amount tidak negatif
+            if ($amountToSettle <= 0) {
+                Log::warning("Settlement amount is zero or negative for agent {$agent->agent_name}", [
+                    'total_amount' => $totalAmount,
+                    'total_commission' => $totalCommission,
+                ]);
+                return null;
+            }
+
             $settlement = Settlement::create([
                 'payment_agent_id' => $agent->id,
                 'period_start' => $periodStart->toDateString(),
@@ -87,7 +101,7 @@ class SettlementService
                 'amount_to_settle' => $amountToSettle,
                 'status' => SettlementStatus::PENDING->value,
             ]);
-            
+
             // Link cash payments to this settlement
             CashPayment::whereIn('id', $cashPayments->pluck('id'))
                 ->update([
@@ -95,17 +109,21 @@ class SettlementService
                     'status' => 'settled',
                     'settled_at' => now(),
                 ]);
-            
+
             // Update agent's balance to settle
             $agent->update([
                 'balance_to_settle' => max(0, (float) $agent->balance_to_settle - $amountToSettle),
                 'last_settlement_at' => now(),
             ]);
-            
+
             $this->notificationService->settlementGenerated($settlement);
-            
-            Log::info("Settlement generated for agent {$agent->agent_name}: Rp " . number_format($amountToSettle, 0, ',', '.'));
-            
+
+            Log::info("Settlement generated for agent {$agent->agent_name}", [
+                'settlement_id' => $settlement->id,
+                'amount' => $amountToSettle,
+                'transactions' => $totalTransactions,
+            ]);
+
             return $settlement;
         });
     }
@@ -177,31 +195,56 @@ class SettlementService
     public function handleSettlementCallback(array $payload): void
     {
         Log::info('Settlement Callback Received', $payload);
-        
+
         $orderId = $payload['order_id'] ?? null;
         $transactionStatus = $payload['transaction_status'] ?? null;
         $fraudStatus = $payload['fraud_status'] ?? null;
-        
+
         if (!$orderId) {
             throw new \Exception('Order ID not found in settlement callback.');
         }
-        
+
         // Extract settlement ID from order_id (format: STL-{id}-{timestamp})
         preg_match('/^STL-(\d+)-\d+$/', $orderId, $matches);
-        
+
         if (empty($matches[1])) {
             Log::error('Cannot parse settlement ID from order_id: ' . $orderId);
             return;
         }
-        
+
         $settlementId = (int) $matches[1];
         $settlement = Settlement::find($settlementId);
-        
+
         if (!$settlement) {
             Log::error('Settlement not found: ' . $settlementId);
             return;
         }
-        
+
+        // ═══════════════════════════════════════════
+        // 🔒 IDEMPOTENCY GUARD
+        // ═══════════════════════════════════════════
+        $lastProcessedStatus = $settlement->payment_detail['last_callback_status'] ?? null;
+
+        if ($lastProcessedStatus === $transactionStatus) {
+            Log::info('Duplicate settlement callback ignored', [
+                'settlement_id' => $settlementId,
+                'status' => $transactionStatus,
+            ]);
+            return;
+        }
+
+        // Jika settlement sudah PAID atau VERIFIED → IGNORE
+        if (in_array($settlement->status, [
+            SettlementStatus::PAID->value,
+            SettlementStatus::VERIFIED->value,
+        ])) {
+            Log::warning('Settlement callback ignored - already final', [
+                'settlement_id' => $settlementId,
+                'current_status' => $settlement->status,
+            ]);
+            return;
+        }
+
         if ($transactionStatus === 'capture' || $transactionStatus === 'settlement') {
             if ($fraudStatus === 'accept') {
                 $settlement->update([
@@ -211,13 +254,28 @@ class SettlementService
                     'paid_at' => now(),
                     'payment_detail' => array_merge($settlement->payment_detail ?? [], [
                         'callback' => $payload,
+                        'last_callback_status' => $transactionStatus,
+                        'last_callback_at' => now()->toISOString(),
                     ]),
                 ]);
-                
+
                 $this->notificationService->settlementPaid($settlement);
+
+                Log::info('Settlement payment processed', [
+                    'settlement_id' => $settlementId,
+                    'amount' => $settlement->amount_to_settle,
+                ]);
             }
         } elseif (in_array($transactionStatus, ['deny', 'cancel', 'expire'])) {
             Log::warning("Settlement payment failed for settlement {$settlementId}: {$transactionStatus}");
+
+            $settlement->update([
+                'payment_detail' => array_merge($settlement->payment_detail ?? [], [
+                    'failed_callback' => $payload,
+                    'last_callback_status' => $transactionStatus,
+                    'last_callback_at' => now()->toISOString(),
+                ]),
+            ]);
         }
     }
 

@@ -77,14 +77,54 @@ class PassengerController extends Controller
     {
         $driver = $request->user();
 
+        // ⚡ VALIDASI: Driver harus punya agency
+        if (!$driver->agency_id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Anda tidak terdaftar di agency manapun.',
+                'data' => null,
+                'meta' => null,
+            ], 403);
+        }
+
         $booking = $passenger->booking;
-        if ($booking->schedule->driver_id !== $driver->id) {
+
+        if (!$booking) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Data booking penumpang tidak ditemukan.',
+                'data' => null,
+                'meta' => null,
+            ], 404);
+        }
+
+        // ⚡ VALIDASI: Booking harus milik schedule driver ini
+        $schedule = $booking->schedule;
+
+        if ($schedule->driver_id !== $driver->id) {
+            Log::warning('Driver attempted to pickup passenger from another schedule', [
+                'driver_id' => $driver->id,
+                'passenger_id' => $passenger->id,
+                'schedule_driver_id' => $schedule->driver_id,
+                'ip' => request()->ip(),
+            ]);
+
             return response()->json([
                 'success' => false,
                 'message' => 'Anda tidak ditugaskan di jadwal ini.',
                 'data' => null,
                 'meta' => null,
             ], 403);
+        }
+
+        // ⚡ VALIDASI: Schedule harus sudah dimulai
+        if (!$schedule->started_at) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Jadwal belum dimulai oleh agency.',
+                'data' => null,
+                'meta' => null,
+            ], 400);
         }
 
         if ($passenger->picked_up_at) {
@@ -98,7 +138,7 @@ class PassengerController extends Controller
 
         $passenger->update(['picked_up_at' => now()]);
 
-        // Check if all passengers for this booking are picked up, update booking status to on_going
+        // Check if all passengers for this booking are picked up
         $allPickedUp = BookingPassenger::where('booking_id', $booking->id)
             ->whereNull('picked_up_at')
             ->doesntExist();
@@ -106,6 +146,12 @@ class PassengerController extends Controller
         if ($allPickedUp && $booking->status === 'paid') {
             $booking->update(['status' => 'on_going']);
         }
+
+        Log::info('Driver picked up passenger', [
+            'driver_id' => $driver->id,
+            'passenger_id' => $passenger->id,
+            'booking_code' => $booking->booking_code,
+        ]);
 
         return response()->json([
             'success' => true,

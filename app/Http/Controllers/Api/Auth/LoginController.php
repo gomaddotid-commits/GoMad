@@ -21,24 +21,43 @@ class LoginController extends Controller
             'device_name' => ['nullable', 'string', 'max:100'],
         ]);
 
+        // ═══════════════════════════════════════════
+        // 🔒 BRUTE FORCE PROTECTION (Via Laravel Rate Limiter)
+        // ═══════════════════════════════════════════
+
+        // Gunakan throttle di routes/api.php:
+        // Route::post('/auth/login', [ApiAuthLoginController::class, 'login'])
+        //     ->middleware('throttle:5,1'); // Max 5 attempts per minute
+
         $user = User::where('email', $request->email)->first();
 
+        // ⚡ Gunakan timing-safe comparison untuk mencegah timing attack
         if (!$user || !Hash::check($request->password, $user->password)) {
+            // Log failed attempt
+            Log::warning('Failed API login attempt', [
+                'email' => $request->email,
+                'ip' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+                'user_exists' => !is_null($user),
+            ]);
+
+            // ⚡ DELAY RESPONSE untuk mencegah brute force timing attack
+            usleep(random_int(100000, 500000)); // 100ms - 500ms random delay
+
             throw ValidationException::withMessages([
                 'email' => ['Email atau password salah.'],
             ]);
         }
 
-        if (!$user->is_active) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Akun Anda dinonaktifkan. Hubungi admin.',
-                'data' => null,
-                'meta' => null,
-            ], 403);
-        }
-
+        // ⚡ Cek banned (dengan logging)
         if ($user->banned_at) {
+            Log::warning('Banned user attempted API login', [
+                'user_id' => $user->id,
+                'email' => $user->email,
+                'banned_reason' => $user->banned_reason,
+                'ip' => $request->ip(),
+            ]);
+
             return response()->json([
                 'success' => false,
                 'message' => 'Akun Anda dibanned: ' . ($user->banned_reason ?? 'Tidak ada alasan'),
@@ -47,7 +66,37 @@ class LoginController extends Controller
             ], 403);
         }
 
-        $token = $user->createToken($request->device_name ?? 'api-token')->plainTextToken;
+        // ⚡ Cek user aktif
+        if (!$user->is_active) {
+            Log::warning('Inactive user attempted API login', [
+                'user_id' => $user->id,
+                'email' => $user->email,
+                'ip' => $request->ip(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Akun Anda dinonaktifkan. Hubungi admin.',
+                'data' => null,
+                'meta' => null,
+            ], 403);
+        }
+
+        // ⚡ Revoke token lama untuk device yang sama (opsional)
+        $deviceName = $request->device_name ?? 'api-token';
+        $user->tokens()->where('name', $deviceName)->delete();
+
+        // Buat token baru
+        $token = $user->createToken($deviceName)->plainTextToken;
+
+        // Log successful login
+        Log::info('Successful API login', [
+            'user_id' => $user->id,
+            'email' => $user->email,
+            'role' => $user->role,
+            'device' => $deviceName,
+            'ip' => $request->ip(),
+        ]);
 
         return response()->json([
             'success' => true,
@@ -161,11 +210,65 @@ class LoginController extends Controller
 
     public function logout(Request $request): JsonResponse
     {
-        $request->user()->currentAccessToken()->delete();
+        $user = $request->user();
+
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Tidak ada user yang terautentikasi.',
+                'data' => null,
+                'meta' => null,
+            ], 401);
+        }
+
+        $token = $user->currentAccessToken();
+
+        if ($token) {
+            $token->delete();
+
+            Log::info('User logged out', [
+                'user_id' => $user->id,
+                'email' => $user->email,
+                'token_name' => $token->name,
+            ]);
+        }
 
         return response()->json([
             'success' => true,
             'message' => 'Logout berhasil.',
+            'data' => null,
+            'meta' => null,
+        ]);
+    }
+
+    /**
+     * Logout dari semua device
+     */
+    public function logoutAll(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Tidak ada user yang terautentikasi.',
+                'data' => null,
+                'meta' => null,
+            ], 401);
+        }
+
+        // Hapus SEMUA token user
+        $count = $user->tokens()->delete();
+
+        Log::info('User logged out from all devices', [
+            'user_id' => $user->id,
+            'email' => $user->email,
+            'tokens_revoked' => $count,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => "Logout dari semua device berhasil. {$count} token direvoke.",
             'data' => null,
             'meta' => null,
         ]);

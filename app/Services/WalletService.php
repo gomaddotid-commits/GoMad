@@ -8,6 +8,8 @@ use App\Models\Agency;
 use App\Models\AgencyWallet;
 use App\Models\Booking;
 use App\Models\WalletTransaction;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\DB;
 
 class WalletService
@@ -36,35 +38,109 @@ class WalletService
 
     public function creditWallet(Agency $agency, float $amount, string $description, string $refType, int $refId): void
     {
+        if ($amount <= 0) {
+            throw new \InvalidArgumentException('Credit amount must be positive.');
+        }
+
         DB::transaction(function () use ($agency, $amount, $description, $refType, $refId) {
-            $wallet = $this->getOrCreateWallet($agency);
+            // ⚡ PESSIMISTIC LOCK: Mencegah race condition
+            $wallet = AgencyWallet::where('agency_id', $agency->id)
+                ->lockForUpdate()
+                ->first();
+
+            if (!$wallet) {
+                $wallet = AgencyWallet::create([
+                    'agency_id' => $agency->id,
+                    'available_balance' => 0,
+                    'pending_balance' => 0,
+                    'deposit_balance' => 0,
+                    'cod_hold_balance' => 0,
+                    'total_earned' => 0,
+                    'total_withdrawn' => 0,
+                ]);
+            }
+
             $balanceBefore = (float) $wallet->available_balance;
             $balanceAfter = $balanceBefore + $amount;
-            $wallet->update(['available_balance' => $balanceAfter, 'total_earned' => (float) $wallet->total_earned + $amount]);
+
+            $wallet->update([
+                'available_balance' => $balanceAfter,
+                'total_earned' => (float) $wallet->total_earned + $amount,
+            ]);
+
             WalletTransaction::create([
-                'agency_id' => $agency->id, 'type' => 'credit', 'amount' => $amount,
-                'balance_before' => $balanceBefore, 'balance_after' => $balanceAfter,
-                'description' => $description, 'reference_type' => $refType, 'reference_id' => $refId,
+                'agency_id' => $agency->id,
+                'type' => 'credit',
+                'amount' => $amount,
+                'balance_before' => $balanceBefore,
+                'balance_after' => $balanceAfter,
+                'description' => $description,
+                'reference_type' => $refType,
+                'reference_id' => $refId,
                 'created_at' => now(),
+            ]);
+
+            Log::info('Wallet credited', [
+                'agency_id' => $agency->id,
+                'amount' => $amount,
+                'balance_before' => $balanceBefore,
+                'balance_after' => $balanceAfter,
+                'reference' => $refType . '#' . $refId,
             ]);
         });
     }
 
     public function debitWallet(Agency $agency, float $amount, string $description, string $refType, int $refId): void
     {
+        if ($amount <= 0) {
+            throw new \InvalidArgumentException('Debit amount must be positive.');
+        }
+
         DB::transaction(function () use ($agency, $amount, $description, $refType, $refId) {
-            $wallet = $this->getOrCreateWallet($agency);
-            if ((float) $wallet->available_balance < $amount) {
-                throw new \Exception('Saldo tidak mencukupi.');
+            // ⚡ PESSIMISTIC LOCK: Mencegah race condition
+            $wallet = AgencyWallet::where('agency_id', $agency->id)
+                ->lockForUpdate()
+                ->first();
+
+            if (!$wallet) {
+                throw new \Exception('Wallet tidak ditemukan untuk agency ini.');
             }
+
             $balanceBefore = (float) $wallet->available_balance;
+
+            if ($balanceBefore < $amount) {
+                throw new \Exception(sprintf(
+                    'Saldo tidak mencukupi. Dibutuhkan: Rp %s, Tersedia: Rp %s',
+                    number_format($amount, 0, ',', '.'),
+                    number_format($balanceBefore, 0, ',', '.')
+                ));
+            }
+
             $balanceAfter = $balanceBefore - $amount;
-            $wallet->update(['available_balance' => $balanceAfter, 'total_withdrawn' => (float) $wallet->total_withdrawn + $amount]);
+
+            $wallet->update([
+                'available_balance' => $balanceAfter,
+                'total_withdrawn' => (float) $wallet->total_withdrawn + $amount,
+            ]);
+
             WalletTransaction::create([
-                'agency_id' => $agency->id, 'type' => 'debit', 'amount' => $amount,
-                'balance_before' => $balanceBefore, 'balance_after' => $balanceAfter,
-                'description' => $description, 'reference_type' => $refType, 'reference_id' => $refId,
+                'agency_id' => $agency->id,
+                'type' => 'debit',
+                'amount' => $amount,
+                'balance_before' => $balanceBefore,
+                'balance_after' => $balanceAfter,
+                'description' => $description,
+                'reference_type' => $refType,
+                'reference_id' => $refId,
                 'created_at' => now(),
+            ]);
+
+            Log::info('Wallet debited', [
+                'agency_id' => $agency->id,
+                'amount' => $amount,
+                'balance_before' => $balanceBefore,
+                'balance_after' => $balanceAfter,
+                'reference' => $refType . '#' . $refId,
             ]);
         });
     }
@@ -85,21 +161,74 @@ class WalletService
     public function releaseFunds(Booking $booking): void
     {
         DB::transaction(function () use ($booking) {
+            // ═══════════════════════════════════════════
+            // 🔒 IDEMPOTENCY CHECK: Cegah double release
+            // ═══════════════════════════════════════════
+            $alreadyReleased = WalletTransaction::where('reference_type', 'booking')
+                ->where('reference_id', $booking->id)
+                ->where('description', 'like', 'Dana dirilis untuk booking%')
+                ->exists();
+
+            if ($alreadyReleased) {
+                Log::warning('Funds already released for booking - skipping', [
+                    'booking_code' => $booking->booking_code,
+                    'booking_id' => $booking->id,
+                ]);
+                return;
+            }
+
+            // ⚡ Validasi status booking
+            if (!in_array($booking->status, [
+                \App\Enums\BookingStatus::COMPLETED->value,
+                \App\Enums\BookingStatus::ON_GOING->value,
+            ])) {
+                Log::warning('Cannot release funds - booking not completed', [
+                    'booking_code' => $booking->booking_code,
+                    'status' => $booking->status,
+                ]);
+                return;
+            }
+
             $agency = $booking->schedule->agency;
-            $wallet = $this->getOrCreateWallet($agency);
+            $wallet = AgencyWallet::where('agency_id', $agency->id)
+                ->lockForUpdate()
+                ->first();
+
+            if (!$wallet) {
+                $wallet = $this->getOrCreateWallet($agency);
+            }
+
             $payment = $booking->payment;
+
             if ($payment && (float) $payment->agency_revenue > 0) {
                 $revenue = (float) $payment->agency_revenue;
+
+                $balanceBefore = (float) $wallet->available_balance;
+                $pendingBefore = (float) $wallet->pending_balance;
+
                 $wallet->update([
-                    'pending_balance' => max(0, (float) $wallet->pending_balance - $revenue),
-                    'available_balance' => (float) $wallet->available_balance + $revenue,
+                    'pending_balance' => max(0, $pendingBefore - $revenue),
+                    'available_balance' => $balanceBefore + $revenue,
                 ]);
+
                 WalletTransaction::create([
-                    'agency_id' => $agency->id, 'type' => 'credit', 'amount' => $revenue,
-                    'balance_before' => (float) $wallet->available_balance,
-                    'balance_after' => (float) $wallet->available_balance + $revenue,
+                    'agency_id' => $agency->id,
+                    'type' => 'credit',
+                    'amount' => $revenue,
+                    'balance_before' => $balanceBefore,
+                    'balance_after' => $balanceBefore + $revenue,
                     'description' => "Dana dirilis untuk booking {$booking->booking_code}",
-                    'reference_type' => 'booking', 'reference_id' => $booking->id, 'created_at' => now(),
+                    'reference_type' => 'booking',
+                    'reference_id' => $booking->id,
+                    'created_at' => now(),
+                ]);
+
+                Log::info('Funds released successfully', [
+                    'booking_code' => $booking->booking_code,
+                    'agency_id' => $agency->id,
+                    'amount' => $revenue,
+                    'balance_before' => $balanceBefore,
+                    'balance_after' => $balanceBefore + $revenue,
                 ]);
             }
         });
@@ -208,21 +337,77 @@ class WalletService
     public function releaseCodBalance(Booking $booking): void
     {
         DB::transaction(function () use ($booking) {
+            // ═══════════════════════════════════════════
+            // 🔒 IDEMPOTENCY CHECK: Cegah double release
+            // ═══════════════════════════════════════════
+            $alreadyReleased = WalletTransaction::where('reference_type', 'cod_booking_release')
+                ->where('reference_id', $booking->id)
+                ->exists();
+
+            if ($alreadyReleased) {
+                Log::warning('COD balance already released for this booking - skipping', [
+                    'booking_code' => $booking->booking_code,
+                    'booking_id' => $booking->id,
+                ]);
+                return;
+            }
+
             $agency = $booking->schedule->agency;
-            $wallet = $this->getOrCreateWallet($agency);
-            $before = (float) $wallet->cod_hold_balance;
-            $after = max(0, $before - (float) $booking->total_price);
+
+            // ⚡ PESSIMISTIC LOCK
+            $wallet = AgencyWallet::where('agency_id', $agency->id)
+                ->lockForUpdate()
+                ->first();
+
+            if (!$wallet) {
+                Log::error('Wallet not found for COD release', [
+                    'agency_id' => $agency->id,
+                    'booking_code' => $booking->booking_code,
+                ]);
+                return;
+            }
+
+            $releaseAmount = (float) $booking->total_price;
+
+            // ⚡ Validasi: cod_hold_balance harus mencukupi
+            if ((float) $wallet->cod_hold_balance < $releaseAmount) {
+                Log::error('Insufficient COD hold balance for release', [
+                    'agency_id' => $agency->id,
+                    'booking_code' => $booking->booking_code,
+                    'hold_balance' => $wallet->cod_hold_balance,
+                    'release_amount' => $releaseAmount,
+                ]);
+                return;
+            }
+
+            $codHoldBefore = (float) $wallet->cod_hold_balance;
+            $codHoldAfter = max(0, $codHoldBefore - $releaseAmount);
             $availBefore = (float) $wallet->available_balance;
-            $availAfter = $availBefore + (float) $booking->total_price;
+            $availAfter = $availBefore + $releaseAmount;
+
             $wallet->update([
-                'cod_hold_balance' => $after,
+                'cod_hold_balance' => $codHoldAfter,
                 'available_balance' => $availAfter,
             ]);
+
             WalletTransaction::create([
-                'agency_id' => $agency->id, 'type' => 'credit', 'amount' => (float) $booking->total_price,
-                'balance_before' => $before, 'balance_after' => $after,
+                'agency_id' => $agency->id,
+                'type' => 'credit',
+                'amount' => $releaseAmount,
+                'balance_before' => $codHoldBefore,
+                'balance_after' => $codHoldAfter,
                 'description' => 'Release COD Booking ' . $booking->booking_code . ' (Dikonfirmasi) → Masuk ke Saldo Tersedia',
-                'reference_type' => 'cod_booking_release', 'reference_id' => $booking->id, 'created_at' => now(),
+                'reference_type' => 'cod_booking_release',
+                'reference_id' => $booking->id,
+                'created_at' => now(),
+            ]);
+
+            Log::info('COD balance released successfully', [
+                'agency_id' => $agency->id,
+                'booking_code' => $booking->booking_code,
+                'amount' => $releaseAmount,
+                'cod_hold_before' => $codHoldBefore,
+                'cod_hold_after' => $codHoldAfter,
             ]);
         });
     }
@@ -262,26 +447,96 @@ class WalletService
     public function processTopUpCallback(array $payload): void
     {
         $orderId = $payload['order_id'] ?? '';
-        if (!str_starts_with($orderId, 'TOPUP-')) return;
+
+        if (!str_starts_with($orderId, 'TOPUP-')) {
+            return;
+        }
+
+        // ═══════════════════════════════════════════
+        // 🔒 IDEMPOTENCY CHECK
+        // ═══════════════════════════════════════════
+        $alreadyProcessed = WalletTransaction::where('reference_type', 'topup')
+            ->where('reference_id', $orderId)
+            ->exists();
+
+        if ($alreadyProcessed) {
+            Log::warning('Duplicate topup callback ignored', ['order_id' => $orderId]);
+            return;
+        }
+
         $transactionStatus = $payload['transaction_status'] ?? '';
-        if (in_array($transactionStatus, ['capture', 'settlement'])) {
+        $fraudStatus = $payload['fraud_status'] ?? '';
+
+        if (in_array($transactionStatus, ['capture', 'settlement']) && $fraudStatus === 'accept') {
             preg_match('/^TOPUP-(\d+)-\d+$/', $orderId, $matches);
-            if (empty($matches[1])) return;
+
+            if (empty($matches[1])) {
+                Log::error('Cannot parse agency ID from topup order_id', ['order_id' => $orderId]);
+                return;
+            }
+
             $agencyId = (int) $matches[1];
             $agency = Agency::find($agencyId);
-            if (!$agency) return;
+
+            if (!$agency) {
+                Log::error('Agency not found for topup', ['agency_id' => $agencyId]);
+                return;
+            }
+
             $totalAmount = (float) ($payload['gross_amount'] ?? 0);
             $adminFee = (float) \App\Models\PlatformSetting::getValue('topup_admin_fee', 3500);
             $depositAmount = $totalAmount - $adminFee;
-            $wallet = $this->getOrCreateWallet($agency);
+
+            // ⚡ Validasi amount tidak negatif
+            if ($depositAmount <= 0) {
+                Log::error('Invalid topup amount', [
+                    'order_id' => $orderId,
+                    'gross_amount' => $totalAmount,
+                    'admin_fee' => $adminFee,
+                ]);
+                return;
+            }
+
+            // ⚡ Gunakan lock untuk mencegah race condition
+            $wallet = AgencyWallet::where('agency_id', $agency->id)
+                ->lockForUpdate()
+                ->first();
+
+            if (!$wallet) {
+                $wallet = AgencyWallet::create([
+                    'agency_id' => $agency->id,
+                    'available_balance' => 0,
+                    'pending_balance' => 0,
+                    'deposit_balance' => 0,
+                    'cod_hold_balance' => 0,
+                    'total_earned' => 0,
+                    'total_withdrawn' => 0,
+                ]);
+            }
+
             $balanceBefore = (float) $wallet->deposit_balance;
             $balanceAfter = $balanceBefore + $depositAmount;
+
             $wallet->update(['deposit_balance' => $balanceAfter]);
+
             WalletTransaction::create([
-                'agency_id' => $agency->id, 'type' => 'credit', 'amount' => $depositAmount,
-                'balance_before' => $balanceBefore, 'balance_after' => $balanceAfter,
-                'description' => 'Top Up Saldo Deposit (Rp ' . number_format($depositAmount, 0, ',', '.') . ' + Biaya Admin Rp ' . number_format($adminFee, 0, ',', '.') . ')',
-                'reference_type' => 'topup', 'reference_id' => $orderId, 'created_at' => now(),
+                'agency_id' => $agency->id,
+                'type' => 'credit',
+                'amount' => $depositAmount,
+                'balance_before' => $balanceBefore,
+                'balance_after' => $balanceAfter,
+                'description' => 'Top Up Saldo Deposit (Rp ' . number_format($depositAmount, 0, ',', '.')
+                    . ' + Biaya Admin Rp ' . number_format($adminFee, 0, ',', '.') . ')',
+                'reference_type' => 'topup',
+                'reference_id' => $orderId,
+                'created_at' => now(),
+            ]);
+
+            Log::info('Topup callback processed successfully', [
+                'agency_id' => $agencyId,
+                'order_id' => $orderId,
+                'deposit_amount' => $depositAmount,
+                'balance_after' => $balanceAfter,
             ]);
         }
     }
@@ -290,31 +545,73 @@ class WalletService
 
     public function transferToDeposit(Agency $agency, float $amount): void
     {
-        $wallet = $this->getOrCreateWallet($agency);
-        if ((float) $wallet->available_balance < $amount) {
-            throw new \Exception('Saldo tersedia tidak mencukupi.');
-        }
         if ($amount < 10000) {
             throw new \Exception('Minimal transfer Rp 10.000.');
         }
+
         DB::transaction(function () use ($agency, $amount) {
-            $wallet = $this->getOrCreateWallet($agency);
+            // ⚡ PESSIMISTIC LOCK
+            $wallet = AgencyWallet::where('agency_id', $agency->id)
+                ->lockForUpdate()
+                ->first();
+
+            if (!$wallet) {
+                throw new \Exception('Wallet tidak ditemukan.');
+            }
+
+            // ⚡ VALIDASI SALDO
+            if ((float) $wallet->available_balance < $amount) {
+                throw new \Exception(sprintf(
+                    'Saldo tersedia tidak mencukupi. Dibutuhkan: Rp %s, Tersedia: Rp %s',
+                    number_format($amount, 0, ',', '.'),
+                    number_format($wallet->available_balance, 0, ',', '.')
+                ));
+            }
+
             $availBefore = (float) $wallet->available_balance;
             $availAfter = $availBefore - $amount;
             $depoBefore = (float) $wallet->deposit_balance;
             $depoAfter = $depoBefore + $amount;
-            $wallet->update(['available_balance' => $availAfter, 'deposit_balance' => $depoAfter]);
-            WalletTransaction::create([
-                'agency_id' => $agency->id, 'type' => 'debit', 'amount' => $amount,
-                'balance_before' => $availBefore, 'balance_after' => $availAfter,
-                'description' => 'Transfer ke Saldo Deposit', 'reference_type' => 'transfer_to_deposit',
-                'reference_id' => null, 'created_at' => now(),
+
+            $wallet->update([
+                'available_balance' => $availAfter,
+                'deposit_balance' => $depoAfter,
             ]);
+
+            // ⚡ Gunakan reference_id yang unik (timestamp-based)
+            $referenceId = time();
+
             WalletTransaction::create([
-                'agency_id' => $agency->id, 'type' => 'credit', 'amount' => $amount,
-                'balance_before' => $depoBefore, 'balance_after' => $depoAfter,
-                'description' => 'Transfer dari Saldo Tersedia', 'reference_type' => 'transfer_from_available',
-                'reference_id' => null, 'created_at' => now(),
+                'agency_id' => $agency->id,
+                'type' => 'debit',
+                'amount' => $amount,
+                'balance_before' => $availBefore,
+                'balance_after' => $availAfter,
+                'description' => 'Transfer ke Saldo Deposit',
+                'reference_type' => 'transfer_to_deposit',
+                'reference_id' => $referenceId,
+                'created_at' => now(),
+            ]);
+
+            WalletTransaction::create([
+                'agency_id' => $agency->id,
+                'type' => 'credit',
+                'amount' => $amount,
+                'balance_before' => $depoBefore,
+                'balance_after' => $depoAfter,
+                'description' => 'Transfer dari Saldo Tersedia',
+                'reference_type' => 'transfer_from_available',
+                'reference_id' => $referenceId,
+                'created_at' => now(),
+            ]);
+
+            Log::info('Transfer to deposit completed', [
+                'agency_id' => $agency->id,
+                'amount' => $amount,
+                'avail_before' => $availBefore,
+                'avail_after' => $availAfter,
+                'depo_before' => $depoBefore,
+                'depo_after' => $depoAfter,
             ]);
         });
     }

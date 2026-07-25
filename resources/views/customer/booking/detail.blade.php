@@ -467,11 +467,61 @@ var selectedPromoPercent = 0;
 var selectedPromoMax = 0;
 var selectedPromoName = '';
 
+// ═══════════════════════════════════════════
+// 🔧 EVENT LISTENERS - PASTIKAN TERPANGGIL
+// ═══════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', function() {
+    var promoSelect = document.getElementById('promoSelect');
+    var paymentMethod = document.getElementById('paymentMethod');
+    
+    // Event listener untuk perubahan promo
+    if (promoSelect) {
+        promoSelect.addEventListener('change', function() {
+            console.log('Promo changed:', this.value);
+            updatePromoInfo();
+        });
+    }
+    
+    // Event listener untuk perubahan metode pembayaran
+    if (paymentMethod) {
+        paymentMethod.addEventListener('change', function() {
+            console.log('Payment method changed:', this.value);
+            updatePaymentInfo();
+        });
+    }
+    
+    // ⚡ AUTO-TRIGGER: Jika ada promo yang sudah dipilih sebelumnya
+    // (misalnya user refresh halaman setelah pilih promo)
+    if (promoSelect && promoSelect.value) {
+        console.log('Promo already selected on load:', promoSelect.value);
+        updatePromoInfo();
+    }
+    
+    // Debug: Cek apakah form ada
+    var payForm = document.getElementById('payForm');
+    if (payForm) {
+        console.log('Pay form found');
+        payForm.addEventListener('submit', function(e) {
+            var promoId = document.getElementById('fPromoId').value;
+            var method = document.getElementById('fPaymentMethod').value;
+            console.log('Form submitting with:', { promo_id: promoId, method: method });
+            
+            if (!method) {
+                e.preventDefault();
+                alert('Silakan pilih metode pembayaran!');
+                return false;
+            }
+        });
+    }
+});
+
 function updatePaymentInfo() {
     var method = document.getElementById('paymentMethod').value;
     var info = document.getElementById('paymentInfo');
     var btn = document.getElementById('btnPay');
     var fMethod = document.getElementById('fPaymentMethod');
+    
+    console.log('updatePaymentInfo called, method:', method);
     
     if (method) {
         fMethod.value = method;
@@ -497,12 +547,16 @@ function updatePaymentInfo() {
         info.classList.add('hidden');
     }
     
+    // ⚡ SELALU PANGGIL updatePromoInfo setelah method berubah
     updatePromoInfo();
 }
 
 function updatePromoInfo() {
     var select = document.getElementById('promoSelect');
-    if (!select) return;
+    if (!select) {
+        console.log('Promo select not found');
+        return;
+    }
     
     var option = select.options[select.selectedIndex];
     var info = document.getElementById('promoInfo');
@@ -513,10 +567,18 @@ function updatePromoInfo() {
     var fPromoId = document.getElementById('fPromoId');
     var paymentMethod = document.getElementById('paymentMethod').value;
     
+    console.log('updatePromoInfo called:', { 
+        selectedValue: option.value, 
+        paymentMethod: paymentMethod,
+        currentPromoId: fPromoId.value 
+    });
+    
     warning.classList.add('hidden');
     
     if (option.value) {
         var promoMethods = option.getAttribute('data-methods') || '';
+        console.log('Promo methods:', promoMethods);
+        
         if (paymentMethod && promoMethods && !promoMethods.includes(paymentMethod)) {
             warning.innerHTML = '⚠️ Promo ini tidak berlaku untuk metode pembayaran yang dipilih. Silakan ganti metode pembayaran atau pilih promo lain.';
             warning.classList.remove('hidden');
@@ -533,7 +595,17 @@ function updatePromoInfo() {
         var discount = Math.min(basePrice * (selectedPromoPercent / 100), selectedPromoMax);
         var newTotal = Math.max(0, (basePrice + serviceFee + platformFee) - discount);
         
+        // ⚡ SET NILAI PROMO_ID
         fPromoId.value = option.value;
+        
+        console.log('Promo applied:', {
+            id: option.value,
+            name: selectedPromoName,
+            discount: discount,
+            newTotal: newTotal,
+            fPromoId_value: fPromoId.value
+        });
+        
         info.innerHTML = '🎫 <strong>' + selectedPromoName + '</strong> - Diskon ' + selectedPromoPercent + '% (Maks Rp ' + formatRupiah(selectedPromoMax) + ')';
         info.classList.remove('hidden');
         
@@ -544,7 +616,11 @@ function updatePromoInfo() {
         selectedPromoPercent = 0;
         selectedPromoMax = 0;
         selectedPromoName = '';
+        
+        // ⚡ KOSONGKAN HIDDEN INPUT
         fPromoId.value = '';
+        
+        console.log('No promo selected, fPromoId cleared');
         
         info.classList.add('hidden');
         discountRow.classList.add('hidden');
@@ -558,6 +634,23 @@ function validateAndSubmit() {
         alert('Silakan pilih metode pembayaran terlebih dahulu!');
         return false;
     }
+    
+    // ⚡ PASTIKAN fPromoId SUDAH DIISI SEBELUM SUBMIT
+    var promoId = document.getElementById('fPromoId').value;
+    var promoSelect = document.getElementById('promoSelect');
+    
+    // Jika promo dipilih di dropdown tapi fPromoId kosong, isi ulang
+    if (promoSelect && promoSelect.value && !promoId) {
+        document.getElementById('fPromoId').value = promoSelect.value;
+        console.log('FIXED: fPromoId was empty, set from dropdown:', promoSelect.value);
+    }
+    
+    console.log('Submitting:', {
+        method: method,
+        promo_id: document.getElementById('fPromoId').value,
+        promo_select_value: promoSelect ? promoSelect.value : 'no select'
+    });
+    
     var btn = document.getElementById('btnPay');
     btn.disabled = true;
     btn.textContent = '⏳ Memproses...';

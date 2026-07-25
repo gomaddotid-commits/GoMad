@@ -18,6 +18,7 @@ class Promo extends Model
     protected $fillable = [
         'name', 'type', 'module', 'description',
         'discount_percent', 'max_discount', 'min_purchase',
+        'rental_min_purchase',
         'rental_discount_type', 'rental_discount_amount', 'rental_max_discount',
         'route_id', 'travel_class',
         'applicable_payment_methods',
@@ -32,6 +33,7 @@ class Promo extends Model
             'discount_percent' => 'decimal:2',
             'max_discount' => 'decimal:2',
             'min_purchase' => 'decimal:2',
+            'rental_min_purchase' => 'decimal:2',  // ⚡ TAMBAHKAN
             'rental_discount_amount' => 'decimal:2',
             'rental_max_discount' => 'decimal:2',
             'start_date' => 'date',

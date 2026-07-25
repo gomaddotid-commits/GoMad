@@ -45,7 +45,7 @@
         </div>
 
         {{-- ═══════════════════════════════════════ --}}
-        {{-- DISKON TRAVEL (muncul jika module = travel atau all) --}}
+        {{-- DISKON TRAVEL --}}
         {{-- ═══════════════════════════════════════ --}}
         <div id="travelDiscountFields">
             <div class="border-t border-[#E5E5E5] pt-4">
@@ -63,16 +63,19 @@
                                class="w-full px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111] transition">
                     </div>
                     <div>
-                        <label class="block text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">Min Pembelian (Rp)</label>
+                        <label class="block text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">
+                            Min Pembelian Travel (Rp)
+                        </label>
                         <input type="number" name="min_purchase" value="{{ old('min_purchase', 0) }}" 
-                               class="w-full px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111] transition">
+                               class="w-full px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111] transition"
+                               placeholder="0" min="0">
                     </div>
                 </div>
             </div>
         </div>
 
         {{-- ═══════════════════════════════════════ --}}
-        {{-- DISKON RENTAL (muncul jika module = rental atau all) --}}
+        {{-- DISKON RENTAL --}}
         {{-- ═══════════════════════════════════════ --}}
         <div id="rentalDiscountFields">
             <div class="border-t border-[#E5E5E5] pt-4">
@@ -106,8 +109,10 @@
                 </div>
                 
                 <div class="mt-3">
-                    <label class="block text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">Minimal Sewa (Rp)</label>
-                    <input type="number" name="min_purchase" value="{{ old('min_purchase', 0) }}" 
+                    <label class="block text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">
+                        Minimal Sewa Rental (Rp)
+                    </label>
+                    <input type="number" name="rental_min_purchase" value="{{ old('rental_min_purchase', 0) }}" 
                            class="w-48 px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111] transition"
                            placeholder="0" min="0">
                     <p class="text-[10px] text-gray-400 mt-1 font-light">Minimal subtotal sewa agar promo berlaku</p>
@@ -216,7 +221,6 @@ function togglePromoType() {
     var selectiveTarget = document.getElementById('selectiveTarget');
     var module = document.getElementById('promoModule').value;
     
-    // Selective target hanya muncul untuk travel/all + selective
     if (type === 'selective' && module !== 'rental') {
         selectiveTarget.style.display = 'grid';
     } else {
@@ -231,21 +235,9 @@ function toggleModuleFields() {
     var selectiveTarget = document.getElementById('selectiveTarget');
     var type = document.getElementById('promoType').value;
     
-    // Travel discount fields
-    if (module === 'travel' || module === 'all') {
-        travelFields.style.display = 'block';
-    } else {
-        travelFields.style.display = 'none';
-    }
+    travelFields.style.display = (module === 'travel' || module === 'all') ? 'block' : 'none';
+    rentalFields.style.display = (module === 'rental' || module === 'all') ? 'block' : 'none';
     
-    // Rental discount fields
-    if (module === 'rental' || module === 'all') {
-        rentalFields.style.display = 'block';
-    } else {
-        rentalFields.style.display = 'none';
-    }
-    
-    // Selective target
     if (type === 'selective' && module !== 'rental') {
         selectiveTarget.style.display = 'grid';
     } else {
@@ -258,7 +250,6 @@ function toggleShare() {
         document.getElementById('costBearer').value === 'shared' ? 'grid' : 'none';
 }
 
-// Update label saat tipe diskon berubah
 document.querySelector('select[name="rental_discount_type"]').addEventListener('change', function() {
     var label = document.getElementById('rentalDiscountLabel');
     var hint = document.getElementById('rentalDiscountHint');
@@ -275,7 +266,6 @@ document.querySelector('select[name="rental_discount_type"]').addEventListener('
     }
 });
 
-// Init
 document.addEventListener('DOMContentLoaded', function() {
     toggleModuleFields();
     toggleShare();

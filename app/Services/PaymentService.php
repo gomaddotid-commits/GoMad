@@ -11,6 +11,7 @@ use App\Models\Payment;
 use App\Models\PlatformSetting;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 
 class PaymentService
 {
@@ -45,89 +46,257 @@ class PaymentService
 
     public function getSnapToken(Booking $booking): string
     {
-        $payment = $booking->payment;
-        
-        // Jika tidak ada payment atau payment bukan midtrans, buat baru
-        if (!$payment || $payment->payment_type !== 'midtrans') {
-            $payment = $this->createPayment($booking);
-        }
-        
-        // Jika payment expired, buat payment baru
-        if ($payment->status === \App\Enums\PaymentStatus::EXPIRED->value) {
-            // Hapus payment lama
-            $payment->delete();
-            $payment = $this->createPayment($booking);
-        }
-        
-        // Jika payment sudah paid, kembalikan kosong
-        if ($payment->status === \App\Enums\PaymentStatus::PAID->value) {
-            return '';
-        }
-        
-        $serverKey = config('gomad.midtrans.server_key');
-        $isProduction = config('gomad.midtrans.is_production', false);
-        
-        $baseUrl = $isProduction 
-            ? 'https://app.midtrans.com/snap/v1/transactions' 
-            : 'https://app.sandbox.midtrans.com/snap/v1/transactions';
+        return DB::transaction(function () use ($booking) {
+            // ═══════════════════════════════════════════
+            // 🔧 REFRESH BOOKING UNTUK DAPATKAN HARGA TERAKHIR
+            // ═══════════════════════════════════════════
+            $booking->refresh();
 
-        // Gunakan order_id yang unik (dengan timestamp)
-        $orderId = $booking->booking_code . '-' . time();
+            // Bersihkan semua payment expired milik booking ini
+            Payment::where('booking_id', $booking->id)
+                ->where('payment_type', 'midtrans')
+                ->where('status', PaymentStatus::PENDING->value)
+                ->where('expired_at', '<', now())
+                ->delete();
 
-        $payload = [
-            'transaction_details' => [
-                'order_id' => $orderId,
-                'gross_amount' => (int) $booking->total_price,
-            ],
-            'customer_details' => [
-                'first_name' => $booking->customer->name,
-                'email' => $booking->customer->email,
-                'phone' => $booking->customer->phone,
-            ],
-            'callbacks' => [
-                'finish' => route('customer.booking.show', $booking),
-            ],
-        ];
+            $payment = Payment::where('booking_id', $booking->id)
+                ->where('payment_type', 'midtrans')
+                ->first();
 
-        try {
-            $response = \Illuminate\Support\Facades\Http::withBasicAuth($serverKey, '')
-                ->withHeaders(['Content-Type' => 'application/json'])
-                ->post($baseUrl, $payload);
-
-            if ($response->successful()) {
-                $result = $response->json();
-                
-                $payment->update([
-                    'transaction_id' => $orderId,
-                    'payment_detail' => array_merge($payment->payment_detail ?? [], [
-                        'snap_request' => $payload,
-                        'snap_response' => $result,
-                        'snap_token_created_at' => now()->toISOString(),
-                    ]),
-                ]);
-                
-                return $result['token'] ?? '';
+            // Jika payment sudah PAID → tolak
+            if ($payment && $payment->status === PaymentStatus::PAID->value) {
+                return '';
             }
 
-            \Log::error('Midtrans Snap Token Error', [
-                'response' => $response->body(),
-                'booking_code' => $booking->booking_code,
+            // Jika payment masih PENDING dan belum expired → return token yang SUDAH ADA
+            if ($payment && $payment->status === PaymentStatus::PENDING->value
+                && $payment->expired_at && $payment->expired_at->isFuture()) {
+
+                $existingToken = $payment->payment_detail['snap_token'] ?? null;
+
+                // ⚡ PENTING: Cek apakah harga di payment SAMA dengan harga booking saat ini
+                if ((float) $payment->amount !== (float) $booking->total_price) {
+                    Log::info('Payment amount mismatch - creating new payment', [
+                        'booking_code' => $booking->booking_code,
+                        'payment_amount' => $payment->amount,
+                        'booking_total_price' => $booking->total_price,
+                    ]);
+
+                    // Hapus payment lama (harganya sudah tidak sesuai)
+                    $payment->delete();
+                    $payment = null;
+                } elseif ($existingToken) {
+                    Log::info('Reusing existing Snap Token', [
+                        'booking_code' => $booking->booking_code,
+                        'amount' => $booking->total_price,
+                        'expires_at' => $payment->expired_at->toISOString(),
+                    ]);
+                    return $existingToken;
+                }
+            }
+
+            // Hapus payment lama yang sudah tidak valid
+            if ($payment) {
+                $payment->delete();
+            }
+
+            // ═══════════════════════════════════════════
+            // 🔧 BUAT PAYMENT BARU DENGAN HARGA FINAL
+            // ═══════════════════════════════════════════
+            $commissionData = app(PricingService::class)->calculateCommission(
+                (float) $booking->total_price,
+                'midtrans'
+            );
+
+            $paymentTimeout = (int) PlatformSetting::getValue('payment_timeout', 30);
+
+            $payment = Payment::create([
+                'booking_id' => $booking->id,
+                'amount' => (float) $booking->total_price,
+                'commission' => $commissionData['platform_commission'],
+                'agency_revenue' => $commissionData['agency_revenue'],
+                'payment_type' => 'midtrans',
+                'status' => PaymentStatus::PENDING->value,
+                'expired_at' => now()->addMinutes($paymentTimeout),
             ]);
-            
-            throw new \Exception('Gagal membuat Snap Token: ' . $response->body());
-        } catch (\Exception $e) {
-            \Log::error('Midtrans Snap Token Exception', [
-                'error' => $e->getMessage(),
+
+            // ═══════════════════════════════════════════
+            // GENERATE SNAP TOKEN DENGAN HARGA FINAL
+            // ═══════════════════════════════════════════
+            $serverKey = config('gomad.midtrans.server_key');
+            $isProduction = config('gomad.midtrans.is_production', false);
+
+            $baseUrl = $isProduction
+                ? 'https://app.midtrans.com/snap/v1/transactions'
+                : 'https://app.sandbox.midtrans.com/snap/v1/transactions';
+
+            $orderId = $booking->booking_code . '-' . time();
+
+            // ⚡ GROSS_AMOUNT MENGGUNAKAN HARGA FINAL (SUDAH TERMASUK PROMO)
+            $grossAmount = (int) round($booking->total_price);
+
+            // ═══════════════════════════════════════════
+            // 🔧 BUILD ITEM DETAILS SESUAI MIDTRANS SPEC
+            // ═══════════════════════════════════════════
+            $itemDetails = [];
+
+            // Ambil nilai masing-masing komponen
+            $basePrice = (float) ($booking->base_price ?? 0);
+            $serviceFee = (float) ($booking->service_fee ?? 0);
+            $platformFee = (float) ($booking->platform_fee ?? 0);
+            $discountAmount = (float) ($booking->discount_amount ?? 0);
+
+            // Jika base_price tidak di-set, hitung mundur dari total
+            if ($basePrice <= 0) {
+                $basePrice = (float) $booking->total_price + $discountAmount - $serviceFee - $platformFee;
+            }
+
+            // Potong nama kota agar tidak terlalu panjang (max ~40 karakter untuk name)
+            $originCity = \Illuminate\Support\Str::limit($booking->originStop->city_name ?? 'Origin', 18, '');
+            $destCity = \Illuminate\Support\Str::limit($booking->destinationStop->city_name ?? 'Dest', 18, '');
+
+            // Item 1: Harga tiket dasar (sudah termasuk diskon jika ada)
+            $ticketPrice = (int) round($basePrice - $discountAmount);
+            if ($ticketPrice > 0) {
+                $itemDetails[] = [
+                    'id' => 'TKT-' . $booking->id,
+                    'price' => $ticketPrice,
+                    'quantity' => 1,
+                    'name' => 'Tiket ' . $originCity . '-' . $destCity,
+                ];
+            }
+
+            // Item 2: Biaya Layanan (jika > 0)
+            if ($serviceFee > 0) {
+                $itemDetails[] = [
+                    'id' => 'FEE-' . $booking->id,
+                    'price' => (int) round($serviceFee),
+                    'quantity' => 1,
+                    'name' => 'Biaya Layanan',
+                ];
+            }
+
+            // Item 3: Biaya Platform (jika > 0)
+            if ($platformFee > 0) {
+                $itemDetails[] = [
+                    'id' => 'PLT-' . $booking->id,
+                    'price' => (int) round($platformFee),
+                    'quantity' => 1,
+                    'name' => 'Biaya Platform',
+                ];
+            }
+
+            // Item 4: Diskon Promo (jika ada, sebagai item terpisah BUKAN negative)
+            // Midtrans lebih stabil dengan diskon sebagai pengurang di ticket price
+            // Tapi kita tetap catat sebagai item terpisah untuk transparansi
+            if ($discountAmount > 0) {
+                $itemDetails[] = [
+                    'id' => 'DSC-' . $booking->id,
+                    'price' => -(int) round($discountAmount),
+                    'quantity' => 1,
+                    'name' => 'Diskon Promo',
+                ];
+            }
+
+            // ⚡ VALIDASI: Pastikan total item_details = gross_amount
+            $itemsTotal = 0;
+            foreach ($itemDetails as $item) {
+                $itemsTotal += $item['price'] * $item['quantity'];
+            }
+
+            // Jika ada selisih karena rounding, tambahkan sebagai adjustment
+            $adjustment = $grossAmount - $itemsTotal;
+            if ($adjustment !== 0) {
+                // Jika selisih kecil, masukkan ke item terakhir
+                if (abs($adjustment) <= 100 && !empty($itemDetails)) {
+                    $lastIndex = count($itemDetails) - 1;
+                    $itemDetails[$lastIndex]['price'] += $adjustment;
+                } else {
+                    // Jika selisih besar, buat item adjustment
+                    $itemDetails[] = [
+                        'id' => 'ADJ-' . $booking->id,
+                        'price' => $adjustment,
+                        'quantity' => 1,
+                        'name' => 'Penyesuaian',
+                    ];
+                }
+            }
+
+            $payload = [
+                'transaction_details' => [
+                    'order_id' => $orderId,
+                    'gross_amount' => $grossAmount,
+                ],
+                'customer_details' => [
+                    'first_name' => $booking->customer->name,
+                    'email' => $booking->customer->email,
+                    'phone' => $booking->customer->phone,
+                ],
+                'item_details' => array_values($itemDetails),
+                'callbacks' => [
+                    'finish' => route('customer.booking.show', $booking),
+                ],
+            ];
+
+            Log::info('Creating Midtrans Snap Token', [
                 'booking_code' => $booking->booking_code,
+                'total_price' => $booking->total_price,
+                'base_price' => $basePrice,
+                'service_fee' => $serviceFee,
+                'platform_fee' => $platformFee,
+                'discount_amount' => $discountAmount,
+                'gross_amount' => $grossAmount,
+                'items_total' => $itemsTotal + $adjustment,
+                'item_count' => count($itemDetails),
+                'order_id' => $orderId,
             ]);
-            throw $e;
-        }
+
+            try {
+                $response = \Illuminate\Support\Facades\Http::withBasicAuth($serverKey, '')
+                    ->withHeaders(['Content-Type' => 'application/json'])
+                    ->timeout(10)
+                    ->post($baseUrl, $payload);
+
+                if ($response->successful()) {
+                    $result = $response->json();
+
+                    $payment->update([
+                        'transaction_id' => $orderId,
+                        'payment_detail' => array_merge($payment->payment_detail ?? [], [
+                            'snap_request' => $payload,
+                            'snap_response' => $result,
+                            'snap_token' => $result['token'] ?? null,
+                            'snap_token_created_at' => now()->toISOString(),
+                            'gross_amount' => $grossAmount,
+                            'discount_applied' => $discountAmount,
+                        ]),
+                    ]);
+
+                    return $result['token'] ?? '';
+                }
+
+                Log::error('Midtrans Snap Token Error', [
+                    'response' => $response->body(),
+                    'booking_code' => $booking->booking_code,
+                    'payload' => $payload,
+                ]);
+
+                throw new \Exception('Gagal membuat Snap Token: ' . $response->body());
+            } catch (\Exception $e) {
+                Log::error('Midtrans Snap Token Exception', [
+                    'error' => $e->getMessage(),
+                    'booking_code' => $booking->booking_code,
+                ]);
+                throw $e;
+            }
+        });
     }
 
     public function handleMidtransCallback(array $payload): void
     {
         Log::info('Midtrans Callback Received', $payload);
 
+        // 1. Verifikasi signature
         if (!$this->verifySignature($payload)) {
             Log::error('Midtrans Signature Verification Failed', $payload);
             throw new \Exception('Signature verification failed.');
@@ -137,14 +306,14 @@ class PaymentService
         $transactionStatus = $payload['transaction_status'] ?? null;
         $fraudStatus = $payload['fraud_status'] ?? null;
 
+        if (!$orderId) {
+            throw new \Exception('Order ID not found in callback.');
+        }
+
         // Cek apakah ini top up
         if (str_starts_with($orderId, 'TOPUP-')) {
             app(WalletService::class)->processTopUpCallback($payload);
             return;
-        }
-        
-        if (!$orderId) {
-            throw new \Exception('Order ID not found in callback.');
         }
 
         $booking = Booking::where('booking_code', $orderId)->first();
@@ -155,6 +324,37 @@ class PaymentService
         $payment = Payment::where('booking_id', $booking->id)->first();
         if (!$payment) {
             throw new \Exception("Payment not found for booking: {$orderId}");
+        }
+
+        // ═══════════════════════════════════════════
+        // 🔒 IDEMPOTENCY GUARD: Cegah double processing
+        // ═══════════════════════════════════════════
+        $lastProcessedStatus = $payment->payment_detail['last_callback_status'] ?? null;
+        $lastProcessedFraud = $payment->payment_detail['last_callback_fraud'] ?? null;
+
+        if ($lastProcessedStatus === $transactionStatus && $lastProcessedFraud === $fraudStatus) {
+            Log::info('Duplicate Midtrans callback ignored (idempotent)', [
+                'order_id' => $orderId,
+                'status' => $transactionStatus,
+                'fraud' => $fraudStatus,
+            ]);
+            return;
+        }
+
+        $finalPaymentStatuses = [
+            PaymentStatus::PAID->value,
+            PaymentStatus::FAILED->value,
+            PaymentStatus::REFUNDED->value,
+            PaymentStatus::EXPIRED->value,
+        ];
+
+        if (in_array($payment->status, $finalPaymentStatuses)) {
+            Log::warning('Midtrans callback ignored - payment already final', [
+                'order_id' => $orderId,
+                'payment_status' => $payment->status,
+                'callback_status' => $transactionStatus,
+            ]);
+            return;
         }
 
         $newStatus = null;
@@ -184,28 +384,38 @@ class PaymentService
                 'paid_at' => $newStatus === PaymentStatus::PAID ? now() : null,
                 'payment_detail' => array_merge($payment->payment_detail ?? [], [
                     'callback' => $payload,
+                    'last_callback_status' => $transactionStatus,
+                    'last_callback_fraud' => $fraudStatus,
+                    'last_callback_at' => now()->toISOString(),
                 ]),
             ]);
 
             if ($newStatus === PaymentStatus::PAID) {
                 $booking->update(['status' => BookingStatus::PAID->value]);
                 $this->walletService->addPendingBalance($booking);
-                $this->notificationService->paymentConfirmed($booking);
 
-                try {
-                    $promoService = app(\App\Services\PromoService::class);
-                    $promoService->processReferralReward($booking);
-                    Log::info('Referral reward processed for booking: ' . $booking->booking_code);
-                } catch (\Exception $e) {
-                    Log::error('Referral reward processing failed: ' . $e->getMessage(), [
-                        'booking_id' => $booking->id,
-                        'error' => $e->getMessage(),
-                    ]);
-                    // Jangan throw error - jangan ganggu flow pembayaran utama
-                }
+                // ═══════════════════════════════════════════
+                // NOTIFIKASI via dispatchAfterResponse (ASYNC)
+                // ═══════════════════════════════════════════
+                dispatch(function () use ($booking) {
+                    $this->notificationService->paymentConfirmed($booking);
+
+                    try {
+                        $promoService = app(\App\Services\PromoService::class);
+                        $promoService->processReferralReward($booking);
+                    } catch (\Exception $e) {
+                        Log::error('Referral reward processing failed: ' . $e->getMessage());
+                    }
+                })->afterResponse();
+
             } elseif ($newStatus === PaymentStatus::FAILED) {
-                $booking->update(['status' => BookingStatus::CANCELLED->value, 'cancelled_at' => now()]);
-                $this->notificationService->bookingCancelled($booking, 'Pembayaran gagal');
+                if ($booking->status !== BookingStatus::PAID->value) {
+                    $booking->update(['status' => BookingStatus::CANCELLED->value, 'cancelled_at' => now()]);
+
+                    dispatch(function () use ($booking) {
+                        $this->notificationService->bookingCancelled($booking, 'Pembayaran gagal');
+                    })->afterResponse();
+                }
             }
         }
     }

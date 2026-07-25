@@ -331,12 +331,14 @@ class PromoService
     }
 
     /**
-     * Calculate discount for rental
+     * Hitung diskon untuk rental
      */
     public function calculateRentalDiscount(Promo $promo, float $rentalAmount): float
     {
-        // Cek minimum purchase
-        if ((float) $promo->min_purchase > 0 && $rentalAmount < (float) $promo->min_purchase) {
+        // ⚡ Cek minimum purchase khusus rental
+        $minPurchase = (float) ($promo->rental_min_purchase ?? $promo->min_purchase);
+        
+        if ($minPurchase > 0 && $rentalAmount < $minPurchase) {
             return 0;
         }
 
@@ -345,7 +347,7 @@ class PromoService
             return min((float) $promo->rental_discount_amount, $rentalAmount);
         }
 
-        // Default: persentase (gunakan rental_max_discount jika ada, jika tidak gunakan max_discount)
+        // Default: persentase
         $maxDiscount = (float) ($promo->rental_max_discount ?? $promo->max_discount);
         $discount = $rentalAmount * ((float) $promo->discount_percent / 100);
         

@@ -83,32 +83,47 @@ use App\Http\Controllers\Api\Admin\RentalController as ApiAdminRentalController;
 Route::prefix('v1')->group(function () {
 
     // Auth Routes
-    Route::post('/auth/login', [ApiAuthLoginController::class, 'login']);
-    Route::post('/auth/register', [ApiAuthRegisterController::class, 'register']);
-    Route::post('/auth/register-agency', [ApiAuthRegisterController::class, 'registerAgency']);
-    Route::post('/auth/register-payment-agent', [ApiAuthRegisterController::class, 'registerPaymentAgent']);
+    Route::post('/auth/login', [ApiAuthLoginController::class, 'login'])
+        ->middleware('throttle:5,1');
+    Route::post('/auth/register', [ApiAuthRegisterController::class, 'register'])
+        ->middleware('throttle:3,10');
+    Route::post('/auth/register-agency', [ApiAuthRegisterController::class, 'registerAgency'])
+        ->middleware('throttle:2,30');
+    Route::post('/auth/register-payment-agent', [ApiAuthRegisterController::class, 'registerPaymentAgent'])
+        ->middleware('throttle:2,30');
+    Route::post('/auth/logout-all', [ApiAuthLoginController::class, 'logoutAll']);
 
-    // Public Routes
-    Route::get('/home', [ApiPublicHomeController::class, 'index']);
-    Route::get('/search', [ApiPublicSearchController::class, 'search']);
-    Route::get('/routes', [ApiPublicSearchController::class, 'routes']);
-    Route::get('/routes/{id}', [ApiPublicSearchController::class, 'routeDetail']);
-    Route::get('/cities', [ApiPublicSearchController::class, 'cities']);
-    Route::get('/agencies', [ApiPublicListingController::class, 'index']);
-    Route::get('/agencies/{slug}', [ApiPublicAgencyProfileController::class, 'show']);
-    Route::get('/agencies/{slug}/reviews', [ApiPublicAgencyProfileController::class, 'reviews']);
-    Route::get('/agencies/{slug}/schedules', [ApiPublicAgencyProfileController::class, 'schedules']);
-    Route::get('/schedules', [ApiPublicSearchController::class, 'schedules']);
-    Route::get('/schedules/{id}', [ApiPublicSearchController::class, 'scheduleDetail']);
-    Route::get('/schedules/{schedule}/dropoffs/{originStopId}', [ApiPublicScheduleController::class, 'availableDropoffs']);
-    Route::get('/nearby-warungs', [ApiPublicSearchController::class, 'nearbyWarungs']);
-    Route::get('/rental/vehicle/{vehicle}/availability', [App\Http\Controllers\Api\Public\RentalController::class, 'availability']);
-    Route::get('/rental/vehicle/{vehicle}/availability', [App\Http\Controllers\Api\Public\RentalController::class, 'availability']);
+    // ═══════════════════════════════════════
+    // PUBLIC ROUTES (NO AUTH) - dengan rate limit
+    // ═══════════════════════════════════════
+    Route::middleware(['throttle:60,1'])->group(function () {
+        Route::get('/home', [ApiPublicHomeController::class, 'index']);
+        Route::get('/search', [ApiPublicSearchController::class, 'search']);
+        Route::get('/routes', [ApiPublicSearchController::class, 'routes']);
+        Route::get('/routes/{id}', [ApiPublicSearchController::class, 'routeDetail']);
+        Route::get('/cities', [ApiPublicSearchController::class, 'cities']);
+        Route::get('/agencies', [ApiPublicListingController::class, 'index']);
+        Route::get('/agencies/{slug}', [ApiPublicAgencyProfileController::class, 'show']);
+        Route::get('/agencies/{slug}/reviews', [ApiPublicAgencyProfileController::class, 'reviews']);
+        Route::get('/agencies/{slug}/schedules', [ApiPublicAgencyProfileController::class, 'schedules']);
+        Route::get('/schedules', [ApiPublicSearchController::class, 'schedules']);
+        Route::get('/schedules/{id}', [ApiPublicSearchController::class, 'scheduleDetail']);
+        Route::get('/schedules/{schedule}/dropoffs/{originStopId}', [ApiPublicScheduleController::class, 'availableDropoffs']);
+        Route::get('/nearby-warungs', [ApiPublicSearchController::class, 'nearbyWarungs']);
+        
+        // ⚡ TAMBAHKAN INI: Rental vehicle availability (PUBLIC, NO AUTH)
+        Route::get('/rental/vehicle/{vehicle}/availability', [App\Http\Controllers\Api\Public\RentalController::class, 'availability'])
+            ->name('api.rental.availability');
+    });
+
     Route::post('/e-ticket/check', [ApiPublicETicketController::class, 'check']);
     Route::post('/e-ticket/send', [ApiPublicETicketController::class, 'send']);
 
-    // Landing Page Public API (No Auth, CORS allowed)
-    Route::prefix('v1/landing')->group(function () {
+    // ═══════════════════════════════════════
+    // LANDING PAGE (rate limit lebih longgar)
+    // ═══════════════════════════════════════
+    // ⚠️ FIX: HAPUS prefix 'v1/landing' karena sudah di dalam 'v1'
+    Route::prefix('landing')->middleware(['throttle:120,1'])->group(function () {
         Route::get('/stats', [App\Http\Controllers\Api\LandingController::class, 'stats']);
         Route::get('/popular-routes', [App\Http\Controllers\Api\LandingController::class, 'popularRoutes']);
         Route::get('/top-agencies', [App\Http\Controllers\Api\LandingController::class, 'topAgencies']);
@@ -116,24 +131,26 @@ Route::prefix('v1')->group(function () {
         Route::get('/rental-cars', [App\Http\Controllers\Api\LandingController::class, 'rentalCars']);
         Route::get('/today-schedules', [App\Http\Controllers\Api\LandingController::class, 'todaySchedules']);
         Route::get('/warungs', [App\Http\Controllers\Api\LandingController::class, 'warungs']);
-        
-        // Single endpoint untuk semua data (lebih efisien)
         Route::get('/all', [App\Http\Controllers\Api\LandingController::class, 'all']);
     });
 
     // Midtrans Callback (No Auth) — rate limit + IP whitelist
-    Route::middleware(['throttle:60,1', 'midtrans.webhook'])->group(function () {
-        Route::post('/midtrans/callback', [ApiCustomerPaymentController::class, 'midtransCallback']);
-        Route::post('/midtrans/disbursement-callback', [ApiAdminWithdrawalController::class, 'disbursementCallback']);
-        Route::post('/midtrans/settlement-callback', [ApiPaymentAgentSettlementController::class, 'settlementCallback']);
-        Route::post('/midtrans/topup-callback', [ApiAgencyWalletController::class, 'topUpCallback']);
+    // ⚡ Callback Midtrans butuh rate limit lebih ketat + IP whitelist
+    Route::middleware(['throttle:30,1', 'midtrans.webhook'])->group(function () {
+        Route::post('/midtrans/callback', [ApiCustomerPaymentController::class, 'midtransCallback'])
+            ->name('midtrans.callback');
+        Route::post('/midtrans/disbursement-callback', [ApiAdminWithdrawalController::class, 'disbursementCallback'])
+            ->name('midtrans.disbursement');
+        Route::post('/midtrans/settlement-callback', [ApiPaymentAgentSettlementController::class, 'settlementCallback'])
+            ->name('midtrans.settlement');
+        Route::post('/midtrans/topup-callback', [ApiAgencyWalletController::class, 'topUpCallback'])
+            ->name('midtrans.topup');
     });
     /*
     |--------------------------------------------------------------------------
     | Authenticated Routes
     |--------------------------------------------------------------------------
     */
-    // Di dalam prefix('v1'), tambahkan:
     // ═══════════════════════════════════════
     // REGION API (LARAVOLT)
     // ═══════════════════════════════════════

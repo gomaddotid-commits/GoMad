@@ -11,6 +11,7 @@ use App\Models\Vehicle;
 use App\Models\User;
 use App\Models\Agency;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
@@ -266,6 +267,7 @@ class RentalService
             $customer = User::findOrFail($data['customer_id']);
             $vehicleSetting = VehicleRentalSetting::with('vehicle.agency')
                 ->where('vehicle_id', $data['vehicle_id'])
+                ->lockForUpdate()  // ⚡ PESSIMISTIC LOCK
                 ->firstOrFail();
 
             $vehicle = $vehicleSetting->vehicle;
@@ -302,17 +304,27 @@ class RentalService
             }
 
             // 👇 ========== VALIDASI KETERSEDIAAN ==========
-            if (!$this->isVehicleAvailable($data['vehicle_id'], $startDateTime, $endDateTime)) {
+            // ⚡ VALIDASI KETERSEDIAAN (dengan lock)
+            $conflictingRental = Rental::where('vehicle_id', $data['vehicle_id'])
+                ->whereNotIn('status', ['cancelled'])
+                ->where(function ($q) use ($startDateTime, $endDateTime) {
+                    $q->where('start_datetime', '<', $endDateTime)
+                    ->where('end_datetime', '>', $startDateTime);
+                })
+                ->lockForUpdate()
+                ->exists();
+
+            if ($conflictingRental) {
                 $conflictingRentals = $this->getConflictingRentals(
-                    $data['vehicle_id'], 
-                    $startDateTime, 
+                    $data['vehicle_id'],
+                    $startDateTime,
                     $endDateTime
                 );
-                
+
                 $conflictInfo = $conflictingRentals->map(function ($r) {
-                    return "• {$r->start_datetime->format('d M H:i')} - {$r->end_datetime->format('d M H:i')}";
+                    return "• {$r->rental_code}: {$r->start_datetime->format('d M H:i')} - {$r->end_datetime->format('d M H:i')} ({$r->status_label})";
                 })->join("\n");
-                
+
                 throw new \Exception(
                     "Maaf, kendaraan ini sudah dibooking untuk rentang waktu tersebut.\n\n" .
                     "Booking yang bentrok:\n{$conflictInfo}\n\n" .
@@ -568,22 +580,46 @@ class RentalService
 
     public function completeRental(Rental $rental): Rental
     {
-        if ($rental->status !== RentalStatus::RETURNED->value) {
-            throw new \Exception('Rental harus dalam status Menunggu Verifikasi.');
-        }
+        return DB::transaction(function () use ($rental) {
+            // ⚡ VALIDASI: Status harus returned
+            if ($rental->status !== RentalStatus::RETURNED->value) {
+                throw new \Exception('Rental harus dalam status Menunggu Verifikasi (returned). Status saat ini: ' . $rental->status_label);
+            }
 
-        $rental->update(['status' => RentalStatus::COMPLETED->value]);
-        
-        $revenue = $rental->subtotal - $rental->platform_fee;
-        $this->walletService->creditWallet(
-            $rental->agency,
-            $revenue,
-            "Pendapatan rental {$rental->rental_code}",
-            'rental_revenue',
-            $rental->id
-        );
+            // ⚡ VALIDASI: Harus ada payment
+            if (!$rental->payment) {
+                throw new \Exception('Rental tidak memiliki data pembayaran.');
+            }
 
-        return $rental;
+            // ⚡ VALIDASI: Payment harus PAID
+            if ($rental->payment->status !== PaymentStatus::PAID->value) {
+                throw new \Exception('Pembayaran rental belum dikonfirmasi. Status: ' . $rental->payment->status_label);
+            }
+
+            // ⚡ Update rental status
+            $rental->update(['status' => RentalStatus::COMPLETED->value]);
+
+            // ⚡ Credit agency wallet
+            $revenue = $rental->subtotal - $rental->platform_fee;
+
+            if ($revenue > 0) {
+                $this->walletService->creditWallet(
+                    $rental->agency,
+                    $revenue,
+                    "Pendapatan rental {$rental->rental_code}",
+                    'rental_revenue',
+                    $rental->id
+                );
+            }
+
+            Log::info('Rental completed', [
+                'rental_code' => $rental->rental_code,
+                'agency_id' => $rental->agency_id,
+                'revenue' => $revenue,
+            ]);
+
+            return $rental;
+        });
     }
 
     // ═══════════════════════════════════════════

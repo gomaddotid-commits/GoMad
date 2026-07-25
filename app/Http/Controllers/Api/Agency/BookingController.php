@@ -73,9 +73,28 @@ class BookingController extends Controller
             'cancellation_reason' => ['required_if:status,cancelled', 'string', 'max:500'],
         ]);
 
-        $agency = $request->user()->agency;
+        $user = $request->user();
+        $agency = $user->agency;
 
+        // ⚡ VALIDASI: Agency harus verified
+        if (!$agency || !$agency->is_verified) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Agency belum diverifikasi.',
+                'data' => null,
+                'meta' => null,
+            ], 403);
+        }
+
+        // ⚡ VALIDASI: Booking harus milik schedule agency ini
         if ($booking->schedule->agency_id !== $agency->id) {
+            Log::warning('Agency attempted to access another agency booking', [
+                'agency_id' => $agency->id,
+                'booking_id' => $booking->id,
+                'booking_agency_id' => $booking->schedule->agency_id,
+                'ip' => request()->ip(),
+            ]);
+
             return response()->json([
                 'success' => false,
                 'message' => 'Anda tidak memiliki akses ke booking ini.',
@@ -84,60 +103,59 @@ class BookingController extends Controller
             ], 403);
         }
 
-        try {
-            $newStatus = \App\Enums\BookingStatus::from($request->status);
+        // ⚡ VALIDASI: Transisi status yang valid
+        $newStatus = \App\Enums\BookingStatus::from($request->status);
+        $currentStatus = \App\Enums\BookingStatus::tryFrom($booking->status);
 
-            if (!$newStatus->canTransitionTo($newStatus)) {
-                // Check if current status can transition
-                $currentStatus = \App\Enums\BookingStatus::tryFrom($booking->status);
-                if ($currentStatus && !$currentStatus->canTransitionTo($newStatus)) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Status tidak dapat diubah dari ' . $booking->status_label . ' ke ' . $newStatus->label(),
-                        'data' => null,
-                        'meta' => null,
-                    ], 422);
-                }
-            }
-
-            $updateData = ['status' => $newStatus->value];
-
-            if ($newStatus->value === 'cancelled') {
-                $updateData['cancelled_at'] = now();
-            }
-
-            if ($newStatus->value === 'completed') {
-                $updateData['completed_at'] = now();
-                // Release funds to wallet
-                app(\App\Services\WalletService::class)->releaseFunds($booking);
-                
-                // Send notification
-                app(\App\Services\NotificationService::class)->bookingCompleted($booking);
-            }
-
-            $booking->update($updateData);
-
-            if ($newStatus->value === 'cancelled') {
-                app(\App\Services\NotificationService::class)->bookingCancelled(
-                    $booking,
-                    $request->cancellation_reason ?? 'Dibatalkan oleh agency'
-                );
-            }
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Status booking berhasil diupdate.',
-                'data' => new BookingResource($booking->fresh()),
-                'meta' => null,
-            ]);
-        } catch (\Exception $e) {
+        if (!$currentStatus || !$currentStatus->canTransitionTo($newStatus)) {
             return response()->json([
                 'success' => false,
-                'message' => $e->getMessage(),
+                'message' => 'Status tidak dapat diubah dari ' . $booking->status_label . ' ke ' . $newStatus->label(),
                 'data' => null,
                 'meta' => null,
             ], 422);
         }
+
+        $updateData = ['status' => $newStatus->value];
+
+        if ($newStatus->value === 'cancelled') {
+            $updateData['cancelled_at'] = now();
+        }
+
+        if ($newStatus->value === 'completed') {
+            $updateData['completed_at'] = now();
+
+            // ⚡ Hanya release funds jika booking sudah paid
+            if ($booking->payment && $booking->payment->status === 'paid') {
+                app(\App\Services\WalletService::class)->releaseFunds($booking);
+            }
+
+            app(\App\Services\NotificationService::class)->bookingCompleted($booking);
+        }
+
+        $booking->update($updateData);
+
+        if ($newStatus->value === 'cancelled') {
+            app(\App\Services\NotificationService::class)->bookingCancelled(
+                $booking,
+                $request->cancellation_reason ?? 'Dibatalkan oleh agency'
+            );
+        }
+
+        Log::info('Agency updated booking status', [
+            'agency_id' => $agency->id,
+            'booking_id' => $booking->id,
+            'old_status' => $currentStatus->value,
+            'new_status' => $newStatus->value,
+            'updated_by' => $user->id,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Status booking berhasil diupdate.',
+            'data' => new BookingResource($booking->fresh()),
+            'meta' => null,
+        ]);
     }
 }
 

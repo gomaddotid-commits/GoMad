@@ -62,6 +62,22 @@ class Agency extends Model
         ];
     }
 
+    protected static function booted(): void
+    {
+        static::deleting(function (Agency $agency) {
+            // Soft delete semua relasi
+            $agency->vehicles()->delete();
+            $agency->drivers()->update(['is_active' => false]);
+            $agency->schedules()->update(['is_active' => false]);
+            $agency->rentals()->whereIn('status', ['pending', 'paid'])->update(['status' => 'cancelled']);
+        });
+
+        static::restoring(function (Agency $agency) {
+            // Restore relasi yang di-soft-delete
+            $agency->vehicles()->withTrashed()->restore();
+        });
+    }
+
     // ═══════════════════════════════════════
     // RELASI KE LARAVOLT
     // ═══════════════════════════════════════

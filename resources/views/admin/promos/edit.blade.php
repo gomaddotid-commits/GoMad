@@ -55,7 +55,7 @@
         </div>
 
         {{-- ═══════════════════════════════════════ --}}
-        {{-- DISKON TRAVEL (muncul jika module = travel atau all) --}}
+        {{-- DISKON TRAVEL --}}
         {{-- ═══════════════════════════════════════ --}}
         <div id="travelDiscountFields">
             <div class="border-t border-[#E5E5E5] pt-4">
@@ -72,16 +72,19 @@
                                class="w-full px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111] transition">
                     </div>
                     <div>
-                        <label class="block text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">Min Pembelian (Rp)</label>
+                        <label class="block text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">
+                            Min Pembelian Travel (Rp)
+                        </label>
                         <input type="number" name="min_purchase" value="{{ old('min_purchase', $promo->min_purchase) }}" 
-                               class="w-full px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111] transition">
+                               class="w-full px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111] transition"
+                               placeholder="0" min="0">
                     </div>
                 </div>
             </div>
         </div>
 
         {{-- ═══════════════════════════════════════ --}}
-        {{-- DISKON RENTAL (muncul jika module = rental atau all) --}}
+        {{-- DISKON RENTAL --}}
         {{-- ═══════════════════════════════════════ --}}
         <div id="rentalDiscountFields">
             <div class="border-t border-[#E5E5E5] pt-4">
@@ -115,6 +118,16 @@
                                placeholder="100000" min="0">
                         <p class="text-[10px] text-gray-400 mt-1 font-light">Untuk tipe Persentase</p>
                     </div>
+                </div>
+                
+                <div class="mt-3">
+                    <label class="block text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">
+                        Minimal Sewa Rental (Rp)
+                    </label>
+                    <input type="number" name="rental_min_purchase" value="{{ old('rental_min_purchase', $promo->rental_min_purchase ?? 0) }}" 
+                           class="w-48 px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111] transition"
+                           placeholder="0" min="0">
+                    <p class="text-[10px] text-gray-400 mt-1 font-light">Minimal subtotal sewa agar promo berlaku</p>
                 </div>
                 
                 <div class="bg-blue-50 border border-blue-200 rounded-[12px] p-4 mt-4">
@@ -223,13 +236,9 @@ function toggleModuleFields() {
     var type = document.getElementById('promoType').value;
     var selectiveTarget = document.getElementById('selectiveTarget');
     
-    // Travel discount fields
     travelFields.style.display = (module === 'travel' || module === 'all') ? 'block' : 'none';
-    
-    // Rental discount fields
     rentalFields.style.display = (module === 'rental' || module === 'all') ? 'block' : 'none';
     
-    // Selective target
     if (type === 'selective' && module !== 'rental') {
         selectiveTarget.style.display = 'grid';
     } else {
@@ -237,7 +246,6 @@ function toggleModuleFields() {
     }
 }
 
-// Update label saat tipe diskon rental berubah
 document.getElementById('rentalDiscountType').addEventListener('change', function() {
     var label = document.getElementById('rentalDiscountLabel');
     var hint = document.getElementById('rentalDiscountHint');
@@ -251,11 +259,9 @@ document.getElementById('rentalDiscountType').addEventListener('change', functio
     }
 });
 
-// Init
 document.addEventListener('DOMContentLoaded', function() {
     toggleModuleFields();
     
-    // Trigger change untuk update label rental
     var rentalType = document.getElementById('rentalDiscountType');
     if (rentalType) {
         rentalType.dispatchEvent(new Event('change'));

@@ -1,6 +1,4 @@
 <?php
-// File: app/Http/Controllers/Api/Auth/RegisterController.php
-// Deskripsi: API Controller untuk registrasi user
 
 namespace App\Http\Controllers\Api\Auth;
 
@@ -25,7 +23,7 @@ class RegisterController extends Controller
         $request->validate([
             'name' => ['required', 'string', 'max:100'],
             'email' => ['required', 'email', 'unique:users,email'],
-            'phone' => ['required', 'string', 'max:20', 'unique:users,phone'], // 👈 TAMBAH
+            'phone' => ['required', 'string', 'max:20', 'unique:users,phone'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
             'role' => ['required', 'in:customer'],
             'referral_code' => ['nullable', 'string', 'exists:referral_codes,code'],
@@ -42,11 +40,16 @@ class RegisterController extends Controller
 
         $token = $user->createToken('register-token')->plainTextToken;
 
-        try {
-            app(\App\Services\NotificationService::class)->welcomeCustomer($user);
-        } catch (\Exception $e) {
-            \Log::error('Welcome WhatsApp failed: ' . $e->getMessage());
-        }
+        // ═══════════════════════════════════════════
+        // NOTIFIKASI via dispatchAfterResponse (ASYNC)
+        // ═══════════════════════════════════════════
+        dispatch(function () use ($user) {
+            try {
+                app(\App\Services\NotificationService::class)->welcomeCustomer($user);
+            } catch (\Exception $e) {
+                \Log::error('Welcome WhatsApp failed: ' . $e->getMessage());
+            }
+        })->afterResponse();
 
         return response()->json([
             'success' => true,
@@ -105,12 +108,16 @@ class RegisterController extends Controller
                 'is_verified' => false,
             ]);
 
-            // 👇 KIRIM WHATSAPP WELCOME
-            try {
-                app(\App\Services\NotificationService::class)->welcomeAgency($result['user'], $result['agency']);
-            } catch (\Exception $e) {
-                \Log::error('Welcome WhatsApp failed: ' . $e->getMessage());
-            }
+            // ═══════════════════════════════════════════
+            // NOTIFIKASI via dispatchAfterResponse (ASYNC)
+            // ═══════════════════════════════════════════
+            dispatch(function () use ($user, $agency) {
+                try {
+                    app(\App\Services\NotificationService::class)->welcomeAgency($user, $agency);
+                } catch (\Exception $e) {
+                    \Log::error('Welcome WhatsApp failed: ' . $e->getMessage());
+                }
+            })->afterResponse();
 
             return ['user' => $user, 'agency' => $agency];
         });
@@ -152,11 +159,16 @@ class RegisterController extends Controller
 
         $agent = $this->paymentAgentService->registerAgent($request->all());
         
-        try {
-            app(\App\Services\NotificationService::class)->welcomePaymentAgent($agent->user, $agent);
-        } catch (\Exception $e) {
-            \Log::error('Welcome WhatsApp failed: ' . $e->getMessage());
-        }
+        // ═══════════════════════════════════════════
+        // NOTIFIKASI via dispatchAfterResponse (ASYNC)
+        // ═══════════════════════════════════════════
+        dispatch(function () use ($agent) {
+            try {
+                app(\App\Services\NotificationService::class)->welcomePaymentAgent($agent->user, $agent);
+            } catch (\Exception $e) {
+                \Log::error('Welcome WhatsApp failed: ' . $e->getMessage());
+            }
+        })->afterResponse();
         
         $token = $agent->user->createToken('payment-agent-token')->plainTextToken;
 
@@ -180,5 +192,3 @@ class RegisterController extends Controller
         ], 201);
     }
 }
-
-// End of file

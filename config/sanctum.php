@@ -50,7 +50,7 @@ return [
     |
     */
 
-    'expiration' => null,
+    'expiration' => env('SANCTUM_TOKEN_EXPIRATION', 43200), // Default: 30 hari dalam menit
 
     /*
     |--------------------------------------------------------------------------

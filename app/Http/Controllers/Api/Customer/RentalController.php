@@ -79,7 +79,17 @@ class RentalController extends Controller
 
     public function show(Rental $rental): JsonResponse
     {
-        if ($rental->customer_id !== request()->user()->id) {
+        $user = request()->user();
+
+        // ⚡ VALIDASI: Rental harus milik customer ini
+        if ($rental->customer_id !== $user->id) {
+            Log::warning('Customer attempted to access another customer rental', [
+                'customer_id' => $user->id,
+                'rental_id' => $rental->id,
+                'rental_customer_id' => $rental->customer_id,
+                'ip' => request()->ip(),
+            ]);
+
             return response()->json([
                 'success' => false,
                 'message' => 'Anda tidak memiliki akses ke rental ini.',

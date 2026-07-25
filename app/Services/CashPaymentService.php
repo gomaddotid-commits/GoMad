@@ -122,27 +122,30 @@ class CashPaymentService
 
             $this->walletService->addPendingBalance($booking);
             
-            $this->notificationService->cashPaymentConfirmed($booking);
-            
-            $this->notificationService->sendWhatsApp(
-                $booking->customer->phone,
-                "Pembayaran untuk booking *{$booking->booking_code}* telah dikonfirmasi.\n" .
-                "Total: Rp " . number_format($booking->total_price, 0, ',', '.') . "\n" .
-                "Warung: {$agent->agent_name}\n" .
-                "Terima kasih telah menggunakan GoMad!"
-            );
+            // ═══════════════════════════════════════════
+            // NOTIFIKASI via dispatchAfterResponse (ASYNC)
+            // ═══════════════════════════════════════════
+            dispatch(function () use ($booking, $agent) {
+                // Notifikasi booking confirmed
+                $this->notificationService->cashPaymentConfirmed($booking);
+                
+                // WhatsApp ke customer
+                $this->notificationService->sendWhatsApp(
+                    $booking->customer->phone,
+                    "Pembayaran untuk booking *{$booking->booking_code}* telah dikonfirmasi.\n" .
+                    "Total: Rp " . number_format($booking->total_price, 0, ',', '.') . "\n" .
+                    "Warung: {$agent->agent_name}\n" .
+                    "Terima kasih telah menggunakan GoMad!"
+                );
 
-            try {
-                $promoService = app(\App\Services\PromoService::class);
-                $promoService->processReferralReward($booking);
-                Log::info('Referral reward processed for booking: ' . $booking->booking_code);
-            } catch (\Exception $e) {
-                Log::error('Referral reward processing failed: ' . $e->getMessage(), [
-                    'booking_id' => $booking->id,
-                    'error' => $e->getMessage(),
-                ]);
-                // Jangan throw error - jangan ganggu flow pembayaran utama
-            }
+                // Referral reward
+                try {
+                    $promoService = app(\App\Services\PromoService::class);
+                    $promoService->processReferralReward($booking);
+                } catch (\Exception $e) {
+                    Log::error('Referral reward processing failed: ' . $e->getMessage());
+                }
+            })->afterResponse();
 
             return $cashPayment;
         });

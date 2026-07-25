@@ -19,7 +19,37 @@ class BookingController extends Controller
     {
         $driver = request()->user();
 
-        if ($booking->schedule->driver_id !== $driver->id) {
+        // ⚡ VALIDASI: Driver harus punya agency
+        if (!$driver->agency_id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Anda tidak terdaftar di agency manapun.',
+                'data' => null,
+                'meta' => null,
+            ], 403);
+        }
+
+        // ⚡ VALIDASI: Booking harus milik schedule yang di-drive oleh driver ini
+        $schedule = $booking->schedule;
+
+        if (!$schedule) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Booking tidak memiliki jadwal terkait.',
+                'data' => null,
+                'meta' => null,
+            ], 404);
+        }
+
+        // ⚡ VALIDASI: Driver harus bertugas di schedule ini
+        if ($schedule->driver_id !== $driver->id) {
+            Log::warning('Driver attempted to access another driver booking', [
+                'driver_id' => $driver->id,
+                'booking_id' => $booking->id,
+                'schedule_driver_id' => $schedule->driver_id,
+                'ip' => request()->ip(),
+            ]);
+
             return response()->json([
                 'success' => false,
                 'message' => 'Anda tidak bertugas di jadwal ini.',
@@ -28,7 +58,18 @@ class BookingController extends Controller
             ], 403);
         }
 
-        if (!$booking->schedule->started_at) {
+        // ⚡ VALIDASI: Schedule harus aktif
+        if (!$schedule->is_active) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Jadwal sudah tidak aktif.',
+                'data' => null,
+                'meta' => null,
+            ], 400);
+        }
+
+        // ⚡ VALIDASI: Schedule harus sudah dimulai
+        if (!$schedule->started_at) {
             return response()->json([
                 'success' => false,
                 'message' => 'Jadwal belum dimulai oleh agency.',
@@ -37,13 +78,52 @@ class BookingController extends Controller
             ], 400);
         }
 
+        // ⚡ VALIDASI: Schedule belum selesai
+        if ($schedule->finished_at) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Jadwal sudah selesai.',
+                'data' => null,
+                'meta' => null,
+            ], 400);
+        }
+
+        // ⚡ VALIDASI: Booking tidak boleh cancelled
+        if ($booking->status === 'cancelled') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Booking sudah dibatalkan.',
+                'data' => null,
+                'meta' => null,
+            ], 400);
+        }
+
+        // ⚡ VALIDASI: Booking harus dalam status yang valid untuk pickup
+        $validStatuses = ['paid', 'confirmed', 'on_going'];
+        if (!in_array($booking->status, $validStatuses)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Booking tidak dalam status yang bisa dijemput. Status saat ini: ' . $booking->status_label,
+                'data' => null,
+                'meta' => null,
+            ], 400);
+        }
+
+        // Proses pickup
         BookingPassenger::where('booking_id', $booking->id)
             ->whereNull('picked_up_at')
             ->update(['picked_up_at' => now()]);
 
-        if ($booking->status === 'paid') {
+        // Update booking status ke on_going jika masih paid
+        if (in_array($booking->status, ['paid', 'confirmed'])) {
             $booking->update(['status' => 'on_going']);
         }
+
+        Log::info('Driver picked up booking', [
+            'driver_id' => $driver->id,
+            'booking_id' => $booking->id,
+            'booking_code' => $booking->booking_code,
+        ]);
 
         return response()->json([
             'success' => true,
@@ -60,7 +140,36 @@ class BookingController extends Controller
     {
         $driver = request()->user();
 
-        if ($booking->schedule->driver_id !== $driver->id) {
+        // ⚡ VALIDASI: Driver harus punya agency
+        if (!$driver->agency_id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Anda tidak terdaftar di agency manapun.',
+                'data' => null,
+                'meta' => null,
+            ], 403);
+        }
+
+        // ⚡ VALIDASI: Booking harus milik schedule yang di-drive oleh driver ini
+        $schedule = $booking->schedule;
+
+        if (!$schedule) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Booking tidak memiliki jadwal terkait.',
+                'data' => null,
+                'meta' => null,
+            ], 404);
+        }
+
+        if ($schedule->driver_id !== $driver->id) {
+            Log::warning('Driver attempted to dropoff another driver booking', [
+                'driver_id' => $driver->id,
+                'booking_id' => $booking->id,
+                'schedule_driver_id' => $schedule->driver_id,
+                'ip' => request()->ip(),
+            ]);
+
             return response()->json([
                 'success' => false,
                 'message' => 'Anda tidak bertugas di jadwal ini.',
@@ -69,9 +178,58 @@ class BookingController extends Controller
             ], 403);
         }
 
+        // ⚡ VALIDASI: Schedule harus aktif dan sudah dimulai
+        if (!$schedule->is_active) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Jadwal sudah tidak aktif.',
+                'data' => null,
+                'meta' => null,
+            ], 400);
+        }
+
+        if (!$schedule->started_at) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Jadwal belum dimulai oleh agency.',
+                'data' => null,
+                'meta' => null,
+            ], 400);
+        }
+
+        if ($schedule->finished_at) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Jadwal sudah selesai.',
+                'data' => null,
+                'meta' => null,
+            ], 400);
+        }
+
+        // ⚡ VALIDASI: Semua penumpang harus sudah dijemput
+        $allPickedUp = BookingPassenger::where('booking_id', $booking->id)
+            ->whereNull('picked_up_at')
+            ->doesntExist();
+
+        if (!$allPickedUp) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Semua penumpang harus dijemput terlebih dahulu.',
+                'data' => null,
+                'meta' => null,
+            ], 400);
+        }
+
+        // Proses dropoff
         BookingPassenger::where('booking_id', $booking->id)
             ->whereNull('dropped_off_at')
             ->update(['dropped_off_at' => now()]);
+
+        Log::info('Driver dropped off booking', [
+            'driver_id' => $driver->id,
+            'booking_id' => $booking->id,
+            'booking_code' => $booking->booking_code,
+        ]);
 
         return response()->json([
             'success' => true,
@@ -88,7 +246,36 @@ class BookingController extends Controller
     {
         $driver = request()->user();
 
-        if ($booking->schedule->driver_id !== $driver->id) {
+        // ⚡ VALIDASI: Driver harus punya agency
+        if (!$driver->agency_id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Anda tidak terdaftar di agency manapun.',
+                'data' => null,
+                'meta' => null,
+            ], 403);
+        }
+
+        // ⚡ VALIDASI: Booking harus milik schedule driver ini
+        $schedule = $booking->schedule;
+
+        if (!$schedule) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Booking tidak memiliki jadwal terkait.',
+                'data' => null,
+                'meta' => null,
+            ], 404);
+        }
+
+        if ($schedule->driver_id !== $driver->id) {
+            Log::warning('Driver attempted to complete another driver booking', [
+                'driver_id' => $driver->id,
+                'booking_id' => $booking->id,
+                'schedule_driver_id' => $schedule->driver_id,
+                'ip' => request()->ip(),
+            ]);
+
             return response()->json([
                 'success' => false,
                 'message' => 'Anda tidak bertugas di jadwal ini.',
@@ -97,8 +284,30 @@ class BookingController extends Controller
             ], 403);
         }
 
+        // ⚡ VALIDASI: Booking tidak boleh cancelled
+        if ($booking->status === 'cancelled') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Booking sudah dibatalkan.',
+                'data' => null,
+                'meta' => null,
+            ], 400);
+        }
+
+        // ⚡ VALIDASI: Booking tidak boleh sudah completed
+        if ($booking->status === 'completed') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Booking sudah selesai.',
+                'data' => null,
+                'meta' => null,
+            ], 400);
+        }
+
+        // ⚡ VALIDASI: Semua penumpang harus sudah diturunkan
         $allDroppedOff = BookingPassenger::where('booking_id', $booking->id)
-            ->whereNull('dropped_off_at')->doesntExist();
+            ->whereNull('dropped_off_at')
+            ->doesntExist();
 
         if (!$allDroppedOff) {
             return response()->json([
@@ -109,6 +318,18 @@ class BookingController extends Controller
             ], 400);
         }
 
+        // ⚡ VALIDASI: Jika COD, pastikan sudah dikonfirmasi
+        if ($booking->payment && $booking->payment->payment_type === 'cod') {
+            if ($booking->payment->status !== 'cod_confirmed') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Pembayaran COD harus dikonfirmasi terlebih dahulu.',
+                    'data' => null,
+                    'meta' => null,
+                ], 400);
+            }
+        }
+
         $booking->update([
             'status' => 'completed',
             'completed_at' => now(),
@@ -116,6 +337,12 @@ class BookingController extends Controller
 
         app(\App\Services\WalletService::class)->releaseFunds($booking);
         $booking->schedule->agency->increment('total_bookings');
+
+        Log::info('Driver completed booking', [
+            'driver_id' => $driver->id,
+            'booking_id' => $booking->id,
+            'booking_code' => $booking->booking_code,
+        ]);
 
         return response()->json([
             'success' => true,

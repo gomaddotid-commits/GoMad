@@ -382,9 +382,11 @@ Route::post('/e-ticket/send', [WebPublicHomeController::class, 'sendETicket'])->
 
 // Auth Routes
 Route::get('/login', [WebAuthLoginController::class, 'showLoginForm'])->name('login');
-Route::post('/login', [WebAuthLoginController::class, 'login']);
+Route::post('/login', [WebAuthLoginController::class, 'login'])
+    ->middleware('throttle:10,1'); // Max 10 login attempts per minute
 Route::get('/register', [WebAuthRegisterController::class, 'showRegistrationForm'])->name('register');
-Route::post('/register', [WebAuthRegisterController::class, 'register']);
+Route::post('/register', [WebAuthRegisterController::class, 'register'])
+    ->middleware('throttle:3,10'); // Max 3 registrations per 10 minutes per IP
 Route::post('/logout', [WebAuthLoginController::class, 'logout'])->name('logout');
 Route::get('/auth/google', [App\Http\Controllers\Web\Auth\GoogleController::class, 'redirect'])->name('google.login');
 Route::get('/auth/google/callback', [App\Http\Controllers\Web\Auth\GoogleController::class, 'callback'])->name('google.callback');

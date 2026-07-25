@@ -54,7 +54,17 @@ class BookingController extends Controller
 
     public function show(Booking $booking): JsonResponse
     {
-        if ($booking->customer_id !== request()->user()->id) {
+        $user = request()->user();
+
+        // ⚡ VALIDASI: Booking harus milik customer ini
+        if ($booking->customer_id !== $user->id) {
+            Log::warning('Customer attempted to access another customer booking', [
+                'customer_id' => $user->id,
+                'booking_id' => $booking->id,
+                'booking_customer_id' => $booking->customer_id,
+                'ip' => request()->ip(),
+            ]);
+
             return response()->json([
                 'success' => false,
                 'message' => 'Anda tidak memiliki akses ke booking ini.',
@@ -85,7 +95,17 @@ class BookingController extends Controller
 
     public function cancel(Booking $booking): JsonResponse
     {
-        if ($booking->customer_id !== request()->user()->id) {
+        $user = request()->user();
+
+        // ⚡ VALIDASI: Booking harus milik customer ini
+        if ($booking->customer_id !== $user->id) {
+            Log::warning('Customer attempted to cancel another customer booking', [
+                'customer_id' => $user->id,
+                'booking_id' => $booking->id,
+                'booking_customer_id' => $booking->customer_id,
+                'ip' => request()->ip(),
+            ]);
+
             return response()->json([
                 'success' => false,
                 'message' => 'Anda tidak memiliki akses ke booking ini.',
@@ -97,6 +117,12 @@ class BookingController extends Controller
         try {
             $this->bookingService->cancelBooking($booking);
 
+            Log::info('Customer cancelled booking', [
+                'customer_id' => $user->id,
+                'booking_id' => $booking->id,
+                'booking_code' => $booking->booking_code,
+            ]);
+
             return response()->json([
                 'success' => true,
                 'message' => 'Booking berhasil dibatalkan.',
@@ -104,6 +130,12 @@ class BookingController extends Controller
                 'meta' => null,
             ]);
         } catch (\Exception $e) {
+            Log::error('Customer failed to cancel booking', [
+                'customer_id' => $user->id,
+                'booking_id' => $booking->id,
+                'error' => $e->getMessage(),
+            ]);
+
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage(),

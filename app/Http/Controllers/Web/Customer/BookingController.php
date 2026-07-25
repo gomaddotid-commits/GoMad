@@ -74,8 +74,13 @@ class BookingController extends Controller
 
     public function payProcess(Request $request, Booking $booking): RedirectResponse
     {
-        if ($booking->customer_id !== auth()->id()) abort(403);
-        if ($booking->status !== 'pending') return back()->with('error', 'Booking sudah tidak pending.');
+        if ($booking->customer_id !== auth()->id()) {
+            abort(403);
+        }
+
+        if ($booking->status !== 'pending') {
+            return back()->with('error', 'Booking sudah tidak pending.');
+        }
 
         $request->validate([
             'payment_method' => ['required', 'in:midtrans,cash,cod'],
@@ -84,12 +89,13 @@ class BookingController extends Controller
             'payment_method.required' => 'Silakan pilih metode pembayaran terlebih dahulu.',
             'payment_method.in' => 'Metode pembayaran tidak valid.',
         ]);
-        // 👇 TAMBAHKAN: Validasi metode pembayaran sesuai rute
+
+        // Validasi metode pembayaran sesuai rute
         $routePaymentMethods = $booking->schedule->route->payment_methods_array;
         if (!in_array($request->payment_method, $routePaymentMethods)) {
             return back()->with('error', 'Metode pembayaran ini tidak tersedia untuk rute ini.');
         }
-        
+
         // Validasi khusus COD
         if ($request->payment_method === 'cod') {
             if (!$booking->schedule->route->cod_available) {
@@ -100,14 +106,130 @@ class BookingController extends Controller
             }
         }
 
-        // Validasi promo dengan metode pembayaran
+        // ═══════════════════════════════════════════
+        // 🔧 APPLY PROMO SEKARANG (SEBELUM PAYMENT)
+        // ═══════════════════════════════════════════
         if ($request->filled('promo_id')) {
             $promo = \App\Models\Promo::find($request->promo_id);
-            if ($promo && !$promo->isApplicableFor($request->payment_method)) {
-                return back()->with('error', 'Promo "' . $promo->name . '" tidak berlaku untuk metode pembayaran yang dipilih.');
+
+            \Log::info('payProcess - promo received', [
+                'booking_code' => $booking->booking_code,
+                'promo_id' => $request->promo_id,
+                'promo_exists' => !is_null($promo),
+                'promo_is_active' => $promo ? ($promo->isActiveNow() ? 'yes' : 'no') : 'N/A',
+                'promo_start_date' => $promo ? $promo->start_date->toDateString() : 'N/A',
+                'promo_end_date' => $promo ? $promo->end_date->toDateString() : 'N/A',
+                'now_date' => now()->toDateString(),
+            ]);
+
+            if ($promo && $promo->isActiveNow()) {
+                \Log::info('payProcess - promo is active, checking applicable', [
+                    'promo_applicable_methods' => $promo->applicable_payment_methods,
+                    'request_method' => $request->payment_method,
+                    'is_applicable' => $promo->isApplicableFor($request->payment_method),
+                ]);
+
+                // Validasi promo dengan metode pembayaran
+                if (!$promo->isApplicableFor($request->payment_method)) {
+                    \Log::warning('payProcess - promo not applicable for payment method', [
+                        'promo_id' => $promo->id,
+                        'promo_methods' => $promo->applicable_payment_methods,
+                        'request_method' => $request->payment_method,
+                    ]);
+                    return back()->with('error', 'Promo "' . $promo->name . '" tidak berlaku untuk metode pembayaran yang dipilih.');
+                }
+
+                // Simpan ke session (fallback)
+                session()->put('selected_promo_' . $booking->id, $request->promo_id);
+
+                // APPLY promo langsung
+                $promoService = app(\App\Services\PromoService::class);
+
+                $canUse = $promoService->canUsePromo($booking->customer, $promo);
+                \Log::info('payProcess - canUsePromo check', [
+                    'can_use' => $canUse ? 'yes' : 'no',
+                    'customer_id' => $booking->customer_id,
+                    'promo_id' => $promo->id,
+                ]);
+
+                if ($canUse) {
+                    $basePrice = (float) ($booking->base_price ?? $booking->total_price);
+                    $discount = $promoService->calculateDiscount($promo, $basePrice);
+
+                    \Log::info('payProcess - discount calculation', [
+                        'base_price' => $basePrice,
+                        'discount_percent' => $promo->discount_percent,
+                        'max_discount' => $promo->max_discount,
+                        'calculated_discount' => $discount,
+                    ]);
+
+                    if ($discount > 0) {
+                        $newTotal = max(0, (float) $booking->total_price - $discount);
+
+                        \Log::info('payProcess - applying promo to booking', [
+                            'booking_code' => $booking->booking_code,
+                            'promo_name' => $promo->name,
+                            'old_total' => $booking->total_price,
+                            'discount' => $discount,
+                            'new_total' => $newTotal,
+                        ]);
+
+                        $booking->update([
+                            'total_price' => $newTotal,
+                            'discount_amount' => ((float) ($booking->discount_amount ?? 0)) + $discount,
+                        ]);
+
+                        \App\Models\PromoUsage::create([
+                            'promo_id' => $promo->id,
+                            'user_id' => $booking->customer_id,
+                            'booking_id' => $booking->id,
+                            'discount_amount' => $discount,
+                        ]);
+
+                        \Log::info('payProcess - promo applied successfully', [
+                            'booking_code' => $booking->booking_code,
+                            'new_total_price' => $newTotal,
+                            'new_discount_amount' => $booking->fresh()->discount_amount,
+                        ]);
+                    } else {
+                        \Log::warning('payProcess - discount is zero after calculation', [
+                            'base_price' => $basePrice,
+                            'discount_percent' => $promo->discount_percent,
+                            'max_discount' => $promo->max_discount,
+                            'min_purchase' => $promo->min_purchase,
+                        ]);
+                    }
+                } else {
+                    \Log::warning('payProcess - canUsePromo returned false', [
+                        'customer_id' => $booking->customer_id,
+                        'promo_id' => $promo->id,
+                        'promo_type' => $promo->type,
+                        'promo_created_by' => $promo->created_by,
+                    ]);
+                }
+            } else {
+                \Log::warning('payProcess - promo not active or not found', [
+                    'promo_id' => $request->promo_id,
+                    'promo_found' => !is_null($promo),
+                    'is_active' => $promo ? ($promo->isActiveNow() ? 'yes' : 'no') : 'N/A',
+                    'promo_start' => $promo ? $promo->start_date->toDateString() : 'N/A',
+                    'promo_end' => $promo ? $promo->end_date->toDateString() : 'N/A',
+                    'promo_is_active_field' => $promo ? ($promo->is_active ? 'yes' : 'no') : 'N/A',
+                    'now' => now()->toDateString(),
+                ]);
             }
-            session()->put('selected_promo_' . $booking->id, $request->promo_id);
         }
+
+        // ⚡ Refresh booking untuk dapatkan harga terbaru
+        $booking->refresh();
+
+        \Log::info('payProcess - before routing to payment', [
+            'booking_code' => $booking->booking_code,
+            'total_price' => $booking->total_price,
+            'discount_amount' => $booking->discount_amount,
+            'promo_id' => $request->promo_id,
+            'method' => $request->payment_method,
+        ]);
 
         $method = $request->payment_method;
 
@@ -122,13 +244,23 @@ class BookingController extends Controller
     private function processMidtrans(Booking $booking): RedirectResponse
     {
         try {
+            $booking->refresh();
+
+            \Log::info('processMidtrans - starting', [
+                'booking_code' => $booking->booking_code,
+                'total_price' => $booking->total_price,
+                'discount_amount' => $booking->discount_amount,
+            ]);
+
             $this->cleanupOldPayments($booking);
             $this->paymentService->createPayment($booking);
             $this->paymentService->getSnapToken($booking);
+
         } catch (\Exception $e) {
+            \Log::error('ProcessMidtrans error: ' . $e->getMessage());
             return back()->with('error', 'Gagal membuat pembayaran: ' . $e->getMessage());
         }
-        $this->applyPromoFromSession($booking);
+
         return redirect()->route('customer.booking.show', $booking)
             ->with('success', 'Silakan klik tombol BAYAR SEKARANG untuk menyelesaikan pembayaran.');
     }
@@ -196,37 +328,66 @@ class BookingController extends Controller
     private function applyPromoFromSession(Booking $booking): void
     {
         $promoId = session()->get('selected_promo_' . $booking->id);
-        if (!$promoId) return;
+        if (!$promoId) {
+            \Log::info('applyPromoFromSession - no promo in session', [
+                'booking_id' => $booking->id,
+            ]);
+            return;
+        }
 
         try {
             $promo = \App\Models\Promo::find($promoId);
-            if (!$promo || !$promo->isActiveNow()) { session()->forget('selected_promo_' . $booking->id); return; }
+            if (!$promo || !$promo->isActiveNow()) {
+                session()->forget('selected_promo_' . $booking->id);
+                \Log::warning('applyPromoFromSession - promo not active', ['promo_id' => $promoId]);
+                return;
+            }
 
             $promoService = app(\App\Services\PromoService::class);
-            if (!$promoService->canUsePromo($booking->customer, $promo)) { session()->forget('selected_promo_' . $booking->id); return; }
+            if (!$promoService->canUsePromo($booking->customer, $promo)) {
+                session()->forget('selected_promo_' . $booking->id);
+                \Log::warning('applyPromoFromSession - cannot use promo', ['promo_id' => $promoId]);
+                return;
+            }
 
             $basePrice = (float) ($booking->base_price ?? $booking->total_price);
             $discount = $promoService->calculateDiscount($promo, $basePrice);
 
             if ($discount > 0) {
                 $newTotal = max(0, (float) $booking->total_price - $discount);
+
+                \Log::info('applyPromoFromSession - applying discount', [
+                    'booking_code' => $booking->booking_code,
+                    'promo_name' => $promo->name,
+                    'base_price' => $basePrice,
+                    'current_total' => $booking->total_price,
+                    'discount' => $discount,
+                    'new_total' => $newTotal,
+                ]);
+
+                // ⚡ Update booking dengan harga baru
                 $booking->update([
                     'total_price' => $newTotal,
                     'discount_amount' => ((float) ($booking->discount_amount ?? 0)) + $discount,
                 ]);
+
+                // ⚡ Catat penggunaan promo
                 \App\Models\PromoUsage::create([
                     'promo_id' => $promo->id,
                     'user_id' => $booking->customer_id,
                     'booking_id' => $booking->id,
                     'discount_amount' => $discount,
                 ]);
-                if ($booking->payment && $booking->payment->exists) {
-                    $booking->payment->update(['amount' => $newTotal]);
-                }
+
+                // ⚡ JANGAN update payment di sini — getSnapToken() akan buat payment baru
             }
         } catch (\Exception $e) {
-            \Log::error('Apply promo error: ' . $e->getMessage());
+            \Log::error('Apply promo error: ' . $e->getMessage(), [
+                'booking_id' => $booking->id,
+                'promo_id' => $promoId,
+            ]);
         }
+
         session()->forget('selected_promo_' . $booking->id);
     }
 

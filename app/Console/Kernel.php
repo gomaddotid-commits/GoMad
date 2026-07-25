@@ -22,6 +22,9 @@ class Kernel extends ConsoleKernel
 
         // Generate settlement setiap Senin jam 00:01
         $schedule->command('gomad:generate-settlements')->weeklyOn(1, '00:01');
+
+        // ⚡ TAMBAHKAN: Bersihkan token expired setiap hari
+        $schedule->command('sanctum:prune-expired')->dailyAt('03:00');
     }
 
     protected function commands(): void

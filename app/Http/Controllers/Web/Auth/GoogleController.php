@@ -7,6 +7,8 @@ use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Socialite\Facades\Socialite;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 class GoogleController extends Controller
 {
@@ -28,15 +30,34 @@ class GoogleController extends Controller
         try {
             $googleUser = Socialite::driver('google')->user();
 
-            // Cari user by email
+            // ⚡ Validasi email terverifikasi dari Google
+            if (!$googleUser->getEmail()) {
+                return redirect()->route('login')
+                    ->with('error', 'Google account tidak mengembalikan email. Coba lagi.');
+            }
+
+            // Cari user by email dengan LOCK untuk mencegah race condition
             $user = User::where('email', $googleUser->getEmail())->first();
 
             if (!$user) {
+                // ⚡ Cek apakah email ini sudah ada di database (soft-deleted)
+                $deletedUser = User::withTrashed()
+                    ->where('email', $googleUser->getEmail())
+                    ->first();
+
+                if ($deletedUser) {
+                    Log::warning('Google login attempt on deleted account', [
+                        'email' => $googleUser->getEmail(),
+                    ]);
+                    return redirect()->route('login')
+                        ->with('error', 'Akun dengan email ini sudah dihapus. Hubungi admin untuk pemulihan.');
+                }
+
                 // Buat user baru sebagai customer
                 $user = User::create([
                     'name' => $googleUser->getName(),
                     'email' => $googleUser->getEmail(),
-                    'phone' => null, // Google tidak kasih nomor HP
+                    'phone' => null,
                     'avatar_url' => $googleUser->getAvatar(),
                     'password' => bcrypt(uniqid()),
                     'role' => 'customer',
@@ -50,35 +71,85 @@ class GoogleController extends Controller
                 // Login
                 Auth::login($user, true);
 
+                // Regenerate session ID (security best practice)
+                request()->session()->regenerate();
+
                 // Wajib isi nomor HP untuk user baru dari Google
                 return redirect()->route('customer.setup')
                     ->with('warning', 'Akun Google berhasil terhubung! Silakan lengkapi nomor WhatsApp Anda.');
             }
 
-            // User sudah ada
-            // Update avatar kalau belum ada
-            if (!$user->avatar_url) {
-                $user->update(['avatar_url' => $googleUser->getAvatar()]);
-            }
+            // ═══════════════════════════════════════════
+            // 🔒 User SUDAH ADA — strict validation
+            // ═══════════════════════════════════════════
 
-            // Ban check
-            if ($user->banned_at) {
+            // ⚡ SOFT-DELETED CHECK
+            if ($user->trashed()) {
+                Log::warning('Google login attempt on soft-deleted account', [
+                    'user_id' => $user->id,
+                    'email' => $googleUser->getEmail(),
+                ]);
                 return redirect()->route('login')
-                    ->with('error', 'Akun Anda dibanned: ' . ($user->banned_reason ?? 'Tidak ada alasan'));
+                    ->with('error', 'Akun ini sudah dihapus. Hubungi admin.');
             }
 
+            // ⚡ BANNED CHECK (gunakan banned_at dan banned_reason)
+            if ($user->banned_at) {
+                Log::warning('Banned user attempted Google login', [
+                    'user_id' => $user->id,
+                    'email' => $user->email,
+                ]);
+                return redirect()->route('login')
+                    ->with('error', 'Akun Anda dibanned: ' . ($user->banned_reason ?? 'Tidak ada alasan') .
+                        '. Banned sejak: ' . $user->banned_at->format('d M Y'));
+            }
+
+            // ⚡ INACTIVE CHECK
             if (!$user->is_active) {
+                Log::warning('Inactive user attempted Google login', [
+                    'user_id' => $user->id,
+                    'email' => $user->email,
+                ]);
                 return redirect()->route('login')
                     ->with('error', 'Akun Anda dinonaktifkan. Hubungi admin.');
             }
 
-            // Role check — hanya customer yang bisa login via Google
+            // ⚡ STRICT ROLE CHECK — HANYA customer
             if ($user->role !== 'customer') {
+                Log::warning('Non-customer attempted Google login', [
+                    'user_id' => $user->id,
+                    'email' => $user->email,
+                    'role' => $user->role,
+                ]);
                 return redirect()->route('login')
-                    ->with('error', 'Akun ini terdaftar sebagai ' . $user->role . '. Silakan login dengan email & password.');
+                    ->with('error', 'Akun ini terdaftar sebagai ' . $user->role .
+                        '. Google login hanya untuk customer. Gunakan email & password.');
             }
 
+            // ⚡ EMAIL VERIFIED CHECK
+            if (!$user->email_verified_at) {
+                $user->update(['email_verified_at' => now()]);
+                Log::info('Email verified via Google OAuth', [
+                    'user_id' => $user->id,
+                ]);
+            }
+
+            // Update avatar kalau belum ada atau berbeda
+            $googleAvatar = $googleUser->getAvatar();
+            if ($googleAvatar && (!$user->avatar_url || $user->avatar_url !== $googleAvatar)) {
+                $user->update(['avatar_url' => $googleAvatar]);
+            }
+
+            // Login
             Auth::login($user, true);
+
+            // Regenerate session ID
+            request()->session()->regenerate();
+
+            Log::info('User logged in via Google', [
+                'user_id' => $user->id,
+                'email' => $user->email,
+            ]);
 
             // Cek apakah nomor HP sudah diisi
             if (empty($user->phone)) {
@@ -90,10 +161,13 @@ class GoogleController extends Controller
                 ->with('success', 'Login dengan Google berhasil! Selamat datang, ' . $user->name . '!');
 
         } catch (\Exception $e) {
-            \Log::error('Google login error: ' . $e->getMessage());
+            Log::error('Google login error', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
 
             return redirect()->route('login')
-                ->with('error', 'Gagal login dengan Google. Silakan coba lagi.');
+                ->with('error', 'Terjadi kesalahan saat login dengan Google. Silakan coba lagi nanti.');
         }
     }
 }

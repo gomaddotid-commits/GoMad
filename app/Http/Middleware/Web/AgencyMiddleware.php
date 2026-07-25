@@ -35,7 +35,7 @@ class AgencyMiddleware
         if (!$agency || !$agency->agency_name) {
             $allowedSetupRoutes = ['agency.setup', 'agency.setup.save', 'logout'];
             $currentRoute = optional($request->route())->getName();
-            
+
             if (!in_array($currentRoute, $allowedSetupRoutes)) {
                 return redirect()->route('agency.setup')
                     ->with('warning', 'Silakan lengkapi data agency Anda terlebih dahulu.');
@@ -43,7 +43,7 @@ class AgencyMiddleware
             return $next($request);
         }
 
-        // Jika agency belum verified, izinkan akses terbatas
+        // ⚡ TAMBAHKAN: Verifikasi agency TIDAK boleh mengakses rental
         if (!$agency->is_verified) {
             $allowedRoutes = [
                 'agency.setup',
@@ -57,9 +57,6 @@ class AgencyMiddleware
                 'agency.profile.gallery.remove',
                 'agency.profile.verify',
                 'agency.dashboard',
-                'agency.drivers.index', 'agency.drivers.create',  // 👈 TAMBAH INI
-                'agency.drivers.store', 'agency.drivers.edit',     // 👈 TAMBAH INI
-                'agency.drivers.update', 'agency.drivers.destroy', // 👈 TAMBAH INI
                 'logout',
             ];
 

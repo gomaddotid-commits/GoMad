@@ -51,6 +51,7 @@ class PromoController extends Controller
             $rules['rental_discount_type'] = ['required', 'in:percent,fixed'];
             $rules['rental_discount_amount'] = ['required', 'numeric', 'min:0'];
             $rules['rental_max_discount'] = ['nullable', 'numeric', 'min:0'];
+            $rules['rental_min_purchase'] = ['nullable', 'numeric', 'min:0'];
         }
 
         $request->validate($rules);
@@ -59,7 +60,7 @@ class PromoController extends Controller
         $data['created_by'] = auth()->id();
         $data['is_active'] = true;
 
-        // 👇 SET DEFAULT UNTUK FIELD YANG TIDAK DIKIRIM
+        // Set default untuk field yang tidak dikirim
         if (!isset($data['discount_percent']) || $data['discount_percent'] === null || $data['discount_percent'] === '') {
             $data['discount_percent'] = 0;
         }
@@ -68,6 +69,9 @@ class PromoController extends Controller
         }
         if (!isset($data['min_purchase']) || $data['min_purchase'] === null || $data['min_purchase'] === '') {
             $data['min_purchase'] = 0;
+        }
+        if (!isset($data['rental_min_purchase']) || $data['rental_min_purchase'] === null || $data['rental_min_purchase'] === '') {
+            $data['rental_min_purchase'] = 0;
         }
 
         // Proses applicable_payment_methods
@@ -117,13 +121,14 @@ class PromoController extends Controller
             $rules['rental_discount_type'] = ['required', 'in:percent,fixed'];
             $rules['rental_discount_amount'] = ['required', 'numeric', 'min:0'];
             $rules['rental_max_discount'] = ['nullable', 'numeric', 'min:0'];
+            $rules['rental_min_purchase'] = ['nullable', 'numeric', 'min:0'];
         }
 
         $request->validate($rules);
 
         $data = $request->all();
 
-        // 👇 SET DEFAULT
+        // Set default
         if (!isset($data['discount_percent']) || $data['discount_percent'] === null || $data['discount_percent'] === '') {
             $data['discount_percent'] = $promo->discount_percent ?? 0;
         }
@@ -132,6 +137,9 @@ class PromoController extends Controller
         }
         if (!isset($data['min_purchase']) || $data['min_purchase'] === null || $data['min_purchase'] === '') {
             $data['min_purchase'] = $promo->min_purchase ?? 0;
+        }
+        if (!isset($data['rental_min_purchase']) || $data['rental_min_purchase'] === null || $data['rental_min_purchase'] === '') {
+            $data['rental_min_purchase'] = $promo->rental_min_purchase ?? 0;
         }
 
         // Proses applicable_payment_methods
