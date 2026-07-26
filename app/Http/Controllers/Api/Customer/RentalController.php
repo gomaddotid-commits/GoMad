@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Http\Controllers\Api\Customer;
+use Illuminate\Support\Facades\Log;
 
 use App\Http\Controllers\Controller;
 use App\Models\Rental;

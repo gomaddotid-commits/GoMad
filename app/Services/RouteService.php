@@ -7,6 +7,7 @@ use App\Models\RouteStop;
 use App\Models\Schedule;
 use App\Models\City;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 
@@ -416,16 +417,38 @@ class RouteService
      */
     public function getAllCities(): Collection
     {
-        return City::with('province')
-            ->orderBy('name')
-            ->get()
-            ->map(fn($city) => [
-                'code' => $city->code,
-                'name' => $city->name,
-                'province' => $city->province?->name,
-                'latitude' => $city->latitude,
-                'longitude' => $city->longitude,
-            ]);
+        $cacheTTL = config('gomad.cache_ttl.city_list', 1440) * 60;
+        
+        return Cache::remember('all_cities_with_provinces', $cacheTTL, function () {
+            return City::with('province')
+                ->orderBy('name')
+                ->get()
+                ->map(fn($city) => [
+                    'code' => $city->code,
+                    'name' => $city->name,
+                    'province' => $city->province?->name,
+                    'latitude' => $city->latitude,
+                    'longitude' => $city->longitude,
+                ]);
+        });
+    }
+
+    // app/Services/RouteService.php - getPopularRoutes()
+    public function getPopularRoutes(int $limit = 5): Collection
+    {
+        $cacheTTL = config('gomad.cache_ttl.schedule_search', 5) * 60;
+        
+        return Cache::remember("popular_routes_{$limit}", $cacheTTL, function () use ($limit) {
+            return Route::withCount(['schedules' => function ($query) {
+                $query->where('departure_date', '>=', now()->toDateString())
+                    ->where('is_active', true);
+            }])
+            ->with(['originCity', 'destinationCity'])
+            ->where('is_active', true)
+            ->orderByDesc('schedules_count')
+            ->limit($limit)
+            ->get();
+        });
     }
 
     /**
@@ -439,19 +462,4 @@ class RouteService
             ->get();
     }
 
-    /**
-     * Dapatkan rute populer
-     */
-    public function getPopularRoutes(int $limit = 5): Collection
-    {
-        return Route::withCount(['schedules' => function ($query) {
-            $query->where('departure_date', '>=', now()->toDateString())
-                ->where('is_active', true);
-        }])
-        ->with(['originCity', 'destinationCity'])
-        ->where('is_active', true)
-        ->orderByDesc('schedules_count')
-        ->limit($limit)
-        ->get();
-    }
 }

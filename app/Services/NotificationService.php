@@ -289,23 +289,97 @@ class NotificationService
             'timestamp' => now()->toISOString(),
         ]);
 
-        try {
-            Mail::to($email)->send($mailable);
-            
-            Log::info('📧 EMAIL SENT ✅', [
-                'label' => $label,
-                'to' => $email,
-                'status' => 'success',
-                'timestamp' => now()->toISOString(),
-            ]);
-        } catch (\Exception $e) {
-            Log::error('📧 EMAIL FAILED ❌', [
-                'label' => $label,
-                'to' => $email,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-            ]);
+        // ═══════════════════════════════════════════
+        // 🔀 HYBRID APPROACH: Auto-detect environment
+        // ═══════════════════════════════════════════
+        
+        $shouldQueue = $this->shouldUseQueue();
+        
+        if ($shouldQueue) {
+            // Production dengan queue worker: kirim via queue (async)
+            try {
+                Mail::to($email)->queue($mailable);
+                
+                Log::info('📧 EMAIL QUEUED ✅', [
+                    'label' => $label,
+                    'to' => $email,
+                    'method' => 'queue',
+                    'status' => 'dispatched',
+                    'timestamp' => now()->toISOString(),
+                ]);
+            } catch (\Exception $e) {
+                Log::error('📧 EMAIL QUEUE FAILED ❌', [
+                    'label' => $label,
+                    'to' => $email,
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString(),
+                ]);
+                
+                // Fallback: kirim via dispatch after response
+                $this->sendViaAfterResponse($email, $mailable, $label);
+            }
+        } else {
+            // Local / Free Tier: kirim via dispatch after response (non-blocking)
+            $this->sendViaAfterResponse($email, $mailable, $label);
         }
+    }
+
+    /**
+     * Cek apakah sebaiknya menggunakan queue
+     */
+    private function shouldUseQueue(): bool
+    {
+        // 1. Cek environment
+        $isProduction = app()->environment('production');
+        
+        // 2. Cek queue driver
+        $queueDriver = config('queue.default');
+        $canQueue = $queueDriver !== 'sync' && $queueDriver !== 'null';
+        
+        // 3. Cek apakah queue worker running (opsional)
+        // Di production dengan database queue, cek apakah worker aktif
+        if ($isProduction && $queueDriver === 'database') {
+            // Cek apakah ada worker running (jobs diproses dalam 5 menit terakhir)
+            try {
+                $recentJob = \App\Models\Job::where('reserved_at', '>', now()->subMinutes(5)->timestamp)
+                    ->exists();
+                return $recentJob;
+            } catch (\Exception $e) {
+                // Tabel jobs mungkin belum ada
+                return false;
+            }
+        }
+        
+        // Default: gunakan queue jika bukan sync/null
+        return $canQueue;
+    }
+
+    /**
+     * Kirim email via dispatch after response (non-blocking, no worker needed)
+     */
+    private function sendViaAfterResponse(string $email, \Illuminate\Mail\Mailable $mailable, string $label): void
+    {
+        dispatch(function () use ($email, $mailable, $label) {
+            try {
+                Mail::to($email)->send($mailable);
+                
+                Log::info('📧 EMAIL SENT (after-response) ✅', [
+                    'label' => $label,
+                    'to' => $email,
+                    'method' => 'dispatch-after-response',
+                    'status' => 'success',
+                    'timestamp' => now()->toISOString(),
+                ]);
+            } catch (\Exception $e) {
+                Log::error('📧 EMAIL FAILED (after-response) ❌', [
+                    'label' => $label,
+                    'to' => $email,
+                    'method' => 'dispatch-after-response',
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString(),
+                ]);
+            }
+        })->afterResponse();
     }
 
     // ═══════════════════════════════════════════

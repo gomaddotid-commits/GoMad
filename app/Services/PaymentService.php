@@ -65,7 +65,12 @@ class PaymentService
 
             // Jika payment sudah PAID → tolak
             if ($payment && $payment->status === PaymentStatus::PAID->value) {
-                return '';
+                // Kembalikan token yang sudah ada jika masih valid
+                $existingToken = $payment->payment_detail['snap_token'] ?? null;
+                if ($existingToken) {
+                    return $existingToken;
+                }
+                throw new \RuntimeException('Pembayaran untuk booking ini sudah selesai.');
             }
 
             // Jika payment masih PENDING dan belum expired → return token yang SUDAH ADA

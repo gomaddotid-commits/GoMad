@@ -3,6 +3,7 @@
 // Deskripsi: API Controller untuk autentikasi login
 
 namespace App\Http\Controllers\Api\Auth;
+use Illuminate\Support\Facades\Log;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;

@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Http\Controllers\Web\Admin;
+use Illuminate\Support\Facades\Log;
 
 use App\Http\Controllers\Controller;
 use App\Models\Route;
@@ -10,7 +11,6 @@ use App\Services\RouteService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
-use Illuminate\Support\Facades\Log;
 
 class RouteController extends Controller
 {

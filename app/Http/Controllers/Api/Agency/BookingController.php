@@ -3,6 +3,7 @@
 // Deskripsi: API Controller untuk manajemen booking oleh agency
 
 namespace App\Http\Controllers\Api\Agency;
+use Illuminate\Support\Facades\Log;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\BookingResource;

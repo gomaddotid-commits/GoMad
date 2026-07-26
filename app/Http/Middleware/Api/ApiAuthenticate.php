@@ -3,6 +3,7 @@
 // Deskripsi: Middleware untuk autentikasi Sanctum token pada API
 
 namespace App\Http\Middleware\Api;
+use Illuminate\Support\Facades\Log;
 
 use Closure;
 use Illuminate\Http\Request;
