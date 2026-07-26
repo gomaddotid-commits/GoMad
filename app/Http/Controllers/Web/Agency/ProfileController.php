@@ -1,6 +1,4 @@
 <?php
-// File: app/Http/Controllers/Web/Agency/ProfileController.php
-// Deskripsi: Web Controller untuk profil agency (FULL)
 
 namespace App\Http\Controllers\Web\Agency;
 
@@ -19,14 +17,12 @@ class ProfileController extends Controller
 
     /**
      * Halaman setup profil agency
-     * Jika ada parameter ?reset=1, tampilkan form setup dari awal
      */
     public function setup(): View|RedirectResponse
     {
         $agency = auth()->user()->agency;
         $isReset = request()->has('reset');
         
-        // Jika bukan reset dan profil sudah lengkap, redirect ke dashboard
         if (!$isReset && $agency && $agency->agency_name && $agency->address) {
             return redirect()->route('agency.dashboard')
                 ->with('warning', 'Profil agency Anda sudah lengkap.');
@@ -35,6 +31,9 @@ class ProfileController extends Controller
         return view('agency.profile-setup', compact('agency'));
     }
 
+    /**
+     * Simpan setup profil agency
+     */
     public function saveSetup(Request $request): RedirectResponse
     {
         $request->validate([
@@ -43,17 +42,33 @@ class ProfileController extends Controller
             'description' => ['required', 'string', 'max:2000'],
             'founded_year' => ['required', 'integer', 'min:1950', 'max:' . date('Y')],
             'contact_person' => ['required', 'string', 'max:100'],
-            'phone' => ['required', 'string', 'max:20'],
             'whatsapp' => ['required', 'string', 'max:20'],
+            'phone' => ['nullable', 'string', 'max:20'],
             'email_alternate' => ['nullable', 'email', 'max:100'],
             'logo' => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:2048'],
             'cover' => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:5120'],
             'gallery.*' => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:2048'],
-            'documents' => ['required', 'file', 'mimes:pdf', 'max:10240'], // Max 10MB PDF
+            'documents' => ['required', 'file', 'mimes:pdf', 'max:10240'],
+        ], [
+            'logo.max' => 'Logo maksimal 2MB. Silakan kompres gambar Anda.',
+            'cover.max' => 'Cover maksimal 5MB. Silakan kompres gambar Anda.',
+            'gallery.*.max' => 'Setiap foto galeri maksimal 2MB.',
+            'documents.max' => 'Dokumen PDF maksimal 10MB.',
+            'documents.required' => 'Dokumen verifikasi wajib diupload.',
+            'documents.mimes' => 'Dokumen harus dalam format PDF.',
         ]);
 
         $user = auth()->user();
         $agency = $user->agency;
+        
+        // ⚡ Tentukan phone: kalau checkbox dicentang atau phone kosong, pakai whatsapp
+        $phone = $request->phone;
+        if (empty($phone)) {
+            $phone = $request->whatsapp;
+        }
+        
+        // Update user phone (whatsapp)
+        $user->update(['phone' => $request->whatsapp]);
         
         if (!$agency) {
             $slug = $this->agencyProfileService->generateSlug($request->agency_name);
@@ -64,8 +79,12 @@ class ProfileController extends Controller
                 'description' => $request->description,
                 'founded_year' => $request->founded_year,
                 'contact_person' => $request->contact_person,
-                'contact_alternate' => $request->phone,
+                'contact_alternate' => $phone,
                 'email_alternate' => $request->email_alternate,
+                'province_code' => $request->province_code,
+                'city_code' => $request->city_code,
+                'district_code' => $request->district_code,
+                'coverage_cities' => $request->coverage_cities ?? [],
                 'is_verified' => false,
             ]);
         } else {
@@ -75,37 +94,53 @@ class ProfileController extends Controller
                 'description' => $request->description,
                 'founded_year' => $request->founded_year,
                 'contact_person' => $request->contact_person,
-                'contact_alternate' => $request->phone,
+                'contact_alternate' => $phone,
                 'email_alternate' => $request->email_alternate,
+                'province_code' => $request->province_code,
+                'city_code' => $request->city_code,
+                'district_code' => $request->district_code,
+                'coverage_cities' => $request->coverage_cities ?? [],
             ]);
         }
 
-        // Update user phone
-        $user->update(['phone' => $request->whatsapp]);
-
         // Upload logo
         if ($request->hasFile('logo')) {
-            $this->agencyProfileService->uploadLogo($agency, $request->file('logo'));
+            try {
+                $this->agencyProfileService->uploadLogo($agency, $request->file('logo'));
+            } catch (\Exception $e) {
+                return back()->with('error', 'Logo: ' . $e->getMessage())->withInput();
+            }
         }
 
         // Upload cover
         if ($request->hasFile('cover')) {
-            $this->agencyProfileService->uploadCover($agency, $request->file('cover'));
+            try {
+                $this->agencyProfileService->uploadCover($agency, $request->file('cover'));
+            } catch (\Exception $e) {
+                return back()->with('error', 'Cover: ' . $e->getMessage())->withInput();
+            }
         }
 
         // Upload gallery
         if ($request->hasFile('gallery')) {
             foreach ($request->file('gallery') as $photo) {
-                if (count($agency->gallery ?? []) < 10) {
-                    $this->agencyProfileService->addGalleryPhoto($agency, $photo);
+                try {
+                    if (count($agency->gallery ?? []) < 10) {
+                        $this->agencyProfileService->addGalleryPhoto($agency, $photo);
+                    }
+                } catch (\Exception $e) {
+                    return back()->with('error', 'Gallery: ' . $e->getMessage())->withInput();
                 }
             }
         }
 
-        // Upload dokumen pengajuan (PDF)
+        // Upload dokumen verifikasi PDF via Cloudinary
         if ($request->hasFile('documents')) {
-            $docPath = $request->file('documents')->store('agencies/' . $agency->id . '/documents', 'public');
-            $agency->update(['business_license' => $docPath]);
+            try {
+                $this->agencyProfileService->uploadBusinessDocument($agency, $request->file('documents'));
+            } catch (\Exception $e) {
+                return back()->with('error', 'Dokumen: ' . $e->getMessage())->withInput();
+            }
         }
 
         // Auto-submit verifikasi
@@ -115,12 +150,18 @@ class ProfileController extends Controller
             ->with('success', 'Data agency berhasil disimpan! Pengajuan verifikasi telah dikirim. Admin akan mereview dalam 1-3 hari kerja.');
     }
 
+    /**
+     * Halaman edit profil
+     */
     public function edit(): View
     {
         $agency = auth()->user()->agency;
         return view('agency.profile.edit', compact('agency'));
     }
 
+    /**
+     * Update profil
+     */
     public function update(Request $request): RedirectResponse
     {
         $request->validate([
@@ -145,72 +186,98 @@ class ProfileController extends Controller
         }
     }
 
+    /**
+     * Upload logo (max 2MB)
+     */
     public function uploadLogo(Request $request): RedirectResponse
     {
         $request->validate([
             'logo' => ['required', 'image', 'mimes:jpeg,png,jpg,webp', 'max:2048'],
+        ], [
+            'logo.max' => 'Logo maksimal 2MB.',
         ]);
 
         try {
-            $url = $this->agencyProfileService->uploadLogo(auth()->user()->agency, $request->file('logo'));
+            $this->agencyProfileService->uploadLogo(auth()->user()->agency, $request->file('logo'));
             return back()->with('success', 'Logo berhasil diupload!');
         } catch (\Exception $e) {
             return back()->with('error', 'Gagal upload logo: ' . $e->getMessage());
         }
     }
 
+    /**
+     * Upload cover (max 5MB)
+     */
     public function uploadCover(Request $request): RedirectResponse
     {
         $request->validate([
             'cover' => ['required', 'image', 'mimes:jpeg,png,jpg,webp', 'max:5120'],
+        ], [
+            'cover.max' => 'Cover maksimal 5MB.',
         ]);
 
         try {
-            $url = $this->agencyProfileService->uploadCover(auth()->user()->agency, $request->file('cover'));
+            $this->agencyProfileService->uploadCover(auth()->user()->agency, $request->file('cover'));
             return back()->with('success', 'Cover berhasil diupload!');
         } catch (\Exception $e) {
             return back()->with('error', 'Gagal upload cover: ' . $e->getMessage());
         }
     }
 
+    /**
+     * Upload dokumen license (max 10MB)
+     */
     public function uploadBusinessLicense(Request $request): RedirectResponse
     {
         $request->validate([
-            'license' => ['required', 'image', 'mimes:jpeg,png,jpg,pdf', 'max:5120'],
+            'license' => ['required', 'file', 'mimes:jpeg,png,jpg,pdf', 'max:10240'],
+        ], [
+            'license.max' => 'Dokumen maksimal 10MB.',
         ]);
 
         try {
-            $url = $this->agencyProfileService->uploadBusinessLicense(auth()->user()->agency, $request->file('license'));
-            return back()->with('success', 'Surat izin berhasil diupload!');
+            $this->agencyProfileService->uploadBusinessLicense(auth()->user()->agency, $request->file('license'));
+            return back()->with('success', 'Dokumen berhasil diupload!');
         } catch (\Exception $e) {
             return back()->with('error', 'Gagal upload: ' . $e->getMessage());
         }
     }
 
+    /**
+     * Tambah foto gallery (max 2MB)
+     */
     public function addGalleryPhoto(Request $request): RedirectResponse
     {
         $request->validate([
             'photo' => ['required', 'image', 'mimes:jpeg,png,jpg,webp', 'max:2048'],
+        ], [
+            'photo.max' => 'Foto maksimal 2MB.',
         ]);
 
         try {
-            $gallery = $this->agencyProfileService->addGalleryPhoto(auth()->user()->agency, $request->file('photo'));
+            $this->agencyProfileService->addGalleryPhoto(auth()->user()->agency, $request->file('photo'));
             return back()->with('success', 'Foto berhasil ditambahkan ke galeri!');
         } catch (\Exception $e) {
             return back()->with('error', 'Gagal upload: ' . $e->getMessage());
         }
     }
 
+    /**
+     * Hapus foto gallery
+     */
     public function removeGalleryPhoto(int $index): RedirectResponse
     {
         try {
-            $gallery = $this->agencyProfileService->removeGalleryPhoto(auth()->user()->agency, $index);
+            $this->agencyProfileService->removeGalleryPhoto(auth()->user()->agency, $index);
             return back()->with('success', 'Foto berhasil dihapus dari galeri.');
         } catch (\Exception $e) {
             return back()->with('error', 'Gagal hapus: ' . $e->getMessage());
         }
     }
 
+    /**
+     * Ajukan verifikasi
+     */
     public function submitVerification(): RedirectResponse
     {
         try {
@@ -221,5 +288,3 @@ class ProfileController extends Controller
         }
     }
 }
-
-// End of file

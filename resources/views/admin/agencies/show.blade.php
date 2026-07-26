@@ -27,21 +27,94 @@
             </div>
         </div>
 
-        <div class="grid md:grid-cols-2 gap-4 text-sm">
-            <div class="bg-[#F5F5F5] border border-[#E5E5E5] rounded-[12px] p-3"><span class="text-[10px] font-mono uppercase tracking-wider text-gray-400">Pemilik</span><span class="font-medium text-[#111111]">{{ $agency->user->name ?? '-' }}</span></div>
-            <div class="bg-[#F5F5F5] border border-[#E5E5E5] rounded-[12px] p-3"><span class="text-[10px] font-mono uppercase tracking-wider text-gray-400">Email</span><span class="font-medium text-[#111111]">{{ $agency->user->email ?? '-' }}</span></div>
-            <div class="bg-[#F5F5F5] border border-[#E5E5E5] rounded-[12px] p-3"><span class="text-[10px] font-mono uppercase tracking-wider text-gray-400">Alamat</span><span class="font-medium text-[#111111]">{{ $agency->address ?? '-' }}</span></div>
-            <div class="bg-[#F5F5F5] border border-[#E5E5E5] rounded-[12px] p-3"><span class="text-[10px] font-mono uppercase tracking-wider text-gray-400">Tahun Berdiri</span><span class="font-medium text-[#111111]">{{ $agency->founded_year ?? '-' }}</span></div>
-            <div class="bg-[#F5F5F5] border border-[#E5E5E5] rounded-[12px] p-3"><span class="text-[10px] font-mono uppercase tracking-wider text-gray-400">Rating</span><span class="font-medium text-[#111111]">⭐ {{ number_format((float)$agency->rating, 1) }}</span></div>
-            <div class="bg-[#F5F5F5] border border-[#E5E5E5] rounded-[12px] p-3"><span class="text-[10px] font-mono uppercase tracking-wider text-gray-400">Total Booking</span><span class="font-medium text-[#111111]">{{ $agency->total_bookings }}</span></div>
+        {{-- Logo & Cover --}}
+        <div class="grid grid-cols-2 gap-4 mb-6">
+            @if($agency->logo)
+            <div>
+                <span class="text-[10px] font-mono uppercase tracking-wider text-gray-400">Logo</span>
+                <img src="{{ $agency->logo }}" alt="Logo" class="w-24 h-24 object-cover rounded-[12px] border border-[#E5E5E5] mt-1">
+            </div>
+            @endif
+            @if($agency->cover_image)
+            <div>
+                <span class="text-[10px] font-mono uppercase tracking-wider text-gray-400">Cover</span>
+                <img src="{{ $agency->cover_image }}" alt="Cover" class="w-full h-24 object-cover rounded-[12px] border border-[#E5E5E5] mt-1">
+            </div>
+            @endif
         </div>
 
+        <div class="grid md:grid-cols-2 gap-4 text-sm">
+            <div class="bg-[#F5F5F5] border border-[#E5E5E5] rounded-[12px] p-3">
+                <span class="text-[10px] font-mono uppercase tracking-wider text-gray-400">Pemilik</span>
+                <span class="font-medium text-[#111111]">{{ $agency->user->name ?? '-' }}</span>
+            </div>
+            <div class="bg-[#F5F5F5] border border-[#E5E5E5] rounded-[12px] p-3">
+                <span class="text-[10px] font-mono uppercase tracking-wider text-gray-400">Email</span>
+                <span class="font-medium text-[#111111]">{{ $agency->user->email ?? '-' }}</span>
+            </div>
+            <div class="bg-[#F5F5F5] border border-[#E5E5E5] rounded-[12px] p-3">
+                <span class="text-[10px] font-mono uppercase tracking-wider text-gray-400">Alamat</span>
+                <span class="font-medium text-[#111111]">{{ $agency->full_address ?? $agency->address ?? '-' }}</span>
+            </div>
+            <div class="bg-[#F5F5F5] border border-[#E5E5E5] rounded-[12px] p-3">
+                <span class="text-[10px] font-mono uppercase tracking-wider text-gray-400">Tahun Berdiri</span>
+                <span class="font-medium text-[#111111]">{{ $agency->founded_year ?? '-' }}</span>
+            </div>
+            <div class="bg-[#F5F5F5] border border-[#E5E5E5] rounded-[12px] p-3">
+                <span class="text-[10px] font-mono uppercase tracking-wider text-gray-400">Rating</span>
+                <span class="font-medium text-[#111111]">⭐ {{ number_format((float)$agency->rating, 1) }}</span>
+            </div>
+            <div class="bg-[#F5F5F5] border border-[#E5E5E5] rounded-[12px] p-3">
+                <span class="text-[10px] font-mono uppercase tracking-wider text-gray-400">Total Booking</span>
+                <span class="font-medium text-[#111111]">{{ $agency->total_bookings }}</span>
+            </div>
+            <div class="bg-[#F5F5F5] border border-[#E5E5E5] rounded-[12px] p-3">
+                <span class="text-[10px] font-mono uppercase tracking-wider text-gray-400">Provinsi</span>
+                <span class="font-medium text-[#111111]">{{ $agency->province_name }}</span>
+            </div>
+            <div class="bg-[#F5F5F5] border border-[#E5E5E5] rounded-[12px] p-3">
+                <span class="text-[10px] font-mono uppercase tracking-wider text-gray-400">Kota</span>
+                <span class="font-medium text-[#111111]">{{ $agency->city_name }}</span>
+            </div>
+            @if($agency->district_name && $agency->district_name !== '-')
+            <div class="bg-[#F5F5F5] border border-[#E5E5E5] rounded-[12px] p-3">
+                <span class="text-[10px] font-mono uppercase tracking-wider text-gray-400">Kecamatan</span>
+                <span class="font-medium text-[#111111]">{{ $agency->district_name }}</span>
+            </div>
+            @endif
+        </div>
+
+        {{-- Dokumen Verifikasi --}}
         @if($agency->business_license)
         <div class="mt-4 p-4 bg-[#F5F5F5] border border-[#E5E5E5] rounded-[12px]">
-            <a href="{{ $agency->business_license }}" target="_blank" class="text-[#C1121F] text-sm hover:underline font-medium">Lihat Dokumen PDF</a>
+            <p class="text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-3">📄 Dokumen Verifikasi</p>
+            <a href="{{ $agency->business_license }}" target="_blank" 
+               class="inline-flex items-center gap-2 bg-[#C1121F] text-white px-4 py-2 rounded-[12px] text-sm font-medium hover:bg-[#8A0F18] transition">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+                Lihat Dokumen PDF
+            </a>
+        </div>
+        @else
+        <div class="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-[12px]">
+            <p class="text-sm text-yellow-700 font-light">⚠️ Agency belum mengupload dokumen verifikasi.</p>
         </div>
         @endif
 
+        {{-- Galeri --}}
+        @if($agency->gallery && count($agency->gallery) > 0)
+        <div class="mt-4">
+            <p class="text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-2">📸 Galeri ({{ count($agency->gallery) }} foto)</p>
+            <div class="grid grid-cols-4 gap-2">
+                @foreach($agency->gallery as $photo)
+                <img src="{{ $photo }}" alt="Gallery" class="w-full h-20 object-cover rounded-[8px] border border-[#E5E5E5]">
+                @endforeach
+            </div>
+        </div>
+        @endif
+
+        {{-- Riwayat Verifikasi --}}
         @php $verifications = $agency->verifications()->latest()->get(); @endphp
         @if($verifications->isNotEmpty())
         <div class="mt-4">

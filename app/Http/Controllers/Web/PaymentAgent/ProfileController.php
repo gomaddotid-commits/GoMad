@@ -1,6 +1,4 @@
 <?php
-// File: app/Http/Controllers/Web/PaymentAgent/ProfileController.php
-// Deskripsi: Web Controller untuk profil payment agent (FIXED)
 
 namespace App\Http\Controllers\Web\PaymentAgent;
 
@@ -20,14 +18,12 @@ class ProfileController extends Controller
 
     /**
      * Halaman setup profil warung
-     * Jika ada parameter ?reset=1, tampilkan form setup dari awal
      */
     public function setup(): View|RedirectResponse
     {
         $agent = auth()->user()->paymentAgent;
         $isReset = request()->has('reset');
         
-        // Jika bukan reset dan profil sudah lengkap, redirect ke dashboard
         if (!$isReset && $agent && $agent->agent_name && $agent->address) {
             return redirect()->route('payment-agent.dashboard')
                 ->with('warning', 'Profil warung Anda sudah lengkap.');
@@ -44,23 +40,35 @@ class ProfileController extends Controller
         $request->validate([
             'agent_name' => ['required', 'string', 'max:100'],
             'address' => ['required', 'string', 'max:500'],
-            'kecamatan' => ['nullable', 'string', 'max:100'],
             'pin' => ['required', 'string', 'size:6', 'regex:/^[0-9]+$/'],
-            'maps_link' => ['nullable', 'url', 'max:500'],
             'owner_name' => ['required', 'string', 'max:100'],
             'owner_phone' => ['required', 'string', 'max:20'],
             'guard_name' => ['nullable', 'string', 'max:100'],
             'guard_phone' => ['nullable', 'string', 'max:20'],
+            'province_code' => ['required', 'string', 'size:2'],
+            'city_code' => ['required', 'string', 'size:4'],
+            'district_code' => ['nullable', 'string', 'max:7'],
+            'maps_link' => ['nullable', 'url', 'max:500'],
+        ], [
+            'province_code.required' => 'Provinsi harus dipilih.',
+            'city_code.required' => 'Kabupaten/Kota harus dipilih.',
+            'pin.size' => 'PIN harus 6 digit.',
+            'pin.regex' => 'PIN hanya boleh angka.',
         ]);
 
         $user = auth()->user();
         $agent = $user->paymentAgent;
         
+        // Update nomor HP user (WhatsApp)
+        $user->update(['phone' => $request->owner_phone]);
+        
         if (!$agent) {
             $agent = $user->paymentAgent()->create([
                 'agent_name' => $request->agent_name,
                 'address' => $request->address,
-                'kecamatan' => $request->kecamatan,
+                'province_code' => $request->province_code,
+                'city_code' => $request->city_code,
+                'district_code' => $request->district_code,
                 'pin' => Hash::make($request->pin),
                 'maps_link' => $request->maps_link,
                 'owner_name' => $request->owner_name,
@@ -75,7 +83,9 @@ class ProfileController extends Controller
             $data = [
                 'agent_name' => $request->agent_name,
                 'address' => $request->address,
-                'kecamatan' => $request->kecamatan,
+                'province_code' => $request->province_code,
+                'city_code' => $request->city_code,
+                'district_code' => $request->district_code,
                 'maps_link' => $request->maps_link,
                 'owner_name' => $request->owner_name,
                 'owner_phone' => $request->owner_phone,
@@ -91,12 +101,7 @@ class ProfileController extends Controller
             $agent->update($data);
         }
 
-        // Payment agent tidak perlu auto-submit verifikasi seperti agency
-        // Admin yang akan memverifikasi secara manual
-
         return redirect()->route('payment-agent.dashboard')
             ->with('success', 'Data warung berhasil disimpan! Admin akan memverifikasi dalam 1-3 hari kerja.');
     }
 }
-
-// End of file

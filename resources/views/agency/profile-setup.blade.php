@@ -6,6 +6,27 @@
     $agency = auth()->user()->agency;
     $provinces = \App\Models\Province::orderBy('name')->get();
     $allCities = \App\Models\City::with('province')->orderBy('name')->get();
+    
+    // ⚡ PRELOAD: Siapkan data cities & districts untuk initial load
+    $preloadedCities = [];
+    $preloadedDistricts = [];
+    
+    $selectedProvince = old('province_code', $agency->province_code ?? '');
+    $selectedCity = old('city_code', $agency->city_code ?? '');
+    
+    if ($selectedProvince) {
+        $preloadedCities = \App\Models\City::where('province_code', $selectedProvince)
+            ->orderBy('name')
+            ->get(['code', 'name'])
+            ->toArray();
+    }
+    
+    if ($selectedCity) {
+        $preloadedDistricts = \App\Models\District::where('city_code', $selectedCity)
+            ->orderBy('name')
+            ->get(['code', 'name'])
+            ->toArray();
+    }
 @endphp
 
 <div>
@@ -23,6 +44,17 @@
     <div class="bg-red-50 border border-red-200 rounded-[12px] p-4 mb-6">
         <p class="text-sm font-medium text-red-800">❌ Alasan Penolakan Sebelumnya:</p>
         <p class="text-sm text-red-700 mt-1 font-light">{{ $agency->rejection_reason }}</p>
+    </div>
+    @endif
+
+    @if($errors->any())
+    <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-[12px] mb-6 text-sm">
+        <p class="font-medium mb-1">⚠️ Terjadi kesalahan:</p>
+        <ul class="list-disc list-inside">
+            @foreach($errors->all() as $error)
+            <li>{{ $error }}</li>
+            @endforeach
+        </ul>
     </div>
     @endif
 
@@ -141,40 +173,77 @@
         </div>
 
         <!-- Kontak -->
-        <div class="bg-white border border-[#E5E5E5] rounded-[12px] p-6 shadow-sm">
+        <div class="bg-white border border-[#E5E5E5] rounded-[12px] p-6 shadow-sm" x-data="contactForm()">
             <h3 class="font-mono uppercase tracking-wider text-xs font-bold text-[#111111] mb-4">📞 Kontak</h3>
-            <div class="grid grid-cols-2 gap-4">
+            
+            <div class="space-y-4">
+                {{-- Nomor WhatsApp (WAJIB) --}}
                 <div>
-                    <label class="block text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">Nomor Telepon <span class="text-[#C1121F]">*</span></label>
-                    <input type="text" name="phone" value="{{ old('phone', $agency->contact_alternate ?? auth()->user()->phone) }}"
-                           class="w-full px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111] transition" placeholder="081234567890" required>
+                    <label class="block text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">
+                        Nomor WhatsApp <span class="text-[#C1121F]">*</span>
+                    </label>
+                    <input type="text" name="whatsapp" x-model="whatsapp" 
+                           value="{{ old('whatsapp', auth()->user()->phone ?? '') }}"
+                           class="w-full px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111] transition" 
+                           placeholder="081234567890" required>
+                    <p class="text-[10px] text-gray-400 mt-1 font-light">Notifikasi booking akan dikirim ke nomor ini</p>
                 </div>
+
+                {{-- Checkbox: Gunakan nomor yang sama --}}
+                <div class="bg-[#F5F5F5] border border-[#E5E5E5] rounded-[12px] p-4">
+                    <label class="flex items-center gap-3 cursor-pointer">
+                        <input type="checkbox" x-model="useSameNumber" 
+                               class="w-5 h-5 rounded border-[#E5E5E5] text-[#C1121F] focus:ring-[#C1121F]">
+                        <div>
+                            <span class="text-sm font-medium text-[#111111]">Gunakan nomor yang sama dengan WhatsApp</span>
+                            <p class="text-xs text-gray-500 font-light mt-0.5">Nomor telepon akan diisi otomatis dengan nomor WhatsApp di atas</p>
+                        </div>
+                    </label>
+                </div>
+
+                {{-- Nomor Telepon (Opsional jika sama) --}}
+                <div x-show="!useSameNumber" x-transition>
+                    <label class="block text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">
+                        Nomor Telepon <span class="text-[#C1121F]">*</span>
+                    </label>
+                    <input type="text" name="phone" x-model="phone"
+                           :required="!useSameNumber"
+                           value="{{ old('phone', $agency->contact_alternate ?? '') }}"
+                           class="w-full px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111] transition" 
+                           placeholder="081234567890">
+                    <p class="text-[10px] text-gray-400 mt-1 font-light">Nomor telepon kantor/agen (bisa berbeda dengan WhatsApp)</p>
+                </div>
+
+                {{-- Email Bisnis --}}
                 <div>
                     <label class="block text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">Email Bisnis</label>
-                    <input type="email" name="email_alternate" value="{{ old('email_alternate', $agency->email_alternate ?? '') }}"
-                           class="w-full px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111] transition" placeholder="agency@email.com">
+                    <input type="email" name="email_alternate" 
+                           value="{{ old('email_alternate', $agency->email_alternate ?? '') }}"
+                           class="w-full px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111] transition" 
+                           placeholder="agency@email.com">
                 </div>
             </div>
         </div>
 
-        <!-- Foto & Dokumen -->
+        <!-- Foto Agency -->
         <div class="bg-white border border-[#E5E5E5] rounded-[12px] p-6 shadow-sm">
             <h3 class="font-mono uppercase tracking-wider text-xs font-bold text-[#111111] mb-4">🖼️ Foto Agency</h3>
             <div class="grid grid-cols-2 gap-4">
                 <div>
                     <label class="block text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">Logo Agency</label>
                     <input type="file" name="logo" accept="image/*" class="w-full text-sm">
-                    <p class="text-[10px] text-gray-400 mt-1 font-light">Format: JPG, PNG. Max 2MB</p>
+                    <p class="text-[10px] text-gray-400 mt-1 font-light">Format: JPG, PNG, WebP. Maksimal 2MB</p>
                 </div>
                 <div>
                     <label class="block text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">Cover Image</label>
                     <input type="file" name="cover" accept="image/*" class="w-full text-sm">
-                    <p class="text-[10px] text-gray-400 mt-1 font-light">Format: JPG, PNG. Max 5MB</p>
+                    <p class="text-[10px] text-gray-400 mt-1 font-light">Format: JPG, PNG, WebP. Maksimal 5MB</p>
                 </div>
             </div>
             <div class="mt-4">
                 <label class="block text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">Galeri Foto (max 10)</label>
                 <input type="file" name="gallery[]" accept="image/*" multiple class="w-full text-sm">
+                <p class="text-[10px] text-gray-400 mt-1 font-light">Format: JPG, PNG, WebP. Maksimal 2MB per foto</p>
             </div>
         </div>
 
@@ -191,7 +260,7 @@
                 </ol>
             </div>
             <input type="file" name="documents" accept=".pdf" class="w-full text-sm" required>
-            <p class="text-[10px] text-gray-400 mt-1 font-light">Format: PDF. Max 10MB</p>
+            <p class="text-[10px] text-gray-400 mt-1 font-light">Format: PDF. Maksimal 10MB</p>
         </div>
 
         <button type="submit" class="w-full btn-gomad-primary py-4 rounded-[12px] font-bold text-lg">
@@ -202,37 +271,109 @@
 
 @push('scripts')
 <script>
+// ═══════════════════════════════════════
+// CONTACT FORM (WhatsApp + Phone Checkbox)
+// ═══════════════════════════════════════
+function contactForm() {
+    return {
+        whatsapp: '{{ old('whatsapp', auth()->user()->phone ?? '') }}',
+        phone: '{{ old('phone', $agency->contact_alternate ?? '') }}',
+        useSameNumber: {{ (old('whatsapp') && old('phone') && old('whatsapp') === old('phone')) || (!old('whatsapp') && auth()->user()->phone && auth()->user()->phone === ($agency->contact_alternate ?? '')) || empty(old('phone', $agency->contact_alternate ?? '')) ? 'true' : 'false' }},
+
+        init() {
+            // Kalau phone kosong atau sama dengan whatsapp, auto-centang
+            if (!this.phone || this.phone === this.whatsapp) {
+                this.useSameNumber = true;
+                this.phone = this.whatsapp;
+            }
+            
+            // Watch perubahan whatsapp
+            this.$watch('whatsapp', (value) => {
+                if (this.useSameNumber) {
+                    this.phone = value;
+                }
+            });
+            
+            // Watch perubahan checkbox
+            this.$watch('useSameNumber', (value) => {
+                if (value) {
+                    this.phone = this.whatsapp;
+                }
+            });
+        }
+    }
+}
+
+// ═══════════════════════════════════════
+// LOCATION SELECT (CHAINED DROPDOWN)
+// ═══════════════════════════════════════
 function locationSelect() {
     return {
         province: '{{ old('province_code', $agency->province_code ?? '') }}',
         city: '{{ old('city_code', $agency->city_code ?? '') }}',
         district: '{{ old('district_code', $agency->district_code ?? '') }}',
-        cities: [],
-        districts: [],
+        
+        // ⚡ PRELOAD: Data cities & districts dari server
+        cities: @json($preloadedCities),
+        districts: @json($preloadedDistricts),
 
         async loadCities() {
-            if (!this.province) { this.cities = []; this.city = ''; this.district = ''; return; }
+            if (!this.province) { 
+                this.cities = []; 
+                this.city = ''; 
+                this.district = ''; 
+                return; 
+            }
+            
             try {
                 const res = await fetch(`/api/v1/region/cities?province=${this.province}`);
                 const data = await res.json();
                 this.cities = data.data || data || [];
-                this.city = '';
-                this.district = '';
-            } catch (e) { console.error('Failed to load cities:', e); }
+                
+                if (this.city && !this.cities.find(c => c.code === this.city)) {
+                    this.city = '';
+                    this.district = '';
+                }
+            } catch (e) {
+                console.error('Failed to load cities:', e);
+            }
         },
 
         async loadDistricts() {
-            if (!this.city) { this.districts = []; this.district = ''; return; }
+            if (!this.city) { 
+                this.districts = []; 
+                this.district = ''; 
+                return; 
+            }
+            
             try {
                 const res = await fetch(`/api/v1/region/districts?city=${this.city}`);
                 const data = await res.json();
                 this.districts = data.data || data || [];
-                this.district = '';
-            } catch (e) { console.error('Failed to load districts:', e); }
+                
+                if (this.district && !this.districts.find(d => d.code === this.district)) {
+                    this.district = '';
+                }
+            } catch (e) {
+                console.error('Failed to load districts:', e);
+            }
+        },
+
+        init() {
+            if (this.province && this.cities.length === 0) {
+                this.loadCities().then(() => {
+                    if (this.city && this.districts.length === 0) {
+                        this.loadDistricts();
+                    }
+                });
+            }
         }
     }
 }
 
+// ═══════════════════════════════════════
+// COVERAGE SELECT
+// ═══════════════════════════════════════
 function coverageSelect() {
     return {
         selected: @json(old('coverage_cities', $agency->coverage_cities ?? [])),

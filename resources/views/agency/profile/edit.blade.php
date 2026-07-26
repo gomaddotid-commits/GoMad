@@ -27,6 +27,7 @@
         ];
     })->values()->toArray();
 
+    // ⚡ PRELOAD: Data cities & districts
     $preloadedCities = [];
     $preloadedDistricts = [];
 
@@ -128,6 +129,7 @@
             <form action="{{ route('agency.profile.logo') }}" method="POST" enctype="multipart/form-data">
                 @csrf
                 <input type="file" name="logo" accept="image/*" class="w-full text-sm mb-2">
+                <p class="text-[10px] text-gray-400 mb-2 font-light">Format: JPG, PNG, WebP. Maksimal 2MB</p>
                 <button type="submit" class="bg-[#BA1826] text-white px-4 py-2 rounded-[10px] text-sm font-semibold hover:bg-[#8A0F18] transition">Upload Logo</button>
             </form>
         </div>
@@ -144,6 +146,7 @@
             <form action="{{ route('agency.profile.cover') }}" method="POST" enctype="multipart/form-data">
                 @csrf
                 <input type="file" name="cover" accept="image/*" class="w-full text-sm mb-2">
+                <p class="text-[10px] text-gray-400 mb-2 font-light">Format: JPG, PNG, WebP. Maksimal 5MB</p>
                 <button type="submit" class="bg-[#BA1826] text-white px-4 py-2 rounded-[10px] text-sm font-semibold hover:bg-[#8A0F18] transition">Upload Cover</button>
             </form>
         </div>
@@ -251,7 +254,6 @@
             <h3 class="font-mono uppercase tracking-wider text-xs font-bold text-[#111827] mb-4">🗺️ Zona Layanan (Coverage)</h3>
             <p class="text-sm text-gray-500 mb-4 font-light">Pilih kota mana saja yang dilayani agency Anda.</p>
 
-            {{-- Search Filter --}}
             <div class="mb-4">
                 <input type="text" x-model="searchQuery" placeholder="🔍 Filter kota..." 
                        class="w-full px-0 py-2 border-b-2 border-[#E5E7EB] focus:border-[#BA1826] outline-none bg-transparent text-[#111827] transition text-sm">
@@ -288,6 +290,38 @@
         </div>
     </form>
 
+    {{-- DOKUMEN VERIFIKASI --}}
+    <div class="bg-white border border-[#E5E7EB] rounded-[12px] p-6 mt-6 shadow-gomad">
+        <h3 class="font-mono uppercase tracking-wider text-xs font-bold text-[#111827] mb-4">📄 Dokumen Verifikasi</h3>
+        
+        @if($agency->business_license)
+        <div class="bg-green-50 border border-green-200 rounded-[12px] p-4 mb-4">
+            <p class="text-sm text-green-700 font-light mb-2">✅ Dokumen sudah diupload</p>
+            <a href="{{ $agency->business_license }}" target="_blank" 
+               class="inline-flex items-center gap-2 text-[#C1121F] text-sm hover:underline font-medium">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+                Lihat Dokumen Saat Ini →
+            </a>
+        </div>
+        @endif
+        
+        <form action="{{ route('agency.profile.license') }}" method="POST" enctype="multipart/form-data">
+            @csrf
+            <div>
+                <label class="block text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">
+                    {{ $agency->business_license ? 'Upload Ulang Dokumen' : 'Upload Dokumen Verifikasi' }} (PDF)
+                </label>
+                <input type="file" name="license" accept=".pdf" class="w-full text-sm" required>
+                <p class="text-[10px] text-gray-400 mt-1 font-light">Format: PDF. Maksimal 10MB</p>
+            </div>
+            <button type="submit" class="mt-3 bg-[#BA1826] text-white px-4 py-2 rounded-[10px] text-sm font-semibold hover:bg-[#8A0F18] transition">
+                📤 Upload Dokumen
+            </button>
+        </form>
+    </div>
+
     {{-- GALLERY --}}
     <div class="bg-white border border-[#E5E7EB] rounded-[12px] p-6 mt-6 shadow-gomad">
         <h3 class="font-mono uppercase tracking-wider text-xs font-bold text-[#111827] mb-4">📸 Galeri Foto</h3>
@@ -311,20 +345,19 @@
             </form>
             @endif
         </div>
-        <p class="text-[10px] text-gray-400 mt-1 font-light">Klik + untuk menambah foto (max 10). Hover foto untuk hapus.</p>
+        <p class="text-[10px] text-gray-400 mt-1 font-light">Klik + untuk menambah foto (max 10). Hover foto untuk hapus. Maksimal 2MB per foto.</p>
     </div>
 </div>
 
 @push('scripts')
 <script>
-// ═══════════════════════════════════════
-// LOCATION SELECT (CHAINED DROPDOWN)
-// ═══════════════════════════════════════
 function locationSelect() {
     return {
         province: '{{ old('province_code', $agency->province_code) }}',
         city: '{{ old('city_code', $agency->city_code) }}',
         district: '{{ old('district_code', $agency->district_code) }}',
+        
+        // ⚡ PRELOAD: Data cities & districts dari server
         cities: @json($preloadedCities),
         districts: @json($preloadedDistricts),
 
@@ -372,9 +405,6 @@ function locationSelect() {
     }
 }
 
-// ═══════════════════════════════════════
-// COVERAGE SELECT
-// ═══════════════════════════════════════
 function coverageSelect() {
     return {
         selected: @json($coverageSelected),

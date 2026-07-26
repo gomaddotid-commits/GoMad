@@ -41,7 +41,10 @@
             @if($agent->guard_name)
             <div class="bg-[#F5F5F5] border border-[#E5E5E5] rounded-[12px] p-3"><span class="text-[10px] text-gray-400 font-mono uppercase tracking-wider">Penjaga</span><p class="font-semibold text-[#111111]">{{ $agent->guard_name }}</p><p class="text-gray-600 font-light">{{ $agent->guard_phone }}</p></div>
             @endif
-            <div class="bg-[#F5F5F5] border border-[#E5E5E5] rounded-[12px] p-3 md:col-span-2"><span class="text-[10px] text-gray-400 font-mono uppercase tracking-wider">Alamat</span><p class="font-semibold text-[#111111]">{{ $agent->address }}</p><p class="text-gray-600 font-light">Kec. {{ $agent->kecamatan ?? '-' }}</p></div>
+            <div class="bg-[#F5F5F5] border border-[#E5E5E5] rounded-[12px] p-3 md:col-span-2">
+                <span class="text-[10px] text-gray-400 font-mono uppercase tracking-wider">Alamat</span>
+                <p class="font-semibold text-[#111111]">{{ $agent->full_address }}</p>
+            </div>
         </div>
     </div>
 

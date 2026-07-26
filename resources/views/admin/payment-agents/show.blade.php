@@ -9,7 +9,7 @@
         <div class="flex flex-col md:flex-row md:justify-between md:items-start gap-4 mb-4">
             <div>
                 <h1 class="text-2xl font-bold text-[#111111]">{{ $agent->agent_name }}</h1>
-                <p class="text-gray-500 font-light">{{ $agent->address }}</p>
+                <p class="text-gray-500 font-light">{{ $agent->full_address }}</p>
                 @if($agent->is_verified)
                 <span class="inline-block mt-1 px-2 py-0.5 bg-green-50 text-green-700 text-[10px] font-mono uppercase tracking-wider rounded-full border border-green-200">Terverifikasi</span>
                 @else
