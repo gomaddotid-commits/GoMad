@@ -41,10 +41,21 @@ class ProfileController extends Controller
         ]);
 
         $user = auth()->user();
+        $oldPhone = $user->phone;
+        
         $user->update([
             'name' => $request->name,
             'phone' => $request->phone,
         ]);
+
+        // ⚡ Kirim welcome notification jika nomor WhatsApp baru diisi
+        if ($request->filled('phone') && $oldPhone !== $request->phone) {
+            try {
+                app(\App\Services\NotificationService::class)->welcomeCustomer($user);
+            } catch (\Exception $e) {
+                \Log::error('Welcome notification failed: ' . $e->getMessage());
+            }
+        }
 
         return redirect()->route('customer.home')
             ->with('success', 'Profil berhasil dilengkapi! Selamat datang di GoMad, ' . $user->name . '!');
@@ -57,7 +68,19 @@ class ProfileController extends Controller
             'phone' => ['required', 'string', 'max:20'],
         ]);
 
-        auth()->user()->update($request->only(['name', 'phone']));
+        $user = auth()->user();
+        $oldPhone = $user->phone;
+
+        $user->update($request->only(['name', 'phone']));
+
+        // ⚡ Kirim welcome notification jika nomor WhatsApp berubah
+        if ($request->phone !== $oldPhone) {
+            try {
+                app(\App\Services\NotificationService::class)->welcomeCustomer($user);
+            } catch (\Exception $e) {
+                \Log::error('Welcome notification on phone change failed: ' . $e->getMessage());
+            }
+        }
 
         return back()->with('success', 'Profil berhasil diupdate.');
     }

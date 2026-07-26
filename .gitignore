@@ -32,3 +32,5 @@ database/seeders/
 app/Console/Commands/FlowTest/
 app/Console/Commands/FlowTestCommand.php
 app/Console/Commands/ProductionReadinessCheck.php
+app/Console/Commands/ClearCloudinaryFolder.php
+app/Console/Commands/GoMadProduction.php

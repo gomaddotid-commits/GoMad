@@ -367,8 +367,6 @@ class NotificationService
         Log::info('🎫 NOTIFICATION: bookingCreated START', [
             'booking_code' => $booking->booking_code,
             'customer_id' => $customer->id,
-            'customer_email' => $customer->email,
-            'customer_phone' => $customer->phone,
         ]);
 
         // In-app notification
@@ -379,7 +377,7 @@ class NotificationService
             ['type' => 'booking_created', 'booking_id' => $booking->id]
         );
 
-        // WhatsApp ke customer
+        // WhatsApp ke customer — TANPA HARGA
         if ($customer->phone) {
             $this->sendWhatsApp(
                 $customer->phone,
@@ -387,25 +385,22 @@ class NotificationService
                 "🎫 Booking GoMad *{$booking->booking_code}* berhasil dibuat.\n\n" .
                 "📅 Rute: {$booking->originStop->city_name} → {$booking->destinationStop->city_name}\n" .
                 "🕐 Tanggal: {$schedule->departure_date->format('d M Y')} {$schedule->departure_time}\n" .
-                "💰 Total: Rp " . number_format($booking->total_price, 0, ',', '.') . "\n\n" .
+                "👥 Penumpang: {$booking->total_passengers} orang\n\n" .
+                "💡 *Pilih metode pembayaran dan promo untuk mendapatkan harga terbaik!*\n\n" .
                 "Segera lakukan pembayaran untuk konfirmasi booking."
             );
-        } else {
-            Log::info('🔕 NOTIFICATION: bookingCreated - No customer phone, WhatsApp skipped');
         }
 
-        // Email ke customer
+        // Email ke customer — TANPA HARGA
         if ($customer->email) {
             $this->sendEmail(
                 $customer->email,
                 new \App\Mail\BookingCreatedMail($booking),
                 'Booking Created'
             );
-        } else {
-            Log::info('🔕 NOTIFICATION: bookingCreated - No customer email, Email skipped');
         }
 
-        // WhatsApp ke agency
+        // WhatsApp ke agency — dengan harga
         $agencyUser = $booking->schedule->agency->user ?? null;
         if ($agencyUser && $agencyUser->phone) {
             $this->sendWhatsApp(
@@ -430,9 +425,7 @@ class NotificationService
             ['type' => 'booking_created', 'booking_id' => $booking->id]
         );
 
-        Log::info('🎫 NOTIFICATION: bookingCreated COMPLETED', [
-            'booking_code' => $booking->booking_code,
-        ]);
+        Log::info('🎫 NOTIFICATION: bookingCreated COMPLETED');
     }
 
     public function paymentConfirmed(\App\Models\Booking $booking): void

@@ -38,7 +38,20 @@ class ProfileController extends Controller
         ]);
 
         $user = $request->user();
+        $oldPhone = $user->phone;
+        
         $user->update($request->only(['name', 'phone']));
+
+        // ⚡ Kirim welcome notification jika nomor WhatsApp baru diisi atau berubah
+        if ($request->filled('phone') && $oldPhone !== $request->phone) {
+            dispatch(function () use ($user) {
+                try {
+                    app(\App\Services\NotificationService::class)->welcomeCustomer($user);
+                } catch (\Exception $e) {
+                    \Log::error('Welcome WhatsApp failed: ' . $e->getMessage());
+                }
+            })->afterResponse();
+        }
 
         return response()->json([
             'success' => true,
