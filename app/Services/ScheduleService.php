@@ -483,9 +483,13 @@ class ScheduleService
         }
     }
 
+    /**
+     * Cek ketersediaan kendaraan (travel + rental)
+     */
     public function checkVehicleAvailability(Vehicle $vehicle, Carbon $date, ?int $excludeScheduleId = null): bool
     {
-        $query = Schedule::where('vehicle_id', $vehicle->id)
+        // 1. Cek bentrok dengan jadwal travel lain
+        $scheduleConflict = Schedule::where('vehicle_id', $vehicle->id)
             ->where('departure_date', $date->toDateString())
             ->where('is_active', true)
             ->whereDoesntHave('bookings', function ($q) {
@@ -493,10 +497,26 @@ class ScheduleService
             });
 
         if ($excludeScheduleId) {
-            $query->where('id', '!=', $excludeScheduleId);
+            $scheduleConflict->where('id', '!=', $excludeScheduleId);
         }
 
-        return !$query->exists();
+        if ($scheduleConflict->exists()) {
+            return false;
+        }
+
+        // ✅ TAMBAHKAN: Cek bentrok dengan booking rental
+        // Jika kendaraan disewa rental di tanggal tersebut, tidak bisa dipakai travel
+        $rentalConflict = \App\Models\Rental::where('vehicle_id', $vehicle->id)
+            ->whereNotIn('status', ['cancelled'])
+            ->whereDate('start_datetime', '<=', $date)
+            ->whereDate('end_datetime', '>=', $date)
+            ->exists();
+
+        if ($rentalConflict) {
+            return false;
+        }
+
+        return true;
     }
 
     public function checkDriverAvailability(User $driver, Carbon $date, ?int $excludeScheduleId = null): bool

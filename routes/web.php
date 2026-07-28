@@ -38,8 +38,10 @@ use App\Http\Controllers\Web\Agency\RentalController as WebAgencyRentalControlle
 use App\Http\Controllers\Web\Agency\RentalPromoController as WebAgencyRentalPromoController;
 
 // Driver Controllers
-use App\Http\Controllers\Web\Driver\ScheduleController as WebDriverScheduleController;
-use App\Http\Controllers\Web\Driver\BookingController as WebDriverBookingController;
+use App\Http\Controllers\Web\Driver\DashboardController as WebDriverDashboardController;
+use App\Http\Controllers\Web\Driver\AssignmentController as WebDriverAssignmentController;
+use App\Http\Controllers\Web\Driver\TravelController as WebDriverTravelController;
+use App\Http\Controllers\Web\Driver\RentalController as WebDriverRentalController;
 use App\Http\Controllers\Web\Driver\ProfileController as WebDriverProfileController;
 
 // Payment Agent Controllers
@@ -245,19 +247,33 @@ Route::middleware(['auth', \App\Http\Middleware\Web\DriverMiddleware::class])
     ->prefix('driver')
     ->name('driver.')
     ->group(function () {
-        Route::get('/schedule', [WebDriverScheduleController::class, 'index'])->name('schedule');
-        Route::get('/schedule/{schedule}', [WebDriverScheduleController::class, 'show'])->name('schedule.show');
-        Route::post('/schedule/{schedule}/finish', [WebDriverScheduleController::class, 'finish'])->name('schedule.finish');
+        
+        // Dashboard (highlight + rekap)
+        Route::get('/dashboard', [WebDriverDashboardController::class, 'index'])->name('dashboard');
 
-        // Halaman daftar penumpang
-        Route::get('/bookings', [WebDriverBookingController::class, 'index'])->name('bookings');
-        
-        // Aksi per booking (Jemput, Antar, Selesai)
-        Route::post('/bookings/{booking}/pickup', [WebDriverBookingController::class, 'pickupBooking'])->name('bookings.pickup');
-        Route::post('/bookings/{booking}/dropoff', [WebDriverBookingController::class, 'dropoffBooking'])->name('bookings.dropoff');
-        Route::post('/bookings/{booking}/complete', [WebDriverBookingController::class, 'completeBooking'])->name('bookings.complete');
-        Route::post('/bookings/{booking}/confirm-cod', [WebDriverBookingController::class, 'confirmCod'])->name('bookings.confirm-cod');
-        
+        // Penugasan (tab filter Travel/Rental)
+        Route::get('/assignments', [WebDriverAssignmentController::class, 'index'])->name('assignments');
+
+        // ========== TRAVEL ==========
+        Route::prefix('travel')->name('travel.')->group(function () {
+            Route::get('/', [WebDriverTravelController::class, 'index'])->name('index');
+            Route::get('/{schedule}', [WebDriverTravelController::class, 'show'])->name('show');
+            Route::post('/{schedule}/finish', [WebDriverTravelController::class, 'finish'])->name('finish');
+            Route::post('/bookings/{booking}/pickup', [WebDriverTravelController::class, 'pickupBooking'])->name('bookings.pickup');
+            Route::post('/bookings/{booking}/dropoff', [WebDriverTravelController::class, 'dropoffBooking'])->name('bookings.dropoff');
+            Route::post('/bookings/{booking}/complete', [WebDriverTravelController::class, 'completeBooking'])->name('bookings.complete');
+            Route::post('/bookings/{booking}/confirm-cod', [WebDriverTravelController::class, 'confirmCod'])->name('bookings.confirm-cod');
+        });
+
+        // ========== RENTAL ==========
+        Route::prefix('rentals')->name('rentals.')->group(function () {
+            Route::get('/', [WebDriverRentalController::class, 'index'])->name('index');
+            Route::get('/{rental}', [WebDriverRentalController::class, 'show'])->name('show');
+            Route::post('/{rental}/verify-pickup', [WebDriverRentalController::class, 'verifyPickup'])->name('verify-pickup');
+            Route::post('/{rental}/verify-return', [WebDriverRentalController::class, 'verifyReturn'])->name('verify-return');
+        });
+
+        // Profile
         Route::get('/profile', [WebDriverProfileController::class, 'show'])->name('profile');
         Route::put('/profile', [WebDriverProfileController::class, 'update'])->name('profile.update');
     });

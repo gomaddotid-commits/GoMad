@@ -36,7 +36,7 @@ enum UserRole: string
         return match($this) {
             self::CUSTOMER => 'customer.home',
             self::AGENCY => 'agency.dashboard',
-            self::DRIVER => 'driver.schedule',
+            self::DRIVER => 'driver.dashboard',
             self::ADMIN => 'admin.dashboard',
             self::PAYMENT_AGENT => 'payment-agent.dashboard',
         };

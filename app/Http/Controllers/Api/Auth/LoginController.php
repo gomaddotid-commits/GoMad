@@ -22,14 +22,6 @@ class LoginController extends Controller
             'device_name' => ['nullable', 'string', 'max:100'],
         ]);
 
-        // ═══════════════════════════════════════════
-        // 🔒 BRUTE FORCE PROTECTION (Via Laravel Rate Limiter)
-        // ═══════════════════════════════════════════
-
-        // Gunakan throttle di routes/api.php:
-        // Route::post('/auth/login', [ApiAuthLoginController::class, 'login'])
-        //     ->middleware('throttle:5,1'); // Max 5 attempts per minute
-
         $user = User::where('email', $request->email)->first();
 
         // ⚡ Gunakan timing-safe comparison untuk mencegah timing attack

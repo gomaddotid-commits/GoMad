@@ -203,6 +203,11 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return $this->hasMany(Rental::class, 'customer_id');
     }
+
+    public function driverRentals(): HasMany
+    {
+        return $this->hasMany(Rental::class, 'driver_id');
+    }
 }
 
 // End of file

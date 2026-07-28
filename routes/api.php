@@ -44,6 +44,7 @@ use App\Http\Controllers\Api\Agency\WithdrawalController as ApiAgencyWithdrawalC
 use App\Http\Controllers\Api\Agency\ReportController as ApiAgencyReportController;
 use App\Http\Controllers\Api\Agency\PromoController as ApiAgencyPromoController;
 use App\Http\Controllers\Api\Agency\TransferController as ApiAgencyTransferController;
+use App\Http\Controllers\Api\Driver\RentalController as ApiDriverRentalController;
 
 // Driver Controllers
 use App\Http\Controllers\Api\Driver\ScheduleController as ApiDriverScheduleController;
@@ -339,6 +340,12 @@ Route::prefix('v1')->group(function () {
 
             Route::post('/location/update', [ApiDriverLocationController::class, 'update']);
             Route::get('/location/current', [ApiDriverLocationController::class, 'current']);
+
+            // Rental Tasks
+            Route::get('/rentals', [ApiDriverRentalController::class, 'index']);
+            Route::get('/rentals/{rental}', [ApiDriverRentalController::class, 'show']);
+            Route::post('/rentals/{rental}/verify-pickup', [ApiDriverRentalController::class, 'verifyPickup']);
+            Route::post('/rentals/{rental}/verify-return', [ApiDriverRentalController::class, 'verifyReturn']);
         });
 
         /*
