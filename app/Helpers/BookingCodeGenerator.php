@@ -1,6 +1,4 @@
 <?php
-// File: app/Helpers/BookingCodeGenerator.php
-// Deskripsi: Generator kode booking format GM-YYYYMMDD-XXXX (THREAD-SAFE for MySQL)
 
 namespace App\Helpers;
 
@@ -9,22 +7,28 @@ use Illuminate\Support\Facades\DB;
 
 class BookingCodeGenerator
 {
+    /**
+     * Generate kode booking format GM-YYYYMMDD-XXXX (THREAD-SAFE)
+     * 
+     * @param int $scheduleId - Tidak digunakan lagi untuk locking, 
+     *                          tapi dipertahankan untuk backward compatibility
+     */
     public static function generate(int $scheduleId): string
     {
         $prefix = config('gomad.booking_code_prefix', 'GM');
         $date = now()->format('Ymd');
         
         return DB::transaction(function () use ($prefix, $date) {
-            // 🔒 PESSIMISTIC LOCK: Ambil booking TERAKHIR hari ini
+            // 🔒 PESSIMISTIC LOCK pada tabel bookings untuk mencegah race condition
+            // Gunakan SELECT ... FOR UPDATE pada level tabel
             $lastBooking = Booking::whereDate('created_at', now()->toDateString())
                 ->where('booking_code', 'like', $prefix . '-' . $date . '-%')
-                ->lockForUpdate()
+                ->lockForUpdate()  // ✅ Lock semua booking hari ini
                 ->orderBy('booking_code', 'desc')
                 ->first();
             
-            // Hitung counter dari kode terakhir (bukan dari count)
+            // Hitung counter
             if ($lastBooking) {
-                // Ekstrak nomor dari kode terakhir: GM-20260727-0002 → 2
                 $parts = explode('-', $lastBooking->booking_code);
                 $lastNumber = (int) end($parts);
                 $counter = $lastNumber + 1;
@@ -32,10 +36,10 @@ class BookingCodeGenerator
                 $counter = 1;
             }
             
-            // Generate code dengan counter unik
+            // Generate code
             $code = $prefix . '-' . $date . '-' . str_pad($counter, 4, '0', STR_PAD_LEFT);
             
-            // Safety net: double-check uniqueness (harusnya tidak perlu dengan lock)
+            // ✅ DOUBLE-CHECK dengan re-query dalam lock yang sama
             $attempts = 0;
             while (Booking::where('booking_code', $code)->exists() && $attempts < 100) {
                 $counter++;

@@ -53,4 +53,16 @@ class City extends Model
     {
         return $this->meta['long'] ?? null;
     }
+
+    public function getNameAttribute($value): string
+    {
+        // Jika value null atau kosong
+        if (empty($value)) return 'Unknown';
+        
+        // Jika sudah dalam format proper case, return langsung
+        if ($value === ucwords(strtolower($value))) return $value;
+        
+        // Konversi dari UPPERCASE ke Proper Case
+        return ucwords(strtolower($value));
+    }
 }

@@ -16,7 +16,7 @@ class Promo extends Model
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
-        'name', 'type', 'module', 'description',
+        'name', 'type', 'module', 'image', 'description',
         'discount_percent', 'max_discount', 'min_purchase',
         'rental_min_purchase',
         'rental_discount_type', 'rental_discount_amount', 'rental_max_discount',
@@ -211,6 +211,13 @@ class Promo extends Model
     public function rentalVehicles(): BelongsToMany
     {
         return $this->belongsToMany(Vehicle::class, 'promo_rental_vehicle')->withTimestamps();
+    }
+
+    public function getImageUrlAttribute(): ?string
+    {
+        if (!$this->image) return null;
+        if (str_starts_with($this->image, 'http')) return $this->image;
+        return asset('storage/' . $this->image);
     }
 
 }

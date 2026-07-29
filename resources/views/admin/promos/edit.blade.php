@@ -7,7 +7,6 @@
 
     @php 
         $methods = $promo->applicable_payment_methods;
-        
         if (is_string($methods)) {
             $selectedMethods = !empty($methods) ? explode(',', $methods) : [];
         } elseif (is_array($methods)) {
@@ -17,7 +16,7 @@
         }
     @endphp
 
-    <form action="{{ route('admin.promos.update', $promo) }}" method="POST" class="bg-white border border-[#E5E5E5] rounded-[12px] p-6 shadow-sm space-y-6">
+    <form action="{{ route('admin.promos.update', $promo) }}" method="POST" enctype="multipart/form-data" class="bg-white border border-[#E5E5E5] rounded-[12px] p-6 shadow-sm space-y-6">
         @csrf @method('PUT')
         
         {{-- Nama & Jenis --}}
@@ -54,6 +53,27 @@
                       class="w-full px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111] transition">{{ old('description', $promo->description) }}</textarea>
         </div>
 
+        {{-- ✅ GAMBAR PROMO --}}
+        <div>
+            <label class="block text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-2">🖼️ Gambar Promo (Opsional)</label>
+            <div class="flex items-center gap-4">
+                <div class="w-40 h-28 bg-[#F5F5F5] border border-[#E5E5E5] rounded-[12px] flex items-center justify-center text-4xl overflow-hidden flex-shrink-0" id="promoImagePreview">
+                    @if($promo->image)
+                    <img src="{{ $promo->image_url }}" alt="{{ $promo->name }}" class="w-full h-full object-cover">
+                    @else
+                    <span>🎫</span>
+                    @endif
+                </div>
+                <div class="flex-1">
+                    <input type="file" name="image" accept="image/*" class="w-full text-sm" onchange="previewPromoImage(event)">
+                    <p class="text-[10px] text-gray-400 mt-1 font-light">Biarkan kosong jika tidak ingin mengubah. Max 2MB.</p>
+                    @if($promo->image)
+                    <p class="text-[10px] text-green-600 mt-1 font-light">✅ Gambar sudah diupload</p>
+                    @endif
+                </div>
+            </div>
+        </div>
+
         {{-- ═══════════════════════════════════════ --}}
         {{-- DISKON TRAVEL --}}
         {{-- ═══════════════════════════════════════ --}}
@@ -72,9 +92,7 @@
                                class="w-full px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111] transition">
                     </div>
                     <div>
-                        <label class="block text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">
-                            Min Pembelian Travel (Rp)
-                        </label>
+                        <label class="block text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">Min Pembelian Travel (Rp)</label>
                         <input type="number" name="min_purchase" value="{{ old('min_purchase', $promo->min_purchase) }}" 
                                class="w-full px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111] transition"
                                placeholder="0" min="0">
@@ -100,9 +118,7 @@
                     </div>
                     <div>
                         <label class="block text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">
-                            <span id="rentalDiscountLabel">
-                                {{ ($promo->rental_discount_type ?? 'percent') == 'fixed' ? 'Jumlah Diskon (Rp)' : 'Jumlah Diskon (%)' }}
-                            </span>
+                            <span id="rentalDiscountLabel">{{ ($promo->rental_discount_type ?? 'percent') == 'fixed' ? 'Jumlah Diskon (Rp)' : 'Jumlah Diskon (%)' }}</span>
                         </label>
                         <input type="number" name="rental_discount_amount" value="{{ old('rental_discount_amount', $promo->rental_discount_amount) }}"
                                class="w-full px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111] transition"
@@ -121,9 +137,7 @@
                 </div>
                 
                 <div class="mt-3">
-                    <label class="block text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">
-                        Minimal Sewa Rental (Rp)
-                    </label>
+                    <label class="block text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">Minimal Sewa Rental (Rp)</label>
                     <input type="number" name="rental_min_purchase" value="{{ old('rental_min_purchase', $promo->rental_min_purchase ?? 0) }}" 
                            class="w-48 px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111] transition"
                            placeholder="0" min="0">
@@ -168,18 +182,15 @@
             <p class="text-[10px] text-gray-400 mb-3 font-light">Centang metode yang berlaku. Kosongkan semua untuk berlaku di semua metode.</p>
             <div class="grid grid-cols-3 gap-3">
                 <label class="flex items-center gap-2 p-3 border border-[#E5E5E5] rounded-[12px] cursor-pointer hover:bg-[#F5F5F5]">
-                    <input type="checkbox" name="applicable_payment_methods[]" value="midtrans" class="w-4 h-4 text-[#C1121F] rounded border-[#E5E5E5] focus:ring-[#C1121F]"
-                        {{ in_array('midtrans', $selectedMethods) ? 'checked' : '' }}>
+                    <input type="checkbox" name="applicable_payment_methods[]" value="midtrans" class="w-4 h-4 text-[#C1121F] rounded border-[#E5E5E5] focus:ring-[#C1121F]" {{ in_array('midtrans', $selectedMethods) ? 'checked' : '' }}>
                     <div><span class="text-sm font-medium text-[#111111]">💳 Online</span><span class="text-[10px] text-gray-400 block font-light">Midtrans</span></div>
                 </label>
                 <label class="flex items-center gap-2 p-3 border border-[#E5E5E5] rounded-[12px] cursor-pointer hover:bg-[#F5F5F5]">
-                    <input type="checkbox" name="applicable_payment_methods[]" value="cash" class="w-4 h-4 text-[#C1121F] rounded border-[#E5E5E5] focus:ring-[#C1121F]"
-                        {{ in_array('cash', $selectedMethods) ? 'checked' : '' }}>
+                    <input type="checkbox" name="applicable_payment_methods[]" value="cash" class="w-4 h-4 text-[#C1121F] rounded border-[#E5E5E5] focus:ring-[#C1121F]" {{ in_array('cash', $selectedMethods) ? 'checked' : '' }}>
                     <div><span class="text-sm font-medium text-[#111111]">🏪 Warung</span><span class="text-[10px] text-gray-400 block font-light">Warung GoMad</span></div>
                 </label>
                 <label class="flex items-center gap-2 p-3 border border-[#E5E5E5] rounded-[12px] cursor-pointer hover:bg-[#F5F5F5]">
-                    <input type="checkbox" name="applicable_payment_methods[]" value="cod" class="w-4 h-4 text-[#C1121F] rounded border-[#E5E5E5] focus:ring-[#C1121F]"
-                        {{ in_array('cod', $selectedMethods) ? 'checked' : '' }}>
+                    <input type="checkbox" name="applicable_payment_methods[]" value="cod" class="w-4 h-4 text-[#C1121F] rounded border-[#E5E5E5] focus:ring-[#C1121F]" {{ in_array('cod', $selectedMethods) ? 'checked' : '' }}>
                     <div><span class="text-sm font-medium text-[#111111]">🚗 COD</span><span class="text-[10px] text-gray-400 block font-light">Bayar ke Sopir</span></div>
                 </label>
             </div>
@@ -258,6 +269,18 @@ document.getElementById('rentalDiscountType').addEventListener('change', functio
         hint.textContent = 'Persentase diskon (1-100%)';
     }
 });
+
+function previewPromoImage(event) {
+    const file = event.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById('promoImagePreview').innerHTML = 
+                `<img src="${e.target.result}" class="w-full h-full object-cover">`;
+        };
+        reader.readAsDataURL(file);
+    }
+}
 
 document.addEventListener('DOMContentLoaded', function() {
     toggleModuleFields();

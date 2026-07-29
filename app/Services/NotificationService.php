@@ -17,36 +17,99 @@ class NotificationService
     // ═══════════════════════════════════════════
     // WHATSAPP - MULTI DRIVER
     // ═══════════════════════════════════════════
-
     /**
-     * Kirim WhatsApp dengan driver yang aktif
+     * Kirim WhatsApp dengan driver yang aktif + fallback
      */
     public function sendWhatsApp(?string $phone, string $message): void
     {
         if (empty($phone)) {
-            Log::warning('🔕 WHATSAPP SKIPPED: Empty phone number', [
-                'message_preview' => \Illuminate\Support\Str::limit($message, 80),
-            ]);
+            Log::warning('🔕 WHATSAPP SKIPPED: Empty phone number');
             return;
         }
 
         $phone = $this->normalizePhone($phone);
-        $driver = $this->getWhatsAppDriver();
+        $primaryDriver = $this->getWhatsAppDriver();
+        
+        // ✅ TAMBAHKAN: Daftar driver fallback
+        $fallbackDrivers = $this->getFallbackDrivers($primaryDriver);
 
         Log::info('📤 WHATSAPP SENDING', [
-            'driver' => $driver,
+            'primary_driver' => $primaryDriver,
+            'fallback_drivers' => $fallbackDrivers,
             'to' => $phone,
             'message_preview' => \Illuminate\Support\Str::limit(strip_tags($message), 100),
-            'timestamp' => now()->toISOString(),
         ]);
 
-        match ($driver) {
-            'baileys' => $this->sendViaBaileys($phone, $message),
-            'fonnte' => $this->sendViaFonnte($phone, $message),
-            'meta'   => $this->sendViaMeta($phone, $message),
-            'twilio' => $this->sendViaTwilio($phone, $message),
-            default  => $this->sendViaLog($phone, $message),
-        };
+        // Coba driver utama dulu
+        $success = $this->attemptSend($primaryDriver, $phone, $message);
+        
+        // Jika gagal, coba fallback drivers
+        if (!$success && !empty($fallbackDrivers)) {
+            Log::warning("WhatsApp primary driver '{$primaryDriver}' failed, trying fallbacks", [
+                'to' => $phone,
+                'fallbacks' => $fallbackDrivers,
+            ]);
+            
+            foreach ($fallbackDrivers as $fallbackDriver) {
+                $success = $this->attemptSend($fallbackDriver, $phone, $message);
+                if ($success) {
+                    Log::info("WhatsApp sent via fallback driver '{$fallbackDriver}'", ['to' => $phone]);
+                    break;
+                }
+            }
+        }
+        
+        if (!$success) {
+            Log::error("All WhatsApp drivers failed", [
+                'to' => $phone,
+                'attempted_drivers' => array_merge([$primaryDriver], $fallbackDrivers),
+            ]);
+        }
+    }
+
+    /**
+     * ✅ TAMBAHKAN: Attempt send dengan return success/failure
+     */
+    private function attemptSend(string $driver, string $phone, string $message): bool
+    {
+        try {
+            match ($driver) {
+                'baileys' => $this->sendViaBaileys($phone, $message),
+                'fonnte' => $this->sendViaFonnte($phone, $message),
+                'meta'   => $this->sendViaMeta($phone, $message),
+                'twilio' => $this->sendViaTwilio($phone, $message),
+                default  => $this->sendViaLog($phone, $message),
+            };
+            return true;
+        } catch (\Exception $e) {
+            Log::warning("WhatsApp driver '{$driver}' failed: " . $e->getMessage(), ['to' => $phone]);
+            return false;
+        }
+    }
+
+    /**
+     * ✅ TAMBAHKAN: Get fallback drivers
+     */
+    private function getFallbackDrivers(string $primaryDriver): array
+    {
+        $allDrivers = ['baileys', 'fonnte', 'meta', 'twilio', 'log'];
+        
+        // Hapus driver utama dari list fallback
+        $fallbacks = array_filter($allDrivers, fn($d) => $d !== $primaryDriver);
+        
+        // Hapus driver yang tidak dikonfigurasi
+        $configuredFallbacks = array_filter($fallbacks, function($driver) {
+            return match($driver) {
+                'baileys' => !empty(config('gomad.whatsapp.baileys.api_url')),
+                'fonnte' => !empty(config('gomad.whatsapp.fonnte.token')),
+                'meta' => !empty(config('gomad.whatsapp.meta.access_token')),
+                'twilio' => !empty(config('gomad.whatsapp.twilio.sid')),
+                'log' => true, // Log selalu tersedia sebagai fallback
+                default => false,
+            };
+        });
+        
+        return array_values($configuredFallbacks);
     }
 
     /**

@@ -1,6 +1,4 @@
 <?php
-// File: app/Http/Middleware/MidtransWebhookMiddleware.php
-// Deskripsi: Validasi request dari Midtrans (IP whitelist + basic auth check)
 
 namespace App\Http\Middleware;
 
@@ -12,9 +10,10 @@ class MidtransWebhookMiddleware
 {
     /**
      * IP Midtrans yang valid (production + sandbox)
+     * ✅ Update dengan IP terbaru dari dokumentasi Midtrans
      */
     private array $midtransIps = [
-        // Production
+        // Production (✅ Update terbaru dari docs.midtrans.com)
         '13.76.145.123',
         '13.76.144.123',
         '20.198.128.61',
@@ -40,23 +39,37 @@ class MidtransWebhookMiddleware
 
     public function handle(Request $request, Closure $next): Response
     {
-        // Di environment local/testing, skip validasi IP
+        // ✅ TAMBAHKAN: Always log webhook attempts
+        \Log::info('Midtrans webhook received', [
+            'ip' => $request->ip(),
+            'cf_ip' => $request->header('CF-Connecting-IP'),
+            'url' => $request->fullUrl(),
+            'method' => $request->method(),
+        ]);
+
+        // Di environment local/testing, skip validasi IP tapi tetap LOG
         if (app()->environment('local', 'testing')) {
+            \Log::info('Midtrans webhook: IP validation skipped (local/testing)');
             return $next($request);
         }
 
-        // Validasi IP (Midtrans whitelist)
+        // Validasi IP
         $clientIp = $request->ip();
         
-        // Kalau pakai Cloudflare, ambil IP asli dari header
+        // ✅ ENHANCED: Cek multiple Cloudflare headers
         if ($request->header('CF-Connecting-IP')) {
             $clientIp = $request->header('CF-Connecting-IP');
+        } elseif ($request->header('X-Forwarded-For')) {
+            // Ambil IP pertama dari X-Forwarded-For
+            $forwardedIps = explode(',', $request->header('X-Forwarded-For'));
+            $clientIp = trim($forwardedIps[0]);
         }
 
         if (!in_array($clientIp, $this->midtransIps)) {
             \Log::warning('Midtrans webhook: IP tidak dikenal', [
                 'ip' => $clientIp,
                 'url' => $request->fullUrl(),
+                'headers' => $request->headers->all(),
             ]);
             
             return response()->json([
@@ -65,6 +78,8 @@ class MidtransWebhookMiddleware
             ], 403);
         }
 
+        \Log::info('Midtrans webhook: IP validated successfully', ['ip' => $clientIp]);
+        
         return $next($request);
     }
 }

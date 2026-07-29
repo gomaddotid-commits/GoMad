@@ -234,11 +234,11 @@ class RentalController extends Controller
 
             $rental->update(['payment_id' => $payment->id]);
 
-            // Generate Snap Token
+            // ✅ Generate Snap Token dan SIMPAN ke session
             $snapToken = $this->generateRentalSnapToken($rental, $payment);
 
             return redirect()->route('customer.rental.show', $rental)
-                ->with('snap_token', $snapToken)
+                ->with('snap_token', $snapToken)  // ✅ Pastikan ini tersimpan
                 ->with('success', 'Silakan selesaikan pembayaran.');
                 
         } catch (\Exception $e) {

@@ -6,6 +6,7 @@ namespace App\Console\Commands;
 
 use App\Models\CashPayment;
 use App\Models\Payment;
+use App\Models\Schedule;
 use App\Services\CashPaymentService;
 use App\Services\PaymentService;
 use Illuminate\Console\Command;

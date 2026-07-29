@@ -30,4 +30,11 @@ class Province extends Model
     {
         return $this->hasMany(Agency::class, 'province_code', 'code');
     }
+
+    public function getNameAttribute($value): string
+    {
+        if (empty($value)) return 'Unknown';
+        if ($value === ucwords(strtolower($value))) return $value;
+        return ucwords(strtolower($value));
+    }
 }

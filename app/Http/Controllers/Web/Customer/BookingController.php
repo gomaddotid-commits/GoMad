@@ -14,6 +14,7 @@ use App\Services\ScheduleService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
+use Illuminate\Support\Facades\DB; 
 
 class BookingController extends Controller
 {
@@ -280,35 +281,61 @@ class BookingController extends Controller
 
     private function processCod(Booking $booking): RedirectResponse
     {
-        if (!$booking->schedule->allow_cod) return back()->with('error', 'Jadwal ini tidak menyediakan opsi COD.');
-        if (!$booking->schedule->route->cod_available) return back()->with('error', 'Rute ini tidak mendukung COD.');
+        if (!$booking->schedule->allow_cod) {
+            return back()->with('error', 'Jadwal ini tidak menyediakan opsi COD.');
+        }
+        
+        if (!$booking->schedule->route->cod_available) {
+            return back()->with('error', 'Rute ini tidak mendukung COD.');
+        }
 
         $walletService = app(\App\Services\WalletService::class);
         $agency = $booking->schedule->agency;
         $minBalance = $booking->schedule->cod_min_balance ?? 500000;
-        if (!$walletService->canUseCod($agency, $minBalance)) {
-            return back()->with('error', 'Saldo jaminan agency tidak mencukupi untuk COD.');
+        
+        // ✅ TAMBAHKAN: Cek dengan locking untuk mencegah race condition
+        $canUseCod = DB::transaction(function () use ($agency, $minBalance, $walletService) {
+            return $walletService->canUseCod($agency, $minBalance);
+        });
+        
+        if (!$canUseCod) {
+            // ✅ TAMBAHKAN: Informasi lebih detail
+            $summary = $walletService->getBalanceSummary($agency);
+            return back()->with('error', 
+                'Saldo jaminan agency tidak mencukupi untuk COD. ' .
+                'Dibutuhkan: Rp ' . number_format($minBalance, 0, ',', '.') . ', ' .
+                'Tersedia: Rp ' . number_format($summary['available_deposit'], 0, ',', '.')
+            );
         }
 
+        // ✅ TAMBAHKAN: Gunakan transaction untuk atomic operation
         try {
-            $this->cleanupOldPayments($booking);
-            \App\Models\Payment::create([
-                'booking_id' => $booking->id,
-                'amount' => $booking->total_price,
-                'commission' => $booking->total_price * 0.05,
-                'agency_revenue' => $booking->total_price * 0.95,
-                'payment_type' => 'cod',
-                'status' => \App\Enums\PaymentStatus::COD_PENDING->value,
-            ]);
-            
-            // 👇 UBAH: paid → confirmed
-            $booking->update(['status' => \App\Enums\BookingStatus::CONFIRMED->value]);
-            
-            $walletService->holdCodBalance($booking);
+            DB::transaction(function () use ($booking, $walletService, $agency, $minBalance) {
+                $this->cleanupOldPayments($booking);
+                
+                \App\Models\Payment::create([
+                    'booking_id' => $booking->id,
+                    'amount' => $booking->total_price,
+                    'commission' => $booking->total_price * 0.05,
+                    'agency_revenue' => $booking->total_price * 0.95,
+                    'payment_type' => 'cod',
+                    'status' => \App\Enums\PaymentStatus::COD_PENDING->value,
+                ]);
+                
+                $booking->update(['status' => \App\Enums\BookingStatus::CONFIRMED->value]);
+                
+                $walletService->holdCodBalance($booking);
+            });
         } catch (\Exception $e) {
+            \Log::error('COD processing failed: ' . $e->getMessage(), [
+                'booking_code' => $booking->booking_code,
+                'agency_id' => $agency->id,
+            ]);
             return back()->with('error', 'Gagal memproses COD: ' . $e->getMessage());
         }
+        
         $this->applyPromoFromSession($booking);
+        
         return redirect()->route('customer.booking.show', $booking)
             ->with('success', 'Pembayaran COD dipilih. Bayar langsung ke driver saat penjemputan.');
     }

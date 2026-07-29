@@ -31,6 +31,7 @@ class PromoController extends Controller
             'name' => ['required', 'string', 'max:100'],
             'type' => ['required', 'in:general,selective'],
             'module' => ['required', 'in:travel,rental,all'],
+            'image' => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:2048'],
             'description' => ['nullable', 'string', 'max:500'],
             'start_date' => ['required', 'date', 'after_or_equal:today'],
             'end_date' => ['required', 'date', 'after:start_date'],
@@ -39,6 +40,17 @@ class PromoController extends Controller
 
         $module = $request->module;
 
+        $data = $request->except(['image']);
+        $data['created_by'] = auth()->id();
+        $data['is_active'] = true;
+
+        // Upload gambar
+        if ($request->hasFile('image')) {
+            $cloudinary = app(\App\Services\CloudinaryService::class);
+            $result = $cloudinary->upload($request->file('image'), 'promos');
+            $data['image'] = $result['url'];
+        }
+        
         // Travel discount fields
         if ($module === 'travel' || $module === 'all') {
             $rules['discount_percent'] = ['required', 'numeric', 'min:1', 'max:100'];
@@ -103,6 +115,7 @@ class PromoController extends Controller
     {
         $rules = [
             'name' => ['required', 'string', 'max:100'],
+            'image' => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:2048'],
             'description' => ['nullable', 'string', 'max:500'],
             'start_date' => ['required', 'date'],
             'end_date' => ['required', 'date', 'after:start_date'],
@@ -110,6 +123,8 @@ class PromoController extends Controller
         ];
 
         $module = $request->module ?? $promo->module;
+
+        $data = $request->except(['_token', '_method', 'image']);
 
         if ($module === 'travel' || $module === 'all') {
             $rules['discount_percent'] = ['required', 'numeric', 'min:1', 'max:100'];
@@ -149,6 +164,19 @@ class PromoController extends Controller
             $data['applicable_payment_methods'] = null;
         }
 
+        if ($request->hasFile('image')) {
+            // Hapus gambar lama
+            if ($promo->image && str_starts_with($promo->image, 'http')) {
+                $cloudinary = app(\App\Services\CloudinaryService::class);
+                $publicId = $this->extractCloudinaryPublicId($promo->image);
+                if ($publicId) $cloudinary->delete($publicId);
+            }
+            
+            $cloudinary = app(\App\Services\CloudinaryService::class);
+            $result = $cloudinary->upload($request->file('image'), 'promos');
+            $data['image'] = $result['url'];
+        }
+
         $promo->update($data);
 
         return redirect()->route('admin.promos.index')
@@ -171,6 +199,15 @@ class PromoController extends Controller
     {
         $promo->delete();
         return back()->with('success', 'Promo berhasil dihapus.');
+    }
+
+    private function extractCloudinaryPublicId(string $url): ?string
+    {
+        $pattern = '/\/upload\/(?:v\d+\/)?(.+?)\.\w+$/';
+        if (preg_match($pattern, $url, $matches)) {
+            return $matches[1];
+        }
+        return null;
     }
 }
 

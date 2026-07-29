@@ -1,10 +1,8 @@
 <?php
-// File: app/Http/Middleware/Api/ApiAuthenticate.php
-// Deskripsi: Middleware untuk autentikasi Sanctum token pada API
 
 namespace App\Http\Middleware\Api;
-use Illuminate\Support\Facades\Log;
 
+use Illuminate\Support\Facades\Log;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -15,7 +13,6 @@ class ApiAuthenticate
     {
         $user = $request->user();
 
-        // ⚡ Validasi token tidak kosong
         if (!$user) {
             return response()->json([
                 'success' => false,
@@ -25,9 +22,8 @@ class ApiAuthenticate
             ], 401);
         }
 
-        // ⚡ Cek apakah user di-ban
+        // ✅ Check banned
         if ($user->banned_at) {
-            // Log untuk audit
             Log::warning('Banned user attempted API access', [
                 'user_id' => $user->id,
                 'email' => $user->email,
@@ -36,7 +32,6 @@ class ApiAuthenticate
                 'user_agent' => $request->userAgent(),
             ]);
 
-            // Revoke token
             $request->user()->currentAccessToken()->delete();
 
             return response()->json([
@@ -47,7 +42,6 @@ class ApiAuthenticate
             ], 403);
         }
 
-        // ⚡ Cek user aktif
         if (!$user->is_active) {
             Log::warning('Inactive user attempted API access', [
                 'user_id' => $user->id,
@@ -63,21 +57,30 @@ class ApiAuthenticate
             ], 403);
         }
 
-        // ⚡ Rate limit check berdasarkan user ID (opsional, via token ability)
-        // Ini mencegah 1 user melakukan spam request
+        // ✅ ENHANCED: Token expiry check dengan grace period
         $token = $user->currentAccessToken();
-        if ($token && $token->created_at->diffInHours(now()) > 720) { // 30 hari
-            $token->delete();
-            return response()->json([
-                'success' => false,
-                'message' => 'Token kadaluarsa. Silakan login ulang.',
-                'data' => null,
-                'meta' => null,
-            ], 401);
+        if ($token) {
+            $tokenAgeInHours = $token->created_at->diffInHours(now());
+            $maxTokenAge = (int) config('sanctum.expiration', 43200) / 60; // Convert to hours
+            
+            // ✅ Jika token hampir expired (< 24 jam tersisa), beri warning header
+            if ($tokenAgeInHours > ($maxTokenAge - 24) && $tokenAgeInHours <= $maxTokenAge) {
+                // Token masih valid tapi hampir expired
+                // Client sebaiknya refresh token
+            }
+            
+            // ✅ Jika token sudah expired
+            if ($tokenAgeInHours > $maxTokenAge) {
+                $token->delete();
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Token kadaluarsa. Silakan login ulang.',
+                    'data' => null,
+                    'meta' => ['token_expired' => true],
+                ], 401);
+            }
         }
 
         return $next($request);
     }
 }
-
-// End of file

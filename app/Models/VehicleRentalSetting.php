@@ -61,6 +61,17 @@ class VehicleRentalSetting extends Model
         return $this->belongsTo(Vehicle::class);
     }
 
+    public function agency(): BelongsTo
+    {
+        return $this->belongsTo(Agency::class, null, null, 'vehicle.agency');
+    }
+    
+    // ✅ TAMBAHKAN: Atau gunakan accessor melalui Vehicle
+    public function getAgencyAttribute()
+    {
+        return $this->vehicle->agency ?? null;
+    }
+
     public function getAvailableTypesAttribute(): array
     {
         $types = [];

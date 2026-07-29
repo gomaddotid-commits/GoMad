@@ -36,4 +36,11 @@ class District extends Model
     {
         return $this->hasMany(Agency::class, 'district_code', 'code');
     }
+
+    public function getNameAttribute($value): string
+    {
+        if (empty($value)) return 'Unknown';
+        if ($value === ucwords(strtolower($value))) return $value;
+        return ucwords(strtolower($value));
+    }
 }

@@ -191,10 +191,18 @@ class ProfileController extends Controller
      */
     public function uploadLogo(Request $request): RedirectResponse
     {
+        // ✅ ENHANCED validation
         $request->validate([
-            'logo' => ['required', 'image', 'mimes:jpeg,png,jpg,webp', 'max:2048'],
+            'logo' => [
+                'required',
+                'image',
+                'mimes:jpeg,png,jpg,webp',
+                'max:2048',  // 2MB
+                'dimensions:min_width=100,min_height=100,max_width=2000,max_height=2000',  // ✅ Tambahkan
+            ],
         ], [
             'logo.max' => 'Logo maksimal 2MB.',
+            'logo.dimensions' => 'Logo harus berukuran antara 100x100px sampai 2000x2000px.',
         ]);
 
         try {

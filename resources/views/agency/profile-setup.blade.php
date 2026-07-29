@@ -7,12 +7,11 @@
     $provinces = \App\Models\Province::orderBy('name')->get();
     $allCities = \App\Models\City::with('province')->orderBy('name')->get();
     
-    // ⚡ PRELOAD: Siapkan data cities & districts untuk initial load
-    $preloadedCities = [];
-    $preloadedDistricts = [];
-    
     $selectedProvince = old('province_code', $agency->province_code ?? '');
     $selectedCity = old('city_code', $agency->city_code ?? '');
+    
+    $preloadedCities = [];
+    $preloadedDistricts = [];
     
     if ($selectedProvince) {
         $preloadedCities = \App\Models\City::where('province_code', $selectedProvince)
@@ -95,41 +94,103 @@
             </div>
         </div>
 
-        <!-- LOKASI AGENCY (LARAVOLT) -->
+        <!-- LOKASI AGENCY (SEARCHABLE DROPDOWN) -->
         <div class="bg-white border-2 border-[#C1121F] rounded-[12px] p-6 shadow-sm">
             <h3 class="font-mono uppercase tracking-wider text-xs font-bold text-[#C1121F] mb-4">📍 Lokasi Agency <span class="text-[#C1121F]">*</span></h3>
             
-            <div x-data="locationSelect()" class="space-y-4">
+            <div x-data="locationSelect()" class="space-y-4" x-init="initLocation()">
+                {{-- Provinsi --}}
                 <div>
                     <label class="block text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">Provinsi <span class="text-[#C1121F]">*</span></label>
-                    <select name="province_code" x-model="province" @change="loadCities()" 
-                            class="w-full px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111] transition" required>
-                        <option value="">Pilih Provinsi</option>
-                        @foreach($provinces as $p)
-                        <option value="{{ $p->code }}" {{ old('province_code', $agency->province_code ?? '') == $p->code ? 'selected' : '' }}>{{ $p->name }}</option>
-                        @endforeach
-                    </select>
+                    <div class="relative">
+                        <div class="relative">
+                            <input type="text" 
+                                   x-model="provinceSearch" 
+                                   @click="provinceOpen = !provinceOpen"
+                                   @input="provinceOpen = true"
+                                   placeholder="Ketik atau pilih provinsi..."
+                                   class="w-full px-0 py-2 pr-8 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111] transition cursor-pointer"
+                                   x-ref="provinceInput">
+                            <svg @click.stop="provinceOpen = !provinceOpen" class="absolute right-0 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 cursor-pointer hover:text-[#111111] transition" :class="{'rotate-180': provinceOpen}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                        </div>
+                        <div x-show="provinceOpen" @click.away="provinceOpen = false" x-cloak
+                             class="absolute z-50 w-full mt-1 bg-white border border-[#E5E5E5] rounded-[12px] shadow-lg max-h-60 overflow-y-auto">
+                            <template x-for="province in filteredProvinces()" :key="province.code">
+                                <div @click="selectProvince(province); provinceOpen = false;"
+                                     class="px-4 py-2.5 text-sm hover:bg-[#C1121F]/5 cursor-pointer transition border-b border-[#F5F5F5] last:border-0"
+                                     :class="{'bg-[#C1121F]/5 font-semibold text-[#C1121F]': province.code === selectedProvince}">
+                                    <span x-text="province.name"></span>
+                                </div>
+                            </template>
+                            <div x-show="filteredProvinces().length === 0" class="px-4 py-2.5 text-sm text-gray-400 text-center">Tidak ditemukan</div>
+                        </div>
+                        <input type="hidden" name="province_code" :value="selectedProvince">
+                    </div>
                 </div>
+
+                {{-- Kab/Kota --}}
                 <div>
                     <label class="block text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">Kabupaten/Kota <span class="text-[#C1121F]">*</span></label>
-                    <select name="city_code" x-model="city" @change="loadDistricts()" :disabled="!province"
-                            class="w-full px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111] transition" required>
-                        <option value="">Pilih Kab/Kota</option>
-                        <template x-for="c in cities" :key="c.code">
-                            <option :value="c.code" x-text="c.name" :selected="c.code === '{{ old('city_code', $agency->city_code ?? '') }}'"></option>
-                        </template>
-                    </select>
+                    <div class="relative">
+                        <div class="relative">
+                            <input type="text" 
+                                   x-model="citySearch" 
+                                   @click="if(selectedProvince) cityOpen = !cityOpen"
+                                   @input="if(selectedProvince) cityOpen = true"
+                                   placeholder="Ketik atau pilih kota..."
+                                   :disabled="!selectedProvince"
+                                   class="w-full px-0 py-2 pr-8 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent transition"
+                                   :class="!selectedProvince ? 'cursor-not-allowed text-gray-400 bg-gray-50' : 'cursor-pointer text-[#111111]'"
+                                   x-ref="cityInput">
+                            <svg @click.stop="if(selectedProvince) cityOpen = !cityOpen" class="absolute right-0 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 cursor-pointer hover:text-[#111111] transition" :class="{'rotate-180': cityOpen}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                        </div>
+                        <div x-show="cityOpen && selectedProvince" @click.away="cityOpen = false" x-cloak
+                             class="absolute z-50 w-full mt-1 bg-white border border-[#E5E5E5] rounded-[12px] shadow-lg max-h-60 overflow-y-auto">
+                            <template x-for="city in filteredCities()" :key="city.code">
+                                <div @click="selectCity(city); cityOpen = false;"
+                                     class="px-4 py-2.5 text-sm hover:bg-[#C1121F]/5 cursor-pointer transition border-b border-[#F5F5F5] last:border-0"
+                                     :class="{'bg-[#C1121F]/5 font-semibold text-[#C1121F]': city.code === selectedCity}">
+                                    <span x-text="city.name"></span>
+                                </div>
+                            </template>
+                            <div x-show="filteredCities().length === 0" class="px-4 py-2.5 text-sm text-gray-400 text-center">Tidak ditemukan</div>
+                        </div>
+                        <input type="hidden" name="city_code" :value="selectedCity">
+                    </div>
                 </div>
+
+                {{-- Kecamatan --}}
                 <div>
                     <label class="block text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">Kecamatan</label>
-                    <select name="district_code" x-model="district" :disabled="!city"
-                            class="w-full px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111] transition">
-                        <option value="">Pilih Kecamatan</option>
-                        <template x-for="d in districts" :key="d.code">
-                            <option :value="d.code" x-text="d.name" :selected="d.code === '{{ old('district_code', $agency->district_code ?? '') }}'"></option>
-                        </template>
-                    </select>
+                    <div class="relative">
+                        <div class="relative">
+                            <input type="text" 
+                                   x-model="districtSearch" 
+                                   @click="if(selectedCity) districtOpen = !districtOpen"
+                                   @input="if(selectedCity) districtOpen = true"
+                                   placeholder="Ketik atau pilih kecamatan..."
+                                   :disabled="!selectedCity"
+                                   class="w-full px-0 py-2 pr-8 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent transition"
+                                   :class="!selectedCity ? 'cursor-not-allowed text-gray-400 bg-gray-50' : 'cursor-pointer text-[#111111]'"
+                                   x-ref="districtInput">
+                            <svg @click.stop="if(selectedCity) districtOpen = !districtOpen" class="absolute right-0 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 cursor-pointer hover:text-[#111111] transition" :class="{'rotate-180': districtOpen}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                        </div>
+                        <div x-show="districtOpen && selectedCity" @click.away="districtOpen = false" x-cloak
+                             class="absolute z-50 w-full mt-1 bg-white border border-[#E5E5E5] rounded-[12px] shadow-lg max-h-60 overflow-y-auto">
+                            <template x-for="district in filteredDistricts()" :key="district.code">
+                                <div @click="selectDistrict(district); districtOpen = false;"
+                                     class="px-4 py-2.5 text-sm hover:bg-[#C1121F]/5 cursor-pointer transition border-b border-[#F5F5F5] last:border-0"
+                                     :class="{'bg-[#C1121F]/5 font-semibold text-[#C1121F]': district.code === selectedDistrict}">
+                                    <span x-text="district.name"></span>
+                                </div>
+                            </template>
+                            <div x-show="filteredDistricts().length === 0" class="px-4 py-2.5 text-sm text-gray-400 text-center">Tidak ditemukan</div>
+                        </div>
+                        <input type="hidden" name="district_code" :value="selectedDistrict">
+                    </div>
                 </div>
+
+                {{-- Alamat Detail --}}
                 <div>
                     <label class="block text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">Alamat Detail (Jalan, RT/RW) <span class="text-[#C1121F]">*</span></label>
                     <textarea name="address" rows="2" class="w-full px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111] transition"
@@ -142,16 +203,11 @@
         <div class="bg-white border border-[#E5E5E5] rounded-[12px] p-6 shadow-sm" x-data="coverageSelect()">
             <h3 class="font-mono uppercase tracking-wider text-xs font-bold text-[#111111] mb-4">🗺️ Zona Layanan (Coverage)</h3>
             <p class="text-sm text-gray-500 mb-4 font-light">Pilih kota mana saja yang dilayani agency Anda. Minimal pilih kota domisili Anda.</p>
-
             <div class="mb-4">
                 <input type="text" x-model="searchQuery" placeholder="🔍 Filter kota..." 
                        class="w-full px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111] transition text-sm">
             </div>
-
-            <div class="mb-3 text-sm text-gray-500 font-light">
-                Terpilih: <strong x-text="selected.length" class="text-[#C1121F]"></strong> kota
-            </div>
-
+            <div class="mb-3 text-sm text-gray-500 font-light">Terpilih: <strong x-text="selected.length" class="text-[#C1121F]"></strong> kota</div>
             <div class="grid md:grid-cols-3 gap-3 max-h-80 overflow-y-auto">
                 <template x-for="city in filteredCities" :key="city.code">
                     <label class="flex items-center gap-3 p-3 border-2 border-[#E5E5E5] rounded-[12px] cursor-pointer hover:border-[#C1121F] transition"
@@ -165,7 +221,6 @@
                     </label>
                 </template>
             </div>
-
             <div class="flex gap-2 mt-3">
                 <button type="button" @click="selectAll()" class="text-xs text-[#C1121F] hover:underline font-medium">Pilih Semua</button>
                 <button type="button" @click="selected = []" class="text-xs text-gray-500 hover:underline font-medium">Reset</button>
@@ -175,21 +230,15 @@
         <!-- Kontak -->
         <div class="bg-white border border-[#E5E5E5] rounded-[12px] p-6 shadow-sm" x-data="contactForm()">
             <h3 class="font-mono uppercase tracking-wider text-xs font-bold text-[#111111] mb-4">📞 Kontak</h3>
-            
             <div class="space-y-4">
-                {{-- Nomor WhatsApp (WAJIB) --}}
                 <div>
-                    <label class="block text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">
-                        Nomor WhatsApp <span class="text-[#C1121F]">*</span>
-                    </label>
+                    <label class="block text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">Nomor WhatsApp <span class="text-[#C1121F]">*</span></label>
                     <input type="text" name="whatsapp" x-model="whatsapp" 
                            value="{{ old('whatsapp', auth()->user()->phone ?? '') }}"
                            class="w-full px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111] transition" 
                            placeholder="081234567890" required>
                     <p class="text-[10px] text-gray-400 mt-1 font-light">Notifikasi booking akan dikirim ke nomor ini</p>
                 </div>
-
-                {{-- Checkbox: Gunakan nomor yang sama --}}
                 <div class="bg-[#F5F5F5] border border-[#E5E5E5] rounded-[12px] p-4">
                     <label class="flex items-center gap-3 cursor-pointer">
                         <input type="checkbox" x-model="useSameNumber" 
@@ -200,12 +249,8 @@
                         </div>
                     </label>
                 </div>
-
-                {{-- Nomor Telepon (Opsional jika sama) --}}
                 <div x-show="!useSameNumber" x-transition>
-                    <label class="block text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">
-                        Nomor Telepon <span class="text-[#C1121F]">*</span>
-                    </label>
+                    <label class="block text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">Nomor Telepon <span class="text-[#C1121F]">*</span></label>
                     <input type="text" name="phone" x-model="phone"
                            :required="!useSameNumber"
                            value="{{ old('phone', $agency->contact_alternate ?? '') }}"
@@ -213,8 +258,6 @@
                            placeholder="081234567890">
                     <p class="text-[10px] text-gray-400 mt-1 font-light">Nomor telepon kantor/agen (bisa berbeda dengan WhatsApp)</p>
                 </div>
-
-                {{-- Email Bisnis --}}
                 <div>
                     <label class="block text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">Email Bisnis</label>
                     <input type="email" name="email_alternate" 
@@ -271,121 +314,162 @@
 
 @push('scripts')
 <script>
-// ═══════════════════════════════════════
-// CONTACT FORM (WhatsApp + Phone Checkbox)
-// ═══════════════════════════════════════
 function contactForm() {
     return {
         whatsapp: '{{ old('whatsapp', auth()->user()->phone ?? '') }}',
         phone: '{{ old('phone', $agency->contact_alternate ?? '') }}',
         useSameNumber: {{ (old('whatsapp') && old('phone') && old('whatsapp') === old('phone')) || (!old('whatsapp') && auth()->user()->phone && auth()->user()->phone === ($agency->contact_alternate ?? '')) || empty(old('phone', $agency->contact_alternate ?? '')) ? 'true' : 'false' }},
-
         init() {
-            // Kalau phone kosong atau sama dengan whatsapp, auto-centang
             if (!this.phone || this.phone === this.whatsapp) {
                 this.useSameNumber = true;
                 this.phone = this.whatsapp;
             }
-            
-            // Watch perubahan whatsapp
-            this.$watch('whatsapp', (value) => {
-                if (this.useSameNumber) {
-                    this.phone = value;
-                }
-            });
-            
-            // Watch perubahan checkbox
-            this.$watch('useSameNumber', (value) => {
-                if (value) {
-                    this.phone = this.whatsapp;
-                }
-            });
+            this.$watch('whatsapp', (value) => { if (this.useSameNumber) this.phone = value; });
+            this.$watch('useSameNumber', (value) => { if (value) this.phone = this.whatsapp; });
         }
     }
 }
 
-// ═══════════════════════════════════════
-// LOCATION SELECT (CHAINED DROPDOWN)
-// ═══════════════════════════════════════
 function locationSelect() {
     return {
-        province: '{{ old('province_code', $agency->province_code ?? '') }}',
-        city: '{{ old('city_code', $agency->city_code ?? '') }}',
-        district: '{{ old('district_code', $agency->district_code ?? '') }}',
+        selectedProvince: '{{ old('province_code', $agency->province_code ?? '') }}',
+        selectedCity: '{{ old('city_code', $agency->city_code ?? '') }}',
+        selectedDistrict: '{{ old('district_code', $agency->district_code ?? '') }}',
         
-        // ⚡ PRELOAD: Data cities & districts dari server
+        provinceSearch: '',
+        provinceOpen: false,
+        citySearch: '',
+        cityOpen: false,
+        districtSearch: '',
+        districtOpen: false,
+        
+        provinces: @json($provinces->map(fn($p) => ['code' => $p->code, 'name' => $p->name])),
         cities: @json($preloadedCities),
         districts: @json($preloadedDistricts),
-
+        
+        filteredProvinces() {
+            var q = (this.provinceSearch || '').toLowerCase();
+            if (!q) return this.provinces;
+            return this.provinces.filter(p => p.name.toLowerCase().includes(q));
+        },
+        filteredCities() {
+            var q = (this.citySearch || '').toLowerCase();
+            if (!q) return this.cities;
+            return this.cities.filter(c => c.name.toLowerCase().includes(q));
+        },
+        filteredDistricts() {
+            var q = (this.districtSearch || '').toLowerCase();
+            if (!q) return this.districts;
+            return this.districts.filter(d => d.name.toLowerCase().includes(q));
+        },
+        getProvinceName() {
+            if (!this.selectedProvince) return '';
+            var p = this.provinces.find(p => p.code === this.selectedProvince);
+            return p ? p.name : '';
+        },
+        getCityName() {
+            if (!this.selectedCity) return '';
+            var c = this.cities.find(c => c.code === this.selectedCity);
+            return c ? c.name : '';
+        },
+        getDistrictName() {
+            if (!this.selectedDistrict) return '';
+            var d = this.districts.find(d => d.code === this.selectedDistrict);
+            return d ? d.name : '';
+        },
+        selectProvince(province) {
+            this.selectedProvince = province.code;
+            this.selectedCity = '';
+            this.selectedDistrict = '';
+            this.cities = [];
+            this.districts = [];
+            this.provinceSearch = province.name;
+            this.loadCities();
+        },
+        selectCity(city) {
+            this.selectedCity = city.code;
+            this.selectedDistrict = '';
+            this.districts = [];
+            this.citySearch = city.name;
+            this.loadDistricts();
+        },
+        selectDistrict(district) {
+            this.selectedDistrict = district.code;
+            this.districtSearch = district.name;
+        },
         async loadCities() {
-            if (!this.province) { 
-                this.cities = []; 
-                this.city = ''; 
-                this.district = ''; 
-                return; 
-            }
-            
+            if (!this.selectedProvince) return;
             try {
-                const res = await fetch(`/api/v1/region/cities?province=${this.province}`);
+                const res = await fetch(`/api/v1/region/cities?province=${this.selectedProvince}`);
                 const data = await res.json();
                 this.cities = data.data || data || [];
-                
-                if (this.city && !this.cities.find(c => c.code === this.city)) {
-                    this.city = '';
-                    this.district = '';
-                }
-            } catch (e) {
-                console.error('Failed to load cities:', e);
-            }
+                @if(old('city_code'))
+                var oldCityCode = '{{ old('city_code') }}';
+                var foundCity = this.cities.find(c => c.code === oldCityCode);
+                if (foundCity) { this.selectedCity = oldCityCode; this.citySearch = foundCity.name; this.loadDistricts(); }
+                @endif
+            } catch (e) {}
         },
-
         async loadDistricts() {
-            if (!this.city) { 
-                this.districts = []; 
-                this.district = ''; 
-                return; 
-            }
-            
+            if (!this.selectedCity) return;
             try {
-                const res = await fetch(`/api/v1/region/districts?city=${this.city}`);
+                const res = await fetch(`/api/v1/region/districts?city=${this.selectedCity}`);
                 const data = await res.json();
                 this.districts = data.data || data || [];
-                
-                if (this.district && !this.districts.find(d => d.code === this.district)) {
-                    this.district = '';
-                }
-            } catch (e) {
-                console.error('Failed to load districts:', e);
-            }
+                @if(old('district_code'))
+                var oldDistCode = '{{ old('district_code') }}';
+                var foundDist = this.districts.find(d => d.code === oldDistCode);
+                if (foundDist) { this.selectedDistrict = oldDistCode; this.districtSearch = foundDist.name; }
+                @endif
+            } catch (e) {}
         },
-
-        init() {
-            if (this.province && this.cities.length === 0) {
-                this.loadCities().then(() => {
-                    if (this.city && this.districts.length === 0) {
-                        this.loadDistricts();
+        initLocation() {
+            if (this.selectedProvince && this.getProvinceName()) {
+                this.provinceSearch = this.getProvinceName();
+                if (this.cities.length === 0 && this.selectedProvince) {
+                    this.loadCities().then(() => {
+                        if (this.selectedCity && this.getCityName()) {
+                            this.citySearch = this.getCityName();
+                            if (this.districts.length === 0 && this.selectedCity) {
+                                this.loadDistricts().then(() => {
+                                    if (this.selectedDistrict && this.getDistrictName()) this.districtSearch = this.getDistrictName();
+                                });
+                            } else if (this.selectedDistrict && this.getDistrictName()) this.districtSearch = this.getDistrictName();
+                        }
+                    });
+                } else {
+                    if (this.selectedCity && this.getCityName()) {
+                        this.citySearch = this.getCityName();
+                        if (this.districts.length === 0 && this.selectedCity) {
+                            this.loadDistricts().then(() => {
+                                if (this.selectedDistrict && this.getDistrictName()) this.districtSearch = this.getDistrictName();
+                            });
+                        } else if (this.selectedDistrict && this.getDistrictName()) this.districtSearch = this.getDistrictName();
                     }
-                });
+                }
             }
+            @if(old('province_code') && old('province_code') !== ($agency->province_code ?? ''))
+            this.selectedProvince = '{{ old('province_code') }}';
+            this.selectedCity = '';
+            this.selectedDistrict = '';
+            this.cities = [];
+            this.districts = [];
+            this.loadCities();
+            @endif
         }
     }
 }
 
-// ═══════════════════════════════════════
-// COVERAGE SELECT
-// ═══════════════════════════════════════
 function coverageSelect() {
     return {
         selected: @json(old('coverage_cities', $agency->coverage_cities ?? [])),
         searchQuery: '',
         allCities: @json($allCities->map(fn($c) => ['code' => $c->code, 'name' => $c->name, 'province_name' => $c->province?->name ?? ''])),
-
         get filteredCities() {
             if (!this.searchQuery) return this.allCities;
             const q = this.searchQuery.toLowerCase();
             return this.allCities.filter(c => c.name.toLowerCase().includes(q) || c.province_name.toLowerCase().includes(q));
         },
-
         selectAll() { this.selected = this.allCities.map(c => c.code); }
     }
 }

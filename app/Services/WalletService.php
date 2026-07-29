@@ -42,50 +42,149 @@ class WalletService
             throw new \InvalidArgumentException('Credit amount must be positive.');
         }
 
-        DB::transaction(function () use ($agency, $amount, $description, $refType, $refId) {
-            // ⚡ PESSIMISTIC LOCK: Mencegah race condition
+        // ✅ TAMBAHKAN: Retry logic untuk deadlock
+        $maxRetries = 3;
+        $attempt = 0;
+        
+        while ($attempt < $maxRetries) {
+            try {
+                DB::transaction(function () use ($agency, $amount, $description, $refType, $refId) {
+                    $wallet = AgencyWallet::where('agency_id', $agency->id)
+                        ->lockForUpdate()
+                        ->first();
+
+                    if (!$wallet) {
+                        $wallet = AgencyWallet::create([
+                            'agency_id' => $agency->id,
+                            'available_balance' => 0,
+                            'pending_balance' => 0,
+                            'deposit_balance' => 0,
+                            'cod_hold_balance' => 0,
+                            'total_earned' => 0,
+                            'total_withdrawn' => 0,
+                        ]);
+                    }
+
+                    $balanceBefore = (float) $wallet->available_balance;
+                    $balanceAfter = $balanceBefore + $amount;
+
+                    $wallet->update([
+                        'available_balance' => $balanceAfter,
+                        'total_earned' => (float) $wallet->total_earned + $amount,
+                    ]);
+
+                    WalletTransaction::create([
+                        'agency_id' => $agency->id,
+                        'type' => 'credit',
+                        'amount' => $amount,
+                        'balance_before' => $balanceBefore,
+                        'balance_after' => $balanceAfter,
+                        'description' => $description,
+                        'reference_type' => $refType,
+                        'reference_id' => $refId,
+                        'created_at' => now(),
+                    ]);
+
+                    Log::info('Wallet credited', [
+                        'agency_id' => $agency->id,
+                        'amount' => $amount,
+                        'balance_before' => $balanceBefore,
+                        'balance_after' => $balanceAfter,
+                        'reference' => $refType . '#' . $refId,
+                    ]);
+                });
+                
+                // Jika berhasil, keluar dari loop
+                return;
+                
+            } catch (\Illuminate\Database\QueryException $e) {
+                $attempt++;
+                
+                // Jika deadlock, retry
+                if ($e->getCode() === '40001' && $attempt < $maxRetries) {
+                    Log::warning('Wallet credit deadlock, retrying', [
+                        'attempt' => $attempt,
+                        'agency_id' => $agency->id,
+                    ]);
+                    usleep($attempt * 100000); // Exponential backoff: 100ms, 200ms, 300ms
+                    continue;
+                }
+                
+                // Jika bukan deadlock atau sudah max retries, throw
+                Log::error('Wallet credit failed', [
+                    'agency_id' => $agency->id,
+                    'amount' => $amount,
+                    'error' => $e->getMessage(),
+                    'attempts' => $attempt,
+                ]);
+                throw $e;
+            }
+        }
+    }
+
+    /**
+     * Credit wallet untuk pendapatan rental
+     */
+    public function creditRentalRevenue(Rental $rental): void
+    {
+        DB::transaction(function () use ($rental) {
+            // ✅ TAMBAHKAN: Idempotency check
+            $alreadyCredited = WalletTransaction::where('reference_type', 'rental_revenue')
+                ->where('reference_id', $rental->id)
+                ->exists();
+
+            if ($alreadyCredited) {
+                Log::warning('Rental revenue already credited - skipping', [
+                    'rental_code' => $rental->rental_code,
+                    'rental_id' => $rental->id,
+                ]);
+                return;
+            }
+
+            $agency = $rental->agency;
+            $revenue = $rental->subtotal - $rental->platform_fee;
+
+            if ($revenue <= 0) {
+                Log::warning('Rental revenue is zero or negative', [
+                    'rental_code' => $rental->rental_code,
+                    'subtotal' => $rental->subtotal,
+                    'platform_fee' => $rental->platform_fee,
+                ]);
+                return;
+            }
+
             $wallet = AgencyWallet::where('agency_id', $agency->id)
                 ->lockForUpdate()
                 ->first();
 
             if (!$wallet) {
-                $wallet = AgencyWallet::create([
-                    'agency_id' => $agency->id,
-                    'available_balance' => 0,
-                    'pending_balance' => 0,
-                    'deposit_balance' => 0,
-                    'cod_hold_balance' => 0,
-                    'total_earned' => 0,
-                    'total_withdrawn' => 0,
-                ]);
+                $wallet = $this->getOrCreateWallet($agency);
             }
 
             $balanceBefore = (float) $wallet->available_balance;
-            $balanceAfter = $balanceBefore + $amount;
+            $balanceAfter = $balanceBefore + $revenue;
 
             $wallet->update([
                 'available_balance' => $balanceAfter,
-                'total_earned' => (float) $wallet->total_earned + $amount,
+                'total_earned' => (float) $wallet->total_earned + $revenue,
             ]);
 
             WalletTransaction::create([
                 'agency_id' => $agency->id,
                 'type' => 'credit',
-                'amount' => $amount,
+                'amount' => $revenue,
                 'balance_before' => $balanceBefore,
                 'balance_after' => $balanceAfter,
-                'description' => $description,
-                'reference_type' => $refType,
-                'reference_id' => $refId,
+                'description' => "Pendapatan rental {$rental->rental_code}",
+                'reference_type' => 'rental_revenue',
+                'reference_id' => $rental->id,
                 'created_at' => now(),
             ]);
 
-            Log::info('Wallet credited', [
+            Log::info('Rental revenue credited', [
+                'rental_code' => $rental->rental_code,
                 'agency_id' => $agency->id,
-                'amount' => $amount,
-                'balance_before' => $balanceBefore,
-                'balance_after' => $balanceAfter,
-                'reference' => $refType . '#' . $refId,
+                'amount' => $revenue,
             ]);
         });
     }

@@ -1,6 +1,4 @@
 <?php
-// File: app/Models/PlatformSetting.php
-// Deskripsi: PlatformSetting model untuk konfigurasi platform
 
 namespace App\Models;
 
@@ -35,15 +33,25 @@ class PlatformSetting extends Model
 
     public static function setValue(string $key, mixed $value, ?int $userId = null): void
     {
-        $setting = self::updateOrCreate(
-            ['key' => $key],
-            [
-                'value' => $value,
-                'updated_by' => $userId,
-            ]
-        );
+        // ✅ GUNAKAN LOCK untuk mencegah race condition
+        Cache::lock("platform_setting_lock_{$key}", 5)->block(3, function () use ($key, $value, $userId) {
+            $setting = self::updateOrCreate(
+                ['key' => $key],
+                [
+                    'value' => $value,
+                    'updated_by' => $userId,
+                ]
+            );
 
-        Cache::forget("platform_setting_{$key}");
+            // ✅ Hapus individual cache DAN all-settings cache
+            Cache::forget("platform_setting_{$key}");
+            Cache::forget('platform_settings_all');
+            
+            \Log::info('Platform setting updated', [
+                'key' => $key,
+                'updated_by' => $userId,
+            ]);
+        });
     }
 
     public static function getAllSettings(): array
@@ -60,7 +68,7 @@ class PlatformSetting extends Model
             Cache::forget("platform_setting_{$key}");
         }
         Cache::forget('platform_settings_all');
+        
+        \Log::info('All platform settings cache cleared');
     }
 }
-
-// End of file

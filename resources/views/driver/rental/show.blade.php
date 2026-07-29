@@ -4,7 +4,7 @@
 @section('content')
 
 <div class="max-w-2xl mx-auto">
-    <a href="{{ route('driver.rentals') }}" class="text-[#C1121F] text-sm mb-4 inline-block hover:underline">
+    <a href="{{ route('driver.rentals.index') }}" class="text-[#C1121F] text-sm mb-4 inline-block hover:underline">
         ← Kembali ke Daftar Rental
     </a>
 
@@ -158,7 +158,7 @@
     @if($rental->status == 'paid' || $rental->status == 'active')
     <div class="space-y-3">
         @if($rental->status == 'paid')
-        <form action="{{ route('driver.rental.verify-pickup', $rental) }}" method="POST">
+        <form action="{{ route('driver.rentals.verify-pickup', $rental) }}" method="POST">
             @csrf
             <button type="submit" 
                     class="w-full bg-[#C1121F] text-white py-4 rounded-[12px] font-bold text-lg hover:bg-[#8A0F18] transition shadow-sm"
@@ -169,7 +169,7 @@
         @endif
 
         @if($rental->status == 'active')
-        <form action="{{ route('driver.rental.verify-return', $rental) }}" method="POST">
+        <form action="{{ route('driver.rentals.verify-return', $rental) }}" method="POST">
             @csrf
             <button type="submit" 
                     class="w-full bg-blue-600 text-white py-4 rounded-[12px] font-bold text-lg hover:bg-blue-700 transition shadow-sm"

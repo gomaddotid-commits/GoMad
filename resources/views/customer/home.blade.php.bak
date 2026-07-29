@@ -6,18 +6,21 @@
 @php
     $user = auth()->user();
     
+    // Riwayat Travel (5 terakhir)
     $recentBookings = \App\Models\Booking::with(['schedule.route', 'originStop', 'destinationStop', 'payment'])
         ->where('customer_id', $user->id)
         ->latest()
         ->limit(5)
         ->get();
     
+    // Riwayat Rental (5 terakhir)
     $recentRentals = \App\Models\Rental::with(['vehicle', 'agency'])
         ->where('customer_id', $user->id)
         ->latest()
         ->limit(5)
         ->get();
     
+    // Promo Aktif
     $activePromos = \App\Models\Promo::active()
         ->where(function($q) {
             $q->where('module', 'travel')->orWhere('module', 'all');
@@ -26,17 +29,19 @@
         ->limit(4)
         ->get();
     
+    // Status dokumen untuk rental
     $rentalService = app(\App\Services\RentalService::class);
     $docStatus = $rentalService->getCustomerDocumentStatus($user);
     $canSelfDrive = $docStatus['is_complete_for_self_drive'];
     
+    // Referral
     $referralCode = \App\Models\ReferralCode::where('user_id', $user->id)->first();
     if (!$referralCode) {
         $referralCode = app(\App\Services\PromoService::class)->generateReferralCode($user);
     }
 @endphp
 
-<div class="container-magazine py-6 md:py-8" x-data="{ loading: true }" x-init="setTimeout(() => loading = false, 800)">
+<div class="container-magazine py-6 md:py-8">
     
     {{-- Welcome Section --}}
     <div class="mb-8">
@@ -59,6 +64,7 @@
 
     {{-- CTA CARDS --}}
     <div class="grid md:grid-cols-2 gap-6 mb-8">
+        {{-- Travel Card --}}
         <a href="{{ route('customer.search') }}" 
            class="bg-white border border-[#E5E7EB] rounded-[12px] p-6 shadow-gomad hover:border-[#BA1826] hover:shadow-gomad-lg transition-all group">
             <div class="flex items-start gap-5">
@@ -81,6 +87,7 @@
             </div>
         </a>
 
+        {{-- Rental Card --}}
         <a href="{{ route('customer.rental.browse') }}" 
            class="bg-white border border-[#E5E7EB] rounded-[12px] p-6 shadow-gomad hover:border-[#BA1826] hover:shadow-gomad-lg transition-all group">
             <div class="flex items-start gap-5">
@@ -122,12 +129,6 @@
                     </h2>
                     <a href="{{ route('customer.bookings') }}" class="text-sm text-[#BA1826] hover:underline font-medium">Lihat Semua →</a>
                 </div>
-
-                {{-- ✅ SKELETON LOADING --}}
-                <div x-show="loading" x-cloak>
-                    <x-skeleton-card type="booking" :count="5" />
-                </div>
-                <div x-show="!loading" x-cloak>
 
                 @if($recentBookings->isEmpty())
                 <div class="bg-white border border-[#E5E7EB] rounded-[12px] p-8 text-center shadow-sm">
@@ -181,7 +182,6 @@
                     @endforeach
                 </div>
                 @endif
-                </div>
             </div>
 
             {{-- ✅ Riwayat Rental --}}
@@ -192,12 +192,6 @@
                     </h2>
                     <a href="{{ route('customer.rentals') }}" class="text-sm text-[#BA1826] hover:underline font-medium">Lihat Semua →</a>
                 </div>
-
-                {{-- ✅ SKELETON LOADING --}}
-                <div x-show="loading" x-cloak>
-                    <x-skeleton-card type="rental" :count="5" />
-                </div>
-                <div x-show="!loading" x-cloak>
 
                 @if($recentRentals->isEmpty())
                 <div class="bg-white border border-[#E5E7EB] rounded-[12px] p-8 text-center shadow-sm">
@@ -252,7 +246,6 @@
                     @endforeach
                 </div>
                 @endif
-                </div>
             </div>
         </div>
 
@@ -265,12 +258,6 @@
                     <span>🎫</span> Promo Aktif
                 </h2>
                 
-                {{-- ✅ SKELETON LOADING --}}
-                <div x-show="loading" x-cloak>
-                    <x-skeleton-card type="promo" :count="4" />
-                </div>
-                <div x-show="!loading" x-cloak>
-
                 @if($activePromos->isEmpty())
                 <div class="bg-white border border-[#E5E7EB] rounded-[12px] p-6 text-center shadow-sm">
                     <span class="text-3xl block mb-2">🎫</span>
@@ -309,7 +296,6 @@
                     @endforeach
                 </div>
                 @endif
-                </div>
             </div>
 
             {{-- ✅ Akses Cepat --}}
@@ -334,19 +320,25 @@
                        class="bg-white border border-[#E5E7EB] rounded-[12px] p-4 text-center hover:border-[#BA1826] transition-colors shadow-sm group">
                         <span class="text-2xl block mb-2 group-hover:scale-110 transition-transform">🎫</span>
                         <span class="text-xs font-semibold text-[#111827] block">Booking Saya</span>
-                        <span class="text-[10px] text-gray-400 font-light">{{ $recentBookings->count() }} travel</span>
+                        <span class="text-[10px] text-gray-400 font-light">
+                            {{ $recentBookings->count() }} travel
+                        </span>
                     </a>
                     <a href="{{ route('customer.rentals') }}" 
                        class="bg-white border border-[#E5E7EB] rounded-[12px] p-4 text-center hover:border-[#BA1826] transition-colors shadow-sm group">
                         <span class="text-2xl block mb-2 group-hover:scale-110 transition-transform">📋</span>
                         <span class="text-xs font-semibold text-[#111827] block">Rental Saya</span>
-                        <span class="text-[10px] text-gray-400 font-light">{{ $recentRentals->count() }} rental</span>
+                        <span class="text-[10px] text-gray-400 font-light">
+                            {{ $recentRentals->count() }} rental
+                        </span>
                     </a>
                     <a href="{{ route('customer.documents') }}" 
                        class="bg-white border border-[#E5E7EB] rounded-[12px] p-4 text-center hover:border-[#BA1826] transition-colors shadow-sm group">
                         <span class="text-2xl block mb-2 group-hover:scale-110 transition-transform">📄</span>
                         <span class="text-xs font-semibold text-[#111827] block">Dokumen</span>
-                        <span class="text-[10px] text-gray-400 font-light">{{ $canSelfDrive ? '✅ Lengkap' : '⚠️ Perlu' }}</span>
+                        <span class="text-[10px] text-gray-400 font-light">
+                            @if($canSelfDrive) ✅ Lengkap @else ⚠️ Perlu @endif
+                        </span>
                     </a>
                     <a href="{{ route('customer.profile') }}" 
                        class="bg-white border border-[#E5E7EB] rounded-[12px] p-4 text-center hover:border-[#BA1826] transition-colors shadow-sm group">
@@ -361,21 +353,24 @@
             <div class="bg-gradient-to-br from-[#BA1826] to-[#8A0F18] rounded-[12px] p-5 text-white shadow-gomad">
                 <h3 class="font-bold text-lg mb-2">🎁 Ajak Teman, Dapat Diskon!</h3>
                 <p class="text-sm text-white/80 font-light mb-4">Bagikan kode referral dan dapatkan diskon hingga 50%!</p>
+                
                 <div class="bg-white/10 backdrop-blur rounded-[10px] p-3 mb-3 text-center border border-white/10">
                     <p class="text-[10px] font-mono uppercase tracking-wider text-white/70 mb-1">Kode Referral Anda</p>
                     <p class="text-2xl font-mono font-bold tracking-widest">{{ $referralCode->code }}</p>
                 </div>
+                
                 <div class="grid grid-cols-2 gap-2">
                     <button onclick="copyReferralCode()" 
                             class="bg-white/20 text-white py-2 rounded-[10px] text-xs font-semibold hover:bg-white/30 transition text-center">
                         📋 Copy Kode
                     </button>
-                    @php $waText = "Daftar GoMad pakai kode referral saya: *" . $referralCode->code . "*\n\nDaftar di: " . route('register', ['ref' => $referralCode->code]); @endphp
-                    <a href="https://wa.me/?text={{ rawurlencode($waText) }}" target="_blank"
+                    <a href="https://wa.me/?text={{ urlencode('Daftar GoMad pakai kode referral saya: ' . $referralCode->code . ' 🎁\nDaftar di: ' . route('register', ['ref' => $referralCode->code])) }}" 
+                       target="_blank"
                        class="bg-green-500 text-white py-2 rounded-[10px] text-xs font-semibold hover:bg-green-600 transition text-center">
                         💬 Share WA
                     </a>
                 </div>
+                
                 <div class="grid grid-cols-2 gap-2 mt-3">
                     <div class="bg-white/10 rounded-[8px] p-2 text-center border border-white/10">
                         <p class="text-[10px] font-mono uppercase tracking-wider text-white/70">Mengajak</p>

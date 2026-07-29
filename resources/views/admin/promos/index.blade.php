@@ -44,6 +44,7 @@
             <table class="w-full text-sm">
                 <thead class="bg-[#F5F5F5] border-b border-[#E5E5E5]">
                     <tr>
+                        <th class="px-4 py-3 text-center font-mono uppercase tracking-wider text-xs text-gray-500">Gambar</th>
                         <th class="px-4 py-3 text-left font-mono uppercase tracking-wider text-xs text-gray-500">Nama</th>
                         <th class="px-4 py-3 text-center font-mono uppercase tracking-wider text-xs text-gray-500">Jenis</th>
                         <th class="px-4 py-3 text-center font-mono uppercase tracking-wider text-xs text-gray-500">Modul</th>
@@ -56,6 +57,15 @@
                 <tbody class="divide-y divide-[#E5E5E5]">
                     @forelse($promos as $promo)
                     <tr class="hover:bg-[#F5F5F5]">
+                        {{-- Gambar --}}
+                        <td class="px-4 py-3 text-center">
+                            @if($promo->image)
+                            <img src="{{ $promo->image_url }}" alt="{{ $promo->name }}" class="w-12 h-12 object-cover rounded-lg mx-auto border border-[#E5E5E5]">
+                            @else
+                            <div class="w-12 h-12 bg-[#F5F5F5] rounded-lg mx-auto flex items-center justify-center text-lg border border-[#E5E5E5]">🎫</div>
+                            @endif
+                        </td>
+                        
                         {{-- Nama --}}
                         <td class="px-4 py-3 font-medium text-[#111111]">{{ $promo->name }}</td>
                         
@@ -117,7 +127,7 @@
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="7" class="px-4 py-8 text-center text-gray-500 font-light">
+                        <td colspan="8" class="px-4 py-8 text-center text-gray-500 font-light">
                             Belum ada promo. 
                             <a href="{{ route('admin.promos.create') }}" class="text-[#C1121F] hover:underline font-medium">Buat promo pertama</a>
                         </td>

@@ -1,6 +1,4 @@
 <?php
-// File: app/Console/Kernel.php
-// Deskripsi: Kernel untuk scheduling commands
 
 namespace App\Console;
 
@@ -23,8 +21,14 @@ class Kernel extends ConsoleKernel
         // Generate settlement setiap Senin jam 00:01
         $schedule->command('gomad:generate-settlements')->weeklyOn(1, '00:01');
 
-        // ⚡ TAMBAHKAN: Bersihkan token expired setiap hari
+        // Bersihkan token expired setiap hari
         $schedule->command('sanctum:prune-expired')->dailyAt('03:00');
+        
+        // Bersihkan job failed lebih dari 7 hari
+        $schedule->command('queue:prune-failed --hours=168')->dailyAt('03:30');
+        
+        // Bersihkan cache lama setiap minggu
+        $schedule->command('cache:prune-stale-tags')->weekly();
     }
 
     protected function commands(): void
@@ -34,5 +38,3 @@ class Kernel extends ConsoleKernel
         require base_path('routes/console.php');
     }
 }
-
-// End of file

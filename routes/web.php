@@ -174,8 +174,6 @@ Route::middleware(['auth', \App\Http\Middleware\Web\AgencyMiddleware::class])
         Route::delete('/schedules/{schedule}', [WebAgencyScheduleController::class, 'destroy'])->name('schedules.destroy');
         Route::post('/schedules/{schedule}/assign-driver', [WebAgencyScheduleController::class, 'assignDriver'])->name('schedules.assign-driver');
         Route::post('/schedules/{schedule}/start', [WebAgencyScheduleController::class, 'startSchedule'])->name('schedules.start');
-        Route::delete('/schedules/{schedule}', [WebAgencyScheduleController::class, 'destroy'])->name('schedules.destroy');
-        Route::delete('/schedules/{schedule}', [WebAgencyScheduleController::class, 'destroy'])->name('schedules.destroy');
 
         Route::get('/bookings', [WebAgencyBookingController::class, 'index'])->name('bookings.index');
         Route::get('/bookings/{booking}', [WebAgencyBookingController::class, 'show'])->name('bookings.show');
@@ -412,7 +410,7 @@ Route::get('/forgot-password', [App\Http\Controllers\Web\Auth\ForgotPasswordCont
     ->name('password.request');
 
 Route::post('/forgot-password', [App\Http\Controllers\Web\Auth\ForgotPasswordController::class, 'sendResetLink'])
-    ->middleware('guest')
+    ->middleware(['guest', 'throttle:3,10'])  // ✅ Max 3 requests per 10 minutes
     ->name('password.email');
 
 Route::get('/reset-password/{token}', [App\Http\Controllers\Web\Auth\ForgotPasswordController::class, 'showResetForm'])

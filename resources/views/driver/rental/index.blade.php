@@ -22,7 +22,7 @@
         @else
         <div class="space-y-3">
             @foreach($todayRentals as $rental)
-            <a href="{{ route('driver.rental.show', $rental) }}" 
+            <a href="{{ route('driver.rentals.show', $rental) }}" 
                class="block bg-white border border-[#E5E5E5] rounded-[12px] p-5 shadow-sm hover:border-[#C1121F] transition border-l-4
                    @if($rental->status == 'active') border-green-500
                    @else border-[#C1121F] @endif">
@@ -68,7 +68,7 @@
         </h2>
         <div class="space-y-3">
             @foreach($upcomingRentals as $rental)
-            <a href="{{ route('driver.rental.show', $rental) }}" 
+            <a href="{{ route('driver.rentals.show', $rental) }}" 
                class="block bg-white border border-[#E5E5E5] rounded-[12px] p-4 shadow-sm hover:border-[#C1121F] transition">
                 <div class="flex justify-between items-center">
                     <div>
@@ -95,7 +95,7 @@
         </h2>
         <div class="space-y-2 opacity-60">
             @foreach($pastRentals as $rental)
-            <a href="{{ route('driver.rental.show', $rental) }}" 
+            <a href="{{ route('driver.rentals.show', $rental) }}" 
                class="block bg-white border border-[#E5E5E5] rounded-[12px] p-3 shadow-sm">
                 <div class="flex justify-between items-center">
                     <div>

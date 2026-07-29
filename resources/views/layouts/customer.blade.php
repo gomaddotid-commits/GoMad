@@ -81,7 +81,7 @@
             {{-- Drawer --}}
             <div class="absolute right-0 top-0 h-full w-3/4 max-w-sm bg-white shadow-2xl flex flex-col" @click.stop="">
                 {{-- Header --}}
-                <div class="p-5 border-b border-[#E5E7EB] flex items-center justify-between">
+                <div class="p-5 border-b border-[#E5E7EB] flex items-center justify-between flex-shrink-0">
                     <div class="flex items-center gap-2">
                         <span class="text-xl font-bold tracking-tighter text-[#111827]">GO</span>
                         <span class="text-[#BA1826] text-xl font-bold tracking-tighter">MAD</span>
@@ -92,7 +92,7 @@
                 </div>
 
                 {{-- User Info --}}
-                <div class="p-5 border-b border-[#E5E7EB]">
+                <div class="p-5 border-b border-[#E5E7EB] flex-shrink-0">
                     <div class="flex items-center gap-3">
                         <div class="w-10 h-10 rounded-full bg-[#BA1826] flex items-center justify-center text-white font-bold">
                             {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
@@ -104,7 +104,7 @@
                     </div>
                 </div>
 
-                {{-- MENU --}}
+                {{-- MENU - Scrollable --}}
                 <div class="flex-1 overflow-y-auto py-3">
                     {{-- AKSES DASAR --}}
                     <div class="px-5 py-2">
@@ -141,26 +141,35 @@
                             <span>📄</span> Dokumen Saya
                         </a>
                     </div>
-                </div>
-
-                {{-- Logout --}}
-                <div class="p-5 border-t border-[#E5E7EB]">
-                    <form action="{{ route('logout') }}" method="POST">
-                        @csrf
-                        <button type="submit" class="w-full text-left text-sm text-gray-400 hover:text-[#BA1826] transition py-2 font-medium">🚪 Logout</button>
-                    </form>
+                    
+                    {{-- LAINNYA --}}
+                    <div class="px-5 py-2">
+                        <p class="text-[10px] font-mono uppercase tracking-wider text-gray-400 mb-2">Lainnya</p>
+                        <a href="{{ route('eticket.public') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-[10px] text-sm text-gray-600 hover:bg-[#F9FAFB]" @click="mobileMenu = false">
+                            <span>🎟️</span> Cek E-Ticket
+                        </a>
+                        <a href="{{ route('listing') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-[10px] text-sm text-gray-600 hover:bg-[#F9FAFB]" @click="mobileMenu = false">
+                            <span>🏢</span> Daftar Agency
+                        </a>
+                        <form action="{{ route('logout') }}" method="POST">
+                            @csrf
+                            <button type="submit" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-[10px] text-sm text-red-500 hover:bg-red-50 transition font-medium">
+                                <span>🚪</span> Logout
+                            </button>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>
     </header>
 
     {{-- CONTENT --}}
-    <main class="min-h-screen pb-20 md:pb-0">
+    <main class="min-h-screen pb-24 md:pb-0">
         @yield('content')
     </main>
 
     {{-- BOTTOM NAV MOBILE --}}
-    <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-[#E5E7EB] md:hidden z-40">
+    <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-[#E5E7EB] md:hidden z-40 safe-area-bottom">
         <div class="flex items-center justify-around py-2">
             {{-- Home --}}
             <a href="{{ route('customer.home') }}" class="flex flex-col items-center gap-1 text-[10px] {{ request()->routeIs('customer.home') ? 'text-[#BA1826]' : 'text-gray-500' }}">
@@ -168,40 +177,23 @@
                 <span>Home</span>
             </a>
             
-            {{-- Cari --}}
-            @if(!$isRentalMode)
-            <a href="{{ route('customer.search') }}" class="flex flex-col items-center gap-1 text-[10px] {{ request()->routeIs('customer.search') ? 'text-[#BA1826]' : 'text-gray-500' }}">
+            {{-- Travel --}}
+            <a href="{{ route('customer.search') }}" class="flex flex-col items-center gap-1 text-[10px] {{ request()->routeIs('customer.search') && !$isRentalMode ? 'text-[#BA1826]' : 'text-gray-500' }}">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-                <span>Cari</span>
-            </a>
-            @else
-            <a href="{{ route('customer.rental.browse') }}" class="flex flex-col items-center gap-1 text-[10px] {{ request()->routeIs('customer.rental.browse') ? 'text-[#BA1826]' : 'text-gray-500' }}">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-                <span>Cari</span>
-            </a>
-            @endif
-            
-            {{-- Switch Modul --}}
-            <a href="{{ $isRentalMode ? route('customer.search') : route('customer.rental.browse') }}" 
-               class="flex flex-col items-center gap-1 text-[10px] {{ $isRentalMode ? 'text-gray-500' : 'text-gray-500' }}">
-                <div class="w-9 h-9 rounded-full bg-[#BA1826] text-white flex items-center justify-center text-sm -mt-4 shadow-lg border-2 border-white">
-                    {{ $isRentalMode ? '🚐' : '🚗' }}
-                </div>
-                <span class="font-medium">{{ $isRentalMode ? 'Travel' : 'Rental' }}</span>
+                <span>Travel</span>
             </a>
             
-            {{-- Booking/Rental Saya --}}
-            @if(!$isRentalMode)
+            {{-- Rental --}}
+            <a href="{{ route('customer.rental.browse') }}" class="flex flex-col items-center gap-1 text-[10px] {{ request()->routeIs('customer.rental*') ? 'text-[#BA1826]' : 'text-gray-500' }}">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
+                <span>Rental</span>
+            </a>
+            
+            {{-- Booking --}}
             <a href="{{ route('customer.bookings') }}" class="flex flex-col items-center gap-1 text-[10px] {{ request()->routeIs('customer.bookings*') ? 'text-[#BA1826]' : 'text-gray-500' }}">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
                 <span>Booking</span>
             </a>
-            @else
-            <a href="{{ route('customer.rentals') }}" class="flex flex-col items-center gap-1 text-[10px] {{ request()->routeIs('customer.rentals*') ? 'text-[#BA1826]' : 'text-gray-500' }}">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
-                <span>Rental</span>
-            </a>
-            @endif
             
             {{-- Profil --}}
             <a href="{{ route('customer.profile') }}" class="flex flex-col items-center gap-1 text-[10px] {{ request()->routeIs('customer.profile') ? 'text-[#BA1826]' : 'text-gray-500' }}">

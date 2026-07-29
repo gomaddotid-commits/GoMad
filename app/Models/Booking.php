@@ -18,6 +18,31 @@ class Booking extends Model
 {
     use HasFactory, SoftDeletes;
 
+    protected static function booted(): void
+    {
+        static::deleting(function (Booking $booking) {
+            if ($booking->isForceDeleting()) {
+                $booking->passengers()->delete();
+                $booking->payment()->delete();
+                $booking->cashPayment()->delete();
+                $booking->review()->delete();
+            } else {
+                // Soft delete relasi
+                $booking->passengers()->delete();
+                if ($booking->payment) {
+                    $booking->payment->update(['status' => \App\Enums\PaymentStatus::EXPIRED->value]);
+                }
+                if ($booking->cashPayment) {
+                    $booking->cashPayment->update(['status' => 'expired']);
+                }
+            }
+        });
+
+        static::restoring(function (Booking $booking) {
+            $booking->passengers()->withTrashed()->restore();
+        });
+    }
+
     protected $fillable = [
         'booking_code',
         'schedule_id',
@@ -247,6 +272,23 @@ class Booking extends Model
     public function getDestinationCityNameAttribute(): string
     {
         return $this->destinationStop?->city?->name ?? '-';
+    }
+
+    // ✅ TAMBAHKAN relasi
+    public function promoUsage(): HasOne
+    {
+        return $this->hasOne(PromoUsage::class);
+    }
+
+    // ✅ TAMBAHKAN accessor untuk promo
+    public function getPromoNameAttribute(): ?string
+    {
+        return $this->promoUsage?->promo?->name;
+    }
+
+    public function getDiscountAmountAttribute(): float
+    {
+        return (float) ($this->attributes['discount_amount'] ?? 0);
     }
 }
 

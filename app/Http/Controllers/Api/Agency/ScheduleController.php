@@ -1,13 +1,13 @@
 <?php
-// File: app/Http/Controllers/Api/Agency/ScheduleController.php
-// Deskripsi: API Controller untuk manajemen jadwal oleh agency
 
 namespace App\Http\Controllers\Api\Agency;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\CreateScheduleRequest;
 use App\Http\Resources\Api\ScheduleResource;
+use App\Models\RoutePricing;
 use App\Models\Schedule;
+use App\Models\ScheduleStop;
 use App\Services\ScheduleService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -22,8 +22,9 @@ class ScheduleController extends Controller
     {
         $agency = $request->user()->agency;
 
-        $query = Schedule::with(['route', 'vehicle', 'driver'])
-            ->where('agency_id', $agency->id);
+        $query = Schedule::with(['route', 'vehicle', 'driver', 'ppSchedule', 'childSchedule'])
+            ->where('agency_id', $agency->id)
+            ->whereNull('parent_schedule_id'); // Hanya schedule pergi
 
         if ($request->date) {
             $query->where('departure_date', $request->date);
@@ -55,18 +56,61 @@ class ScheduleController extends Controller
         $data = $request->validated();
         $data['agency_id'] = $request->user()->agency->id;
 
-        $schedule = $this->scheduleService->createSchedule($data);
+        // ✅ TAMBAHKAN: Validasi PP pricing wajib diisi jika PP diaktifkan
+        if (!empty($data['is_pp']) && $data['is_pp'] == '1') {
+            if (empty($data['pp_pricing'])) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Harga untuk jadwal PP wajib diisi jika PP diaktifkan.',
+                    'data' => null,
+                    'meta' => null,
+                ], 422);
+            }
+            if (empty($data['pp_stop_config'])) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Konfigurasi stop untuk jadwal PP wajib diisi.',
+                    'data' => null,
+                    'meta' => null,
+                ], 422);
+            }
+            if (empty($data['pp_date'])) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Tanggal PP harus diisi.',
+                    'data' => null,
+                    'meta' => null,
+                ], 422);
+            }
+        }
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Jadwal berhasil dibuat.',
-            'data' => new ScheduleResource($schedule),
-            'meta' => null,
-        ], 201);
+        try {
+            $schedule = $this->scheduleService->createSchedule($data);
+
+            $message = 'Jadwal berhasil dibuat.';
+            if (!empty($data['is_pp']) && $data['is_pp'] == '1') {
+                $message = 'Jadwal Pergi & Pulang (PP) berhasil dibuat!';
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => $message,
+                'data' => new ScheduleResource($schedule),
+                'meta' => null,
+            ], 201);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+                'data' => null,
+                'meta' => null,
+            ], 422);
+        }
     }
 
     public function show(Schedule $schedule): JsonResponse
     {
+        $schedule->load(['ppSchedule', 'childSchedule', 'parentSchedule']);
         $scheduleData = $this->scheduleService->getScheduleWithPricing($schedule);
 
         return response()->json([
@@ -109,7 +153,7 @@ class ScheduleController extends Controller
             ], 422);
         }
 
-        // Release COD deposit jika ada
+        // Release COD deposit
         if ($schedule->allow_cod && $schedule->cod_min_balance > 0) {
             $walletService = app(\App\Services\WalletService::class);
             $walletService->releaseCodDeposit(
@@ -117,6 +161,21 @@ class ScheduleController extends Controller
                 $schedule->cod_min_balance,
                 $schedule->id
             );
+        }
+
+        // Hapus juga schedule PP jika ada
+        if ($schedule->ppSchedule) {
+            $ppSchedule = $schedule->ppSchedule;
+            if ($ppSchedule->allow_cod && $ppSchedule->cod_min_balance > 0) {
+                $walletService = app(\App\Services\WalletService::class);
+                $walletService->releaseCodDeposit(
+                    $ppSchedule->agency,
+                    $ppSchedule->cod_min_balance,
+                    $ppSchedule->id
+                );
+            }
+            $ppSchedule->update(['is_active' => false]);
+            $ppSchedule->delete();
         }
 
         $schedule->update(['is_active' => false]);
@@ -177,21 +236,16 @@ class ScheduleController extends Controller
             'success' => true,
             'message' => 'Daftar pasangan wajib berhasil diambil.',
             'data' => $pairs,
-            'meta' => [
-                'total_pairs' => count($pairs),
-            ],
+            'meta' => ['total_pairs' => count($pairs)],
         ]);
     }
 
-    /**
-     * Get stop configuration untuk form konfigurasi
-     */
     public function stopConfig(Schedule $schedule): JsonResponse
     {
         $stops = $this->scheduleService->getStopConfiguration($schedule);
         $existingPricing = RoutePricing::where('schedule_id', $schedule->id)
             ->get()
-            ->map(function($p) {
+            ->map(function ($p) {
                 return [
                     'origin_stop_id' => $p->origin_stop_id,
                     'destination_stop_id' => $p->destination_stop_id,
@@ -210,10 +264,6 @@ class ScheduleController extends Controller
         ]);
     }
 
-    /**
-     * Toggle Pickup/Dropoff per stop - dipanggil via AJAX
-     * Return pairs yang perlu diisi harganya
-     */
     public function toggleStop(Request $request, Schedule $schedule): JsonResponse
     {
         $request->validate([
@@ -222,17 +272,14 @@ class ScheduleController extends Controller
             'enabled' => ['required', 'boolean'],
         ]);
 
-        // Update schedule stop
         $field = $request->type === 'pickup' ? 'is_pickup_available' : 'is_dropoff_available';
-        
+
         ScheduleStop::where('schedule_id', $schedule->id)
             ->where('route_stop_id', $request->route_stop_id)
             ->update([$field => $request->enabled]);
 
-        // Refresh schedule stops
         $schedule->load('scheduleStops.routeStop');
 
-        // Generate pairs yang perlu diisi
         $newPairs = $this->scheduleService->generatePairsForStopToggle(
             $schedule,
             $request->route_stop_id,
@@ -240,29 +287,25 @@ class ScheduleController extends Controller
             $request->enabled
         );
 
-        // Get existing pricing untuk pairs ini
         $existingPrices = RoutePricing::where('schedule_id', $schedule->id)
-            ->where(function($q) use ($newPairs) {
+            ->where(function ($q) use ($newPairs) {
                 foreach ($newPairs as $pair) {
-                    $q->orWhere(function($sq) use ($pair) {
+                    $q->orWhere(function ($sq) use ($pair) {
                         $sq->where('origin_stop_id', $pair['origin_stop_id'])
-                        ->where('destination_stop_id', $pair['destination_stop_id']);
+                           ->where('destination_stop_id', $pair['destination_stop_id']);
                     });
                 }
             })
             ->get()
-            ->keyBy(function($p) {
+            ->keyBy(function ($p) {
                 return $p->origin_stop_id . '-' . $p->destination_stop_id;
             });
 
-        // Filter pairs yang belum ada harganya
         $pairsNeedPrice = [];
         foreach ($newPairs as $pair) {
             $key = $pair['origin_stop_id'] . '-' . $pair['destination_stop_id'];
             if (!isset($existingPrices[$key])) {
-                $pairsNeedPrice[] = array_merge($pair, [
-                    'current_price' => null,
-                ]);
+                $pairsNeedPrice[] = array_merge($pair, ['current_price' => null]);
             }
         }
 
@@ -277,9 +320,6 @@ class ScheduleController extends Controller
         ]);
     }
 
-    /**
-     * Simpan pricing untuk pairs yang diisi
-     */
     public function savePricing(Request $request, Schedule $schedule): JsonResponse
     {
         $request->validate([
@@ -296,9 +336,7 @@ class ScheduleController extends Controller
                     'origin_stop_id' => $priceItem['origin_stop_id'],
                     'destination_stop_id' => $priceItem['destination_stop_id'],
                 ],
-                [
-                    'price' => $priceItem['price'],
-                ]
+                ['price' => $priceItem['price']]
             );
         }
 
@@ -309,6 +347,59 @@ class ScheduleController extends Controller
             'meta' => null,
         ]);
     }
-}
 
-// End of file
+    /**
+     * Agency klik Mulai - serahkan data ke driver
+     */
+    public function startSchedule(Schedule $schedule): JsonResponse
+    {
+        $agency = request()->user()->agency;
+
+        if ($schedule->agency_id !== $agency->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Anda tidak memiliki akses ke jadwal ini.',
+            ], 403);
+        }
+
+        if ($schedule->started_at) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Jadwal sudah dimulai.',
+            ], 400);
+        }
+
+        if ($schedule->departure_date->toDateString() !== now()->toDateString()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Jadwal hanya bisa dimulai pada tanggal keberangkatan (' . $schedule->departure_date->format('d M Y') . ').',
+            ], 400);
+        }
+
+        $schedule->update(['started_at' => now()]);
+
+        // Mulai juga schedule PP jika ada
+        if ($schedule->ppSchedule && !$schedule->ppSchedule->started_at) {
+            $schedule->ppSchedule->update(['started_at' => now()]);
+        }
+
+        // Notifikasi driver
+        if ($schedule->driver) {
+            app(\App\Services\NotificationService::class)->sendWhatsApp(
+                $schedule->driver->phone,
+                "🚀 *Jadwal Dimulai!*\n\n" .
+                "Rute: {$schedule->route->route_name}\n" .
+                "Tanggal: {$schedule->departure_date->format('d M Y')}\n" .
+                "Jam: {$schedule->departure_time}\n\n" .
+                "Data penumpang sudah bisa diakses. Silakan cek aplikasi."
+            );
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Jadwal dimulai! Data penumpang telah diserahkan ke driver.',
+            'data' => new ScheduleResource($schedule->fresh()),
+            'meta' => null,
+        ]);
+    }
+}

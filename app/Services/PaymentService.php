@@ -321,14 +321,31 @@ class PaymentService
             return;
         }
 
-        $booking = Booking::where('booking_code', $orderId)->first();
-        if (!$booking) {
-            throw new \Exception("Booking not found: {$orderId}");
+         // ✅ TAMBAHKAN: Handle rental payment
+        if (str_starts_with($orderId, 'RNTL-')) {
+            $this->handleRentalPaymentCallback($orderId, $payload);
+            return;
         }
 
-        $payment = Payment::where('booking_id', $booking->id)->first();
-        if (!$payment) {
-            throw new \Exception("Payment not found for booking: {$orderId}");
+        // ✅ TAMBAHKAN: Handle settlement payment
+        if (str_starts_with($orderId, 'STL-')) {
+            app(SettlementService::class)->handleSettlementCallback($payload);
+            return;
+        }
+
+        $booking = Booking::where('booking_code', $orderId)->first();
+        if (!$booking) {
+            // Extract booking code dari order_id (format: GM-YYYYMMDD-XXXX-TIMESTAMP)
+            $parts = explode('-', $orderId);
+            if (count($parts) >= 4) {
+                $possibleCode = $parts[0] . '-' . $parts[1] . '-' . $parts[2] . '-' . $parts[3];
+                $booking = Booking::where('booking_code', $possibleCode)->first();
+            }
+        }
+        
+        if (!$booking) {
+            Log::error('Booking not found for order ID', ['order_id' => $orderId]);
+            throw new \Exception("Booking not found: {$orderId}");
         }
 
         // ═══════════════════════════════════════════
@@ -424,6 +441,48 @@ class PaymentService
             }
         }
     }
+
+    private function handleRentalPaymentCallback(string $orderId, array $payload): void
+    {
+        // Parse rental ID dari order_id: RNTL-{id}-{timestamp}
+        preg_match('/^RNTL-(\d+)-\d+$/', $orderId, $matches);
+        
+        if (empty($matches[1])) {
+            Log::error('Cannot parse rental ID from order_id', ['order_id' => $orderId]);
+            return;
+        }
+        
+        $rentalId = (int) $matches[1];
+        $rental = \App\Models\Rental::find($rentalId);
+        
+        if (!$rental) {
+            Log::error('Rental not found', ['rental_id' => $rentalId]);
+            return;
+        }
+        
+        $transactionStatus = $payload['transaction_status'] ?? null;
+        $fraudStatus = $payload['fraud_status'] ?? null;
+        
+        if (in_array($transactionStatus, ['capture', 'settlement']) && $fraudStatus === 'accept') {
+            $rental->payment->update([
+                'status' => \App\Enums\PaymentStatus::PAID->value,
+                'paid_at' => now(),
+                'transaction_id' => $payload['transaction_id'] ?? null,
+                'payment_method' => $payload['payment_type'] ?? null,
+                'payment_detail' => array_merge($rental->payment->payment_detail ?? [], [
+                    'callback' => $payload,
+                ]),
+            ]);
+            
+            $rental->update(['status' => 'paid']);
+            
+            Log::info('Rental payment confirmed via callback', [
+                'rental_code' => $rental->rental_code,
+                'rental_id' => $rentalId,
+            ]);
+        }
+    }
+
 
     public function verifySignature(array $payload): bool
     {

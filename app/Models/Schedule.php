@@ -7,6 +7,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use App\Models\Promo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -18,6 +19,38 @@ class Schedule extends Model
 {
     use HasFactory, SoftDeletes;
 
+    protected static function booted(): void
+    {
+        static::deleting(function (Schedule $schedule) {
+            if ($schedule->isForceDeleting()) {
+                // Hard delete - hapus semua relasi
+                $schedule->scheduleStops()->delete();
+                $schedule->routePricing()->delete();
+                $schedule->bookings()->forceDelete();
+                $schedule->driverLocations()->delete();
+                $schedule->transfersOut()->delete();
+                $schedule->transfersIn()->delete();
+            } else {
+                // Soft delete - soft delete relasi
+                $schedule->scheduleStops()->delete();
+                $schedule->routePricing()->delete();
+                
+                // Booking tidak di-soft-delete, tapi di-cancel
+                $schedule->bookings()
+                    ->whereNotIn('status', ['cancelled', 'completed'])
+                    ->update([
+                        'status' => 'cancelled',
+                        'cancelled_at' => now(),
+                    ]);
+            }
+        });
+        
+        static::restoring(function (Schedule $schedule) {
+            $schedule->scheduleStops()->withTrashed()->restore();
+            $schedule->routePricing()->withTrashed()->restore();
+        });
+    }
+
     protected $fillable = [
         'agency_id',
         'vehicle_id',
@@ -25,6 +58,12 @@ class Schedule extends Model
         'driver_id',
         'departure_date',
         'departure_time',
+        'estimate_arrival',
+        'pp_rest_hours',
+        'pp_schedule_id',
+        'parent_schedule_id',
+        'available_for_rental_after',
+        'rest_days_before_rental',
         'travel_class',
         'max_overload',
         'price_per_seat',
@@ -59,6 +98,10 @@ class Schedule extends Model
             'transferred_in_count' => 'integer',
             'started_at' => 'datetime',
             'finished_at' => 'datetime',
+            'estimated_arrival' => 'datetime',
+            'pp_rest_hours' => 'integer',
+            'rest_days_before_rental' => 'integer',
+            'available_for_rental_after' => 'date',
         ];
     }
 
@@ -212,6 +255,46 @@ class Schedule extends Model
     public function getRouteDestinationCityAttribute(): string
     {
         return $this->route?->destinationCity?->name ?? '-';
+    }
+
+    /**
+     * Schedule PP (Pulang) — jika ini schedule Pergi
+     */
+    public function ppSchedule(): BelongsTo
+    {
+        return $this->belongsTo(Schedule::class, 'pp_schedule_id');
+    }
+
+    /**
+     * Schedule Induk (Pergi) — jika ini schedule PP (Pulang)
+     */
+    public function parentSchedule(): BelongsTo
+    {
+        return $this->belongsTo(Schedule::class, 'parent_schedule_id');
+    }
+
+    /**
+     * Schedule Anak (PP) — jika ini schedule Pergi
+     */
+    public function childSchedule(): HasOne
+    {
+        return $this->hasOne(Schedule::class, 'parent_schedule_id');
+    }
+
+    /**
+     * Cek apakah ini schedule Pergi (punya PP)
+     */
+    public function isRoundTrip(): bool
+    {
+        return !is_null($this->pp_schedule_id) || !is_null($this->childSchedule);
+    }
+
+    /**
+     * Cek apakah ini schedule PP (Pulang)
+     */
+    public function isReturnTrip(): bool
+    {
+        return !is_null($this->parent_schedule_id);
     }
 }
 

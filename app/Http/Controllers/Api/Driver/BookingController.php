@@ -9,6 +9,7 @@ use App\Models\Booking;
 use App\Models\BookingPassenger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class BookingController extends Controller
 {
@@ -414,7 +415,7 @@ class BookingController extends Controller
         }
 
         try {
-            \Illuminate\Support\Facades\DB::transaction(function () use ($booking, $driver) {
+            DB::transaction(function () use ($booking, $driver) {
                 // Release saldo COD
                 app(\App\Services\WalletService::class)->releaseCodBalance($booking);
 
@@ -424,8 +425,18 @@ class BookingController extends Controller
                     'paid_at' => now(),
                 ]);
 
-                // Update booking status
-                $booking->update(['status' => \App\Enums\BookingStatus::PAID->value]);
+                // ✅ TAMBAHKAN: Auto-complete booking setelah COD dikonfirmasi
+                // Karena semua penumpang sudah turun (validasi sebelumnya)
+                $booking->update([
+                    'status' => \App\Enums\BookingStatus::COMPLETED->value,
+                    'completed_at' => now(),
+                ]);
+                
+                // ✅ TAMBAHKAN: Release funds
+                app(\App\Services\WalletService::class)->releaseFunds($booking);
+                
+                // ✅ TAMBAHKAN: Increment agency counter
+                $booking->schedule->agency->increment('total_bookings');
 
                 // Tandai semua penumpang sudah bayar COD
                 \App\Models\BookingPassenger::where('booking_id', $booking->id)
@@ -435,18 +446,8 @@ class BookingController extends Controller
                         'cod_confirmed_by' => $driver->id,
                     ]);
 
-                // Notifikasi ke agency
-                if ($booking->schedule->agency && $booking->schedule->agency->user) {
-                    \App\Models\Notification::create([
-                        'user_id' => $booking->schedule->agency->user_id,
-                        'title' => '💰 Pembayaran COD Dikonfirmasi',
-                        'body' => "Booking {$booking->booking_code}: Pembayaran COD Rp " . number_format($booking->total_price, 0, ',', '.') . " telah diterima oleh driver.",
-                        'data' => json_encode([
-                            'booking_id' => $booking->id,
-                            'type' => 'cod_confirmed',
-                        ]),
-                    ]);
-                }
+                // Notifikasi
+                app(\App\Services\NotificationService::class)->bookingCompleted($booking);
 
                 // Notifikasi ke customer
                 if ($booking->customer && $booking->customer->phone) {

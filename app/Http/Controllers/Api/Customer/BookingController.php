@@ -3,8 +3,8 @@
 // Deskripsi: API Controller untuk booking customer
 
 namespace App\Http\Controllers\Api\Customer;
-use Illuminate\Support\Facades\Log;
 
+use Illuminate\Support\Facades\Log;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\CreateBookingRequest;
 use App\Http\Requests\Api\CreateReviewRequest;

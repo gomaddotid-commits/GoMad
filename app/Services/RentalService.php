@@ -29,7 +29,7 @@ class RentalService
 
     /**
      * Cek apakah kendaraan tersedia di rentang tanggal tertentu
-     * + cek bentrok dengan jadwal travel (H+0 s/d H+6)
+     * + cek bentrok dengan jadwal travel + masa istirahat
      */
     public function isVehicleAvailable(int $vehicleId, string $startDatetime, string $endDatetime, ?int $excludeRentalId = null): bool
     {
@@ -52,11 +52,23 @@ class RentalService
             return false;
         }
 
-        // 2. ✅ Cek bentrok dengan jadwal travel + masa istirahat (H+0 s/d H+6)
+        // 2. ✅ Cek bentrok dengan jadwal travel + masa istirahat
+        // Travel di rentang tersebut
         $scheduleConflict = Schedule::where('vehicle_id', $vehicleId)
             ->where('is_active', true)
-            ->where('departure_date', '<=', $end->toDateString())
-            ->where('departure_date', '>=', $start->copy()->subDays(6)->toDateString())
+            ->where(function ($q) use ($start, $end) {
+                // Jadwal travel di rentang tanggal
+                $q->where(function ($sq) use ($start, $end) {
+                    $sq->where('departure_date', '>=', $start->toDateString())
+                       ->where('departure_date', '<=', $end->toDateString());
+                })
+                // Atau masa istirahat yang mencakup rentang tersebut
+                ->orWhere(function ($sq) use ($start, $end) {
+                    $sq->whereNotNull('available_for_rental_after')
+                       ->where('available_for_rental_after', '>=', $start->toDateString())
+                       ->where('departure_date', '<=', $end->toDateString());
+                });
+            })
             ->exists();
 
         if ($scheduleConflict) {
@@ -102,37 +114,64 @@ class RentalService
             }
         }
 
-        // 2. ✅ Cek jadwal travel + masa istirahat 6 hari
-        $schedules = Schedule::where('vehicle_id', $vehicleId)
+        // 2. ✅ Cek jadwal travel + masa istirahat
+        $schedules = Schedule::with('route')
+            ->where('vehicle_id', $vehicleId)
             ->where('is_active', true)
+            ->where(function ($q) {
+                $q->whereNotNull('available_for_rental_after')
+                  ->orWhereNotNull('estimated_arrival');
+            })
             ->where('departure_date', '>=', now()->toDateString())
             ->get();
 
         foreach ($schedules as $schedule) {
             $travelDate = $schedule->departure_date;
 
-            // Blokir H+0 sampai H+6 (total 7 hari)
-            for ($i = 0; $i <= 6; $i++) {
-                $blockedDate = $travelDate->copy()->addDays($i)->format('Y-m-d');
+            // Tentukan sampai kapan kendaraan tidak tersedia untuk rental
+            if ($schedule->available_for_rental_after) {
+                $blockUntil = Carbon::parse($schedule->available_for_rental_after);
+            } elseif ($schedule->estimated_arrival) {
+                $blockUntil = $schedule->estimated_arrival->copy()
+                    ->addDays($schedule->rest_days_before_rental ?? 1)
+                    ->startOfDay();
+            } else {
+                $blockUntil = $travelDate->copy()->addDay()->startOfDay();
+            }
 
-                if (!isset($bookedDates[$blockedDate])) {
-                    $bookedDates[$blockedDate] = [];
+            $current = $travelDate->copy()->startOfDay();
+            while ($current->lte($blockUntil)) {
+                $dateStr = $current->format('Y-m-d');
+
+                if (!isset($bookedDates[$dateStr])) {
+                    $bookedDates[$dateStr] = [];
                 }
 
-                // Hindari duplikat jika sudah ada dari rental
-                $alreadyExists = collect($bookedDates[$blockedDate])->contains(function ($item) {
-                    return isset($item['type']) && in_array($item['type'], ['🚐 Travel', '🔧 Maintenance']);
+                // Hindari duplikat
+                $alreadyExists = collect($bookedDates[$dateStr])->contains(function ($item) {
+                    return isset($item['type']) && in_array($item['type'], ['🚐 Travel', '🔧 Maintenance (Travel)']);
                 });
 
                 if (!$alreadyExists) {
-                    $bookedDates[$blockedDate][] = [
+                    $isTravelDay = $current->eq($travelDate);
+                    $isReturnDay = $schedule->ppSchedule && 
+                        $current->eq(Carbon::parse($schedule->ppSchedule->departure_date));
+
+                    $type = '🔧 Maintenance (Travel)';
+                    if ($isTravelDay) {
+                        $type = '🚐 Travel: ' . $schedule->route->route_name;
+                    } elseif ($isReturnDay) {
+                        $type = '🚐 Travel PP: ' . ($schedule->ppSchedule->route->route_name ?? '');
+                    }
+
+                    $bookedDates[$dateStr][] = [
                         'rental_code' => null,
                         'status' => 'travel_blocked',
-                        'type' => $i === 0
-                            ? '🚐 Travel: ' . $schedule->route->route_name
-                            : '🔧 Maintenance (H+' . $i . ')',
+                        'type' => $type,
                     ];
                 }
+
+                $current->addDay();
             }
         }
 
@@ -253,13 +292,19 @@ class RentalService
                   ->whereDate('end_datetime', '>=', $date);
             });
 
-            // ✅ Cek tidak dalam masa travel + istirahat (H+0 s/d H+6)
-            // Jika user pilih tanggal X, cek apakah ada jadwal travel
-            // di rentang X-6 s/d X (karena travel di X-6 blokir sampai X)
+            // ✅ Cek tidak dalam masa travel + istirahat
             $query->whereDoesntHave('vehicle.schedules', function ($q) use ($date) {
                 $q->where('is_active', true)
-                  ->where('departure_date', '<=', $date->toDateString())
-                  ->where('departure_date', '>=', $date->copy()->subDays(6)->toDateString());
+                  ->where(function ($sq) use ($date) {
+                      // Travel di tanggal tersebut
+                      $sq->where('departure_date', $date->toDateString())
+                         // Atau masa istirahat yang belum selesai
+                         ->orWhere(function ($ssq) use ($date) {
+                             $ssq->whereNotNull('available_for_rental_after')
+                                 ->where('available_for_rental_after', '>', $date->toDateString())
+                                 ->where('departure_date', '<=', $date->toDateString());
+                         });
+                  });
             });
         }
 
@@ -365,6 +410,38 @@ class RentalService
             $endDateTime = Carbon::parse($data['end_datetime']);
             $durationUnit = $data['duration_unit'] ?? 'day';
 
+            // Re-check availability dengan lock yang sama
+            $conflictingRental = Rental::where('vehicle_id', $data['vehicle_id'])
+                ->whereNotIn('status', ['cancelled'])
+                ->where(function ($q) use ($startDateTime, $endDateTime) {
+                    $q->where('start_datetime', '<=', $endDateTime)
+                    ->where('end_datetime', '>=', $startDateTime);
+                })
+                ->lockForUpdate()  // ✅ Lock conflicting rentals
+                ->exists();
+            
+            if ($conflictingRental) {
+                throw new \Exception(
+                    'Maaf, kendaraan sudah dibooking untuk rentang waktu tersebut. ' .
+                    'Silakan pilih tanggal atau kendaraan lain.'
+                );
+            }
+            
+            // ✅ TAMBAHKAN: Double-check jadwal travel yang bentrok
+            $conflictingSchedule = Schedule::where('vehicle_id', $data['vehicle_id'])
+                ->where('is_active', true)
+                ->where('departure_date', '>=', $startDateTime->toDateString())
+                ->where('departure_date', '<=', $endDateTime->toDateString())
+                ->lockForUpdate()  // ✅ Lock conflicting schedules
+                ->exists();
+            
+            if ($conflictingSchedule) {
+                throw new \Exception(
+                    'Maaf, kendaraan digunakan untuk jadwal travel pada tanggal tersebut. ' .
+                    'Silakan pilih tanggal atau kendaraan lain.'
+                );
+            }
+            
             if ($durationUnit === 'hour') {
                 $duration = (int) ceil($startDateTime->diffInMinutes($endDateTime) / 60);
             } else {
@@ -378,19 +455,30 @@ class RentalService
             // ✅ Validasi ketersediaan (rental + travel + istirahat)
             if (!$this->isVehicleAvailable($data['vehicle_id'], $startDateTime, $endDateTime)) {
                 // Cek apakah bentrok dengan travel
-                $scheduleConflict = Schedule::where('vehicle_id', $data['vehicle_id'])
+                $scheduleConflict = Schedule::with('route')
+                    ->where('vehicle_id', $data['vehicle_id'])
                     ->where('is_active', true)
-                    ->where('departure_date', '<=', $endDateTime->toDateString())
-                    ->where('departure_date', '>=', $startDateTime->copy()->subDays(6)->toDateString())
+                    ->where(function ($q) use ($startDateTime, $endDateTime) {
+                        $q->where('departure_date', '>=', $startDateTime->toDateString())
+                          ->where('departure_date', '<=', $endDateTime->toDateString())
+                          ->orWhere(function ($sq) use ($startDateTime) {
+                              $sq->whereNotNull('available_for_rental_after')
+                                 ->where('available_for_rental_after', '>=', $startDateTime->toDateString())
+                                 ->where('departure_date', '<=', $startDateTime->toDateString());
+                          });
+                    })
                     ->first();
 
                 if ($scheduleConflict) {
+                    $blockUntil = $scheduleConflict->available_for_rental_after
+                        ? Carbon::parse($scheduleConflict->available_for_rental_after)->format('d M Y')
+                        : $scheduleConflict->departure_date->copy()->addDays(1)->format('d M Y');
+
                     throw new \Exception(
                         "Maaf, kendaraan ini tidak tersedia untuk rental pada tanggal tersebut.\n\n" .
                         "Kendaraan ini digunakan untuk travel di rute *{$scheduleConflict->route->route_name}* " .
                         "pada tanggal {$scheduleConflict->departure_date->format('d M Y')} " .
-                        "dan membutuhkan masa istirahat hingga " .
-                        $scheduleConflict->departure_date->copy()->addDays(6)->format('d M Y') . ".\n\n" .
+                        "dan baru tersedia untuk rental mulai {$blockUntil}.\n\n" .
                         "Silakan pilih tanggal setelah tanggal tersebut atau pilih kendaraan lain."
                     );
                 }
@@ -539,6 +627,10 @@ class RentalService
         });
     }
 
+    // ═══════════════════════════════════════════
+    // ASSIGN DRIVER
+    // ═══════════════════════════════════════════
+
     public function assignDriver(Rental $rental, User $driver): Rental
     {
         if ($rental->type !== 'with_driver') {
@@ -554,6 +646,8 @@ class RentalService
         }
 
         $rental->update(['driver_id' => $driver->id]);
+
+        $this->notificationService->rentalDriverAssigned($rental);
 
         // Notifikasi customer
         if ($rental->customer->phone) {
@@ -586,7 +680,7 @@ class RentalService
     }
 
     // ═══════════════════════════════════════════
-    // AGENCY: Verifikasi Pengambilan
+    // VERIFIKASI PENGAMBILAN
     // ═══════════════════════════════════════════
 
     public function verifyPickup(Rental $rental): Rental
@@ -617,7 +711,7 @@ class RentalService
     }
 
     // ═══════════════════════════════════════════
-    // AGENCY: Verifikasi Pengembalian
+    // VERIFIKASI PENGEMBALIAN
     // ═══════════════════════════════════════════
 
     public function verifyReturn(Rental $rental): Rental
@@ -646,7 +740,7 @@ class RentalService
     }
 
     // ═══════════════════════════════════════════
-    // COMPLETE Rental
+    // COMPLETE RENTAL
     // ═══════════════════════════════════════════
 
     public function completeRental(Rental $rental): Rental
@@ -669,13 +763,7 @@ class RentalService
             $revenue = $rental->subtotal - $rental->platform_fee;
 
             if ($revenue > 0) {
-                $this->walletService->creditWallet(
-                    $rental->agency,
-                    $revenue,
-                    "Pendapatan rental {$rental->rental_code}",
-                    'rental_revenue',
-                    $rental->id
-                );
+                $this->walletService->creditRentalRevenue($rental);
             }
 
             if ($rental->customer->phone) {
@@ -760,14 +848,13 @@ class RentalService
                 $paymentService = app(\App\Services\PaymentService::class);
 
                 if ($rental->payment->payment_type === 'midtrans' && $rental->payment->status === 'paid') {
-                    $refundResult = $paymentService->refundPaymentForRental($rental, $refundAmount);
+                    $paymentService->refundPaymentForRental($rental, $refundAmount);
 
                     Log::info('Rental refund processed', [
                         'rental_code' => $rental->rental_code,
                         'total_price' => $rental->total_price,
                         'cancellation_fee' => $cancellationFee,
                         'refund_amount' => $refundAmount,
-                        'result' => $refundResult,
                     ]);
                 } elseif ($rental->payment->payment_type === 'cash' && $rental->payment->status === 'paid') {
                     $rental->payment->update(['status' => 'refund_pending']);
@@ -775,10 +862,6 @@ class RentalService
                     if ($rental->cashPayment) {
                         $rental->cashPayment->update(['status' => 'refund_pending']);
                     }
-
-                    Log::info('Rental cash refund pending', [
-                        'rental_code' => $rental->rental_code,
-                    ]);
                 } else {
                     $rental->payment->update(['status' => \App\Enums\PaymentStatus::EXPIRED->value]);
 

@@ -272,6 +272,16 @@ class PromoService
             return null;
         }
 
+        // ✅ TAMBAHKAN: Validasi module
+        if (!$promo->isForModule('travel')) {
+            Log::warning('Promo not applicable for travel module', [
+                'promo_id' => $promo->id,
+                'promo_module' => $promo->module,
+                'booking_code' => $booking->booking_code,
+            ]);
+            return null;
+        }
+
         $discount = $this->calculateDiscount($promo, (float) $booking->total_price);
         
         if ($discount <= 0) return null;
@@ -280,6 +290,38 @@ class PromoService
             'promo_id' => $promo->id,
             'user_id' => $booking->customer_id,
             'booking_id' => $booking->id,
+            'discount_amount' => $discount,
+        ]);
+    }
+
+    public function applyPromoToRental(Rental $rental, Promo $promo): ?PromoUsage
+    {
+        // Validasi
+        if (!$this->canUsePromo($rental->customer, $promo)) {
+            return null;
+        }
+
+        // ✅ TAMBAHKAN: Validasi module
+        if (!$promo->isForModule('rental')) {
+            Log::warning('Promo not applicable for rental module', [
+                'promo_id' => $promo->id,
+                'promo_module' => $promo->module,
+                'rental_code' => $rental->rental_code,
+            ]);
+            return null;
+        }
+
+        $discount = $this->calculateRentalDiscount($promo, (float) $rental->subtotal);
+
+        if ($discount <= 0) {
+            return null;
+        }
+
+        return PromoUsage::create([
+            'promo_id' => $promo->id,
+            'user_id' => $rental->customer_id,
+            'booking_id' => null,
+            'rental_id' => $rental->id,
             'discount_amount' => $discount,
         ]);
     }
@@ -352,35 +394,6 @@ class PromoService
         $discount = $rentalAmount * ((float) $promo->discount_percent / 100);
         
         return min($discount, $maxDiscount);
-    }
-
-    /**
-     * Apply promo to rental
-     */
-    public function applyPromoToRental(Rental $rental, Promo $promo): ?PromoUsage
-    {
-        // Validasi
-        if (!$this->canUsePromo($rental->customer, $promo)) {
-            return null;
-        }
-
-        if (!$promo->isForModule('rental')) {
-            return null;
-        }
-
-        $discount = $this->calculateRentalDiscount($promo, (float) $rental->subtotal);
-
-        if ($discount <= 0) {
-            return null;
-        }
-
-        return PromoUsage::create([
-            'promo_id' => $promo->id,
-            'user_id' => $rental->customer_id,
-            'booking_id' => null, // Tidak terkait booking travel
-            'rental_id' => $rental->id,  // 👈 TAMBAHKAN INI (perlu migration)
-            'discount_amount' => $discount,
-        ]);
     }
 }
 

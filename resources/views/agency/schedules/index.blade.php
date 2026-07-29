@@ -22,15 +22,12 @@
     @else
 
     @php
-        // Kelompokkan jadwal
         $todaySchedules = $schedules->filter(fn($s) => $s->departure_date->isToday());
         $futureSchedules = $schedules->filter(fn($s) => $s->departure_date->isFuture());
         $pastSchedules = $schedules->filter(fn($s) => $s->departure_date->isPast());
     @endphp
 
-    {{-- ═══════════════════════════════════════ --}}
-    {{-- JADWAL HARI INI (HIGHLIGHT) --}}
-    {{-- ═══════════════════════════════════════ --}}
+    {{-- JADWAL HARI INI --}}
     @if($todaySchedules->isNotEmpty())
     <div class="mb-8">
         <div class="flex items-center gap-3 mb-4">
@@ -46,8 +43,8 @@
             $isStarted = !is_null($schedule->started_at);
             $isFinished = !is_null($schedule->finished_at);
             $canTransfer = app(\App\Services\PassengerTransferService::class)->canTransfer($schedule);
+            $hasPP = !is_null($schedule->ppSchedule);
 
-            // Status badge
             if ($isFinished) {
                 $statusBadge = 'bg-green-50 text-green-700 border-green-200';
                 $statusText = '✅ Selesai';
@@ -65,13 +62,17 @@
 
         <div class="bg-white border-2 {{ $borderColor }} rounded-[12px] p-5 mb-4 shadow-sm hover:shadow-md transition-shadow">
             <div class="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-4">
-                {{-- Info Kiri --}}
                 <div class="flex-1">
                     <div class="flex flex-wrap items-center gap-2 mb-2">
                         <h3 class="font-bold text-lg text-[#111111]">{{ $schedule->route->route_name }}</h3>
                         <span class="px-2 py-0.5 rounded-full text-[10px] font-mono uppercase tracking-wider border {{ $statusBadge }}">
                             {{ $statusText }}
                         </span>
+                        @if($hasPP)
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-mono uppercase tracking-wider bg-purple-50 text-purple-700 border border-purple-200">
+                            🔄 PP
+                        </span>
+                        @endif
                     </div>
 
                     <div class="flex flex-wrap items-center gap-3 text-sm text-gray-500 font-light mb-3">
@@ -84,6 +85,14 @@
                         <span>👨‍✈️ {{ $schedule->driver->name ?? 'Belum ada' }}</span>
                     </div>
 
+                    {{-- PP Info --}}
+                    @if($hasPP)
+                    <div class="text-xs text-purple-600 font-light mb-2">
+                        🔄 PP: {{ $schedule->ppSchedule->route->route_name }} — 
+                        {{ $schedule->ppSchedule->departure_date->format('d M Y') }} {{ $schedule->ppSchedule->departure_time }}
+                    </div>
+                    @endif
+
                     {{-- Okupansi Bar --}}
                     <div class="mb-1 flex justify-between text-xs">
                         <span class="text-gray-400 font-light">Okupansi</span>
@@ -95,9 +104,7 @@
                     </div>
                 </div>
 
-                {{-- Aksi Kanan --}}
                 <div class="flex flex-row lg:flex-col gap-2 flex-shrink-0">
-                    {{-- Tombol Mulai --}}
                     @if(!$schedule->started_at && !$schedule->finished_at)
                     <form action="{{ route('agency.schedules.start', $schedule) }}" method="POST">
                         @csrf
@@ -134,7 +141,6 @@
                 </div>
             </div>
 
-            {{-- Info Booking Cepat --}}
             @php
                 $totalBookings = $schedule->bookings()->whereNotIn('status', ['cancelled'])->count();
                 $totalPassengers = $schedule->bookings()->whereNotIn('status', ['cancelled'])->sum('total_passengers');
@@ -151,9 +157,7 @@
     </div>
     @endif
 
-    {{-- ═══════════════════════════════════════ --}}
     {{-- JADWAL MENDATANG --}}
-    {{-- ═══════════════════════════════════════ --}}
     @if($futureSchedules->isNotEmpty())
     <div class="mb-8">
         <div class="flex items-center gap-3 mb-4">
@@ -172,6 +176,7 @@
                             <th class="px-4 py-3 text-left font-mono uppercase tracking-wider text-gray-500 text-xs">Tanggal</th>
                             <th class="px-4 py-3 text-left font-mono uppercase tracking-wider text-gray-500 text-xs">Kendaraan</th>
                             <th class="px-4 py-3 text-left font-mono uppercase tracking-wider text-gray-500 text-xs">Driver</th>
+                            <th class="px-4 py-3 text-center font-mono uppercase tracking-wider text-gray-500 text-xs">PP</th>
                             <th class="px-4 py-3 text-center font-mono uppercase tracking-wider text-gray-500 text-xs">Okupansi</th>
                             <th class="px-4 py-3 text-right font-mono uppercase tracking-wider text-gray-500 text-xs">Aksi</th>
                         </tr>
@@ -182,16 +187,32 @@
                             $rate = $schedule->occupancy_rate;
                             $colorClass = $rate >= 80 ? 'text-red-600 bg-red-50 border-red-200' : ($rate >= 50 ? 'text-yellow-600 bg-yellow-50 border-yellow-200' : 'text-green-600 bg-green-50 border-green-200');
                             $canTransfer = app(\App\Services\PassengerTransferService::class)->canTransfer($schedule);
+                            $hasPP = !is_null($schedule->ppSchedule);
                         @endphp
                         <tr class="hover:bg-[#F5F5F5]">
-                            <td class="px-4 py-3 font-medium text-[#111111]">{{ $schedule->route->route_name }}</td>
+                            <td class="px-4 py-3 font-medium text-[#111111]">
+                                {{ $schedule->route->route_name }}
+                                @if($hasPP)
+                                <br><span class="text-[10px] text-purple-600 font-mono">🔄 PP: {{ $schedule->ppSchedule->route->route_name }}</span>
+                                @endif
+                            </td>
                             <td class="px-4 py-3 text-xs font-mono text-[#111111]">
                                 {{ $schedule->departure_date->format('d M Y') }} 
                                 <span class="text-gray-400">{{ $schedule->departure_time }}</span>
                                 <br><span class="text-[10px] text-gray-400">{{ $schedule->departure_date->diffForHumans() }}</span>
+                                @if($hasPP)
+                                <br><span class="text-[10px] text-purple-500">PP: {{ $schedule->ppSchedule->departure_date->format('d M') }} {{ $schedule->ppSchedule->departure_time }}</span>
+                                @endif
                             </td>
                             <td class="px-4 py-3 text-xs font-mono text-gray-500">{{ $schedule->vehicle->plate_number ?? '-' }}</td>
                             <td class="px-4 py-3 text-xs font-mono text-gray-500">{{ $schedule->driver->name ?? '-' }}</td>
+                            <td class="px-4 py-3 text-center">
+                                @if($hasPP)
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-mono uppercase tracking-wider bg-purple-50 text-purple-700 border border-purple-200">PP</span>
+                                @else
+                                <span class="text-gray-300">-</span>
+                                @endif
+                            </td>
                             <td class="px-4 py-3 text-center">
                                 <span class="px-2 py-1 rounded-full text-[10px] font-mono uppercase tracking-wider border {{ $colorClass }}">{{ $rate }}%</span>
                             </td>
@@ -216,9 +237,7 @@
     </div>
     @endif
 
-    {{-- ═══════════════════════════════════════ --}}
     {{-- JADWAL TERLEWAT --}}
-    {{-- ═══════════════════════════════════════ --}}
     @if($pastSchedules->isNotEmpty())
     <div>
         <div class="flex items-center gap-3 mb-4">
@@ -238,6 +257,7 @@
                             <th class="px-4 py-3 text-left font-mono uppercase tracking-wider text-gray-500 text-xs">Tanggal</th>
                             <th class="px-4 py-3 text-left font-mono uppercase tracking-wider text-gray-500 text-xs">Kendaraan</th>
                             <th class="px-4 py-3 text-left font-mono uppercase tracking-wider text-gray-500 text-xs">Driver</th>
+                            <th class="px-4 py-3 text-center font-mono uppercase tracking-wider text-gray-500 text-xs">PP</th>
                             <th class="px-4 py-3 text-center font-mono uppercase tracking-wider text-gray-500 text-xs">Status</th>
                             <th class="px-4 py-3 text-right font-mono uppercase tracking-wider text-gray-500 text-xs">Aksi</th>
                         </tr>
@@ -247,6 +267,7 @@
                         @php
                             $isFinished = !is_null($schedule->finished_at);
                             $isStarted = !is_null($schedule->started_at);
+                            $hasPP = !is_null($schedule->ppSchedule);
                         @endphp
                         <tr class="hover:bg-[#F5F5F5]">
                             <td class="px-4 py-3 font-medium text-[#111111]">{{ $schedule->route->route_name }}</td>
@@ -255,6 +276,13 @@
                             </td>
                             <td class="px-4 py-3 text-xs font-mono text-gray-400">{{ $schedule->vehicle->plate_number ?? '-' }}</td>
                             <td class="px-4 py-3 text-xs font-mono text-gray-400">{{ $schedule->driver->name ?? '-' }}</td>
+                            <td class="px-4 py-3 text-center">
+                                @if($hasPP)
+                                <span class="text-[10px] font-mono text-purple-400">PP</span>
+                                @else
+                                <span class="text-gray-300">-</span>
+                                @endif
+                            </td>
                             <td class="px-4 py-3 text-center">
                                 <span class="px-2 py-1 rounded-full text-[10px] font-mono uppercase tracking-wider border 
                                     {{ $isFinished ? 'bg-green-50 text-green-700 border-green-200' : ($isStarted ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-red-50 text-red-700 border-red-200') }}">

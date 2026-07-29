@@ -25,6 +25,7 @@ class Route extends Model
         'description',
         'photo',
         'is_active',
+        'is_system_generated',  // 🆕
     ];
 
     protected function casts(): array
@@ -36,6 +37,7 @@ class Route extends Model
             'cod_available' => 'boolean',
             'cod_min_deposit' => 'decimal:2',
             'is_active' => 'boolean',
+            'is_system_generated' => 'boolean',  // 🆕
         ];
     }
 
@@ -134,5 +136,13 @@ class Route extends Model
     public function scopeByDestinationCity(Builder $query, string $cityCode): Builder
     {
         return $query->where('destination_city_code', $cityCode);
+    }
+
+    /**
+     * Scope: exclude system-generated routes
+     */
+    public function scopeNotSystemGenerated(Builder $query): Builder
+    {
+        return $query->where('is_system_generated', false);
     }
 }

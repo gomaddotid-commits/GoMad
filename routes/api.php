@@ -92,12 +92,15 @@ Route::prefix('v1')->group(function () {
         ->middleware('throttle:2,30');
     Route::post('/auth/register-payment-agent', [ApiAuthRegisterController::class, 'registerPaymentAgent'])
         ->middleware('throttle:2,30');
+    Route::post('/auth/forgot-password', [/* controller */])
+        ->middleware('throttle:3,10');
+
     Route::post('/auth/logout-all', [ApiAuthLoginController::class, 'logoutAll']);
 
     // ═══════════════════════════════════════
     // PUBLIC ROUTES (NO AUTH) - dengan rate limit
     // ═══════════════════════════════════════
-    Route::middleware(['throttle:60,1'])->group(function () {
+    Route::middleware(['throttle:30,1'])->group(function () {
         Route::get('/home', [ApiPublicHomeController::class, 'index']);
         Route::get('/search', [ApiPublicSearchController::class, 'search']);
         Route::get('/routes', [ApiPublicSearchController::class, 'routes']);
@@ -112,6 +115,12 @@ Route::prefix('v1')->group(function () {
         Route::get('/schedules/{schedule}/dropoffs/{originStopId}', [ApiPublicScheduleController::class, 'availableDropoffs']);
         Route::get('/nearby-warungs', [ApiPublicSearchController::class, 'nearbyWarungs']);
         
+        // Return route (untuk PP) — HARUS DI ATAS /routes/{id}
+        Route::get('/routes/{route}/return-route', [\App\Http\Controllers\Api\RouteController::class, 'returnRoute']);
+
+        // Route detail
+        Route::get('/routes/{id}', [ApiPublicSearchController::class, 'routeDetail']);
+
         // ⚡ TAMBAHKAN INI: Rental vehicle availability (PUBLIC, NO AUTH)
         Route::get('/rental/vehicle/{vehicle}/availability', [App\Http\Controllers\Api\Public\RentalController::class, 'availability'])
             ->name('api.rental.availability');
@@ -135,9 +144,7 @@ Route::prefix('v1')->group(function () {
         Route::get('/all', [App\Http\Controllers\Api\LandingController::class, 'all']);
     });
 
-    // Midtrans Callback (No Auth) — rate limit + IP whitelist
-    // ⚡ Callback Midtrans butuh rate limit lebih ketat + IP whitelist
-    Route::middleware(['throttle:30,1', 'midtrans.webhook'])->group(function () {
+    Route::middleware(['throttle:10,1', 'midtrans.webhook'])->group(function () {
         Route::post('/midtrans/callback', [ApiCustomerPaymentController::class, 'midtransCallback'])
             ->name('midtrans.callback');
         Route::post('/midtrans/disbursement-callback', [ApiAdminWithdrawalController::class, 'disbursementCallback'])
@@ -147,11 +154,7 @@ Route::prefix('v1')->group(function () {
         Route::post('/midtrans/topup-callback', [ApiAgencyWalletController::class, 'topUpCallback'])
             ->name('midtrans.topup');
     });
-    /*
-    |--------------------------------------------------------------------------
-    | Authenticated Routes
-    |--------------------------------------------------------------------------
-    */
+
     // ═══════════════════════════════════════
     // REGION API (LARAVOLT)
     // ═══════════════════════════════════════
@@ -163,9 +166,40 @@ Route::prefix('v1')->group(function () {
         Route::get('/all-cities', [\App\Http\Controllers\Api\RegionController::class, 'allCities']);
     });
 
-    // Available route stops
-    Route::get('/route-stops/available', [\App\Http\Controllers\Web\Admin\RouteController::class, 'availableStops']);
+    // ✅ TAMBAHKAN: Route untuk available stops (digunakan di admin create/edit route)
+    Route::get('/route-stops/available', function (Illuminate\Http\Request $request) {
+        $request->validate([
+            'origin' => ['required', 'string', 'exists:indonesia_cities,code'],
+            'destination' => ['required', 'string', 'exists:indonesia_cities,code'],
+        ]);
+        
+        $routeService = app(\App\Services\RouteService::class);
+        $stops = $routeService->getAvailableStops($request->origin, $request->destination);
+        
+        return response()->json([
+            'success' => true,
+            'data' => $stops,
+        ]);
+    });
 
+    Route::get('/vehicles/{vehicle}/rental-status', function (\App\Models\Vehicle $vehicle) {
+        $isRental = $vehicle->rentalSetting && $vehicle->rentalSetting->is_available_for_rental;
+        
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'is_rental' => $isRental,
+                'vehicle_id' => $vehicle->id,
+                'plate_number' => $vehicle->plate_number,
+            ]
+        ]);
+    });
+
+    /*
+    |--------------------------------------------------------------------------
+    | Authenticated Routes
+    |--------------------------------------------------------------------------
+    */
     Route::middleware(['auth:sanctum', \App\Http\Middleware\Api\ApiAuthenticate::class])->group(function () {
 
         // Device Token
@@ -217,6 +251,7 @@ Route::prefix('v1')->group(function () {
             // Promos
             Route::get('/promos/available', [ApiCustomerPromoController::class, 'available']);
             Route::post('/promos/calculate', [ApiCustomerPromoController::class, 'calculate']);
+            Route::get('/promos/{promo}', [ApiCustomerPromoController::class, 'show']);
 
             // Routes & Agencies
             Route::get('/routes', [ApiCustomerRouteController::class, 'index']);
@@ -301,6 +336,7 @@ Route::prefix('v1')->group(function () {
             // Wallet
             Route::get('/wallet', [ApiAgencyWalletController::class, 'index']);
             Route::get('/wallet/transactions', [ApiAgencyWalletController::class, 'transactions']);
+            Route::get('/wallet/transactions/{transaction}', [ApiAgencyWalletController::class, 'showTransaction']);
 
             // Withdrawals
             Route::get('/withdrawals', [ApiAgencyWithdrawalController::class, 'index']);
@@ -416,6 +452,10 @@ Route::prefix('v1')->group(function () {
             // Bookings
             Route::get('/bookings', [ApiAdminBookingController::class, 'index']);
             Route::get('/bookings/{booking}', [ApiAdminBookingController::class, 'show']);
+            Route::post('/bookings/{booking}/cancel', [ApiAdminBookingController::class, 'cancel']);
+
+            // Schedules
+            Route::get('/schedules/by-city', [ApiAdminScheduleController::class, 'byCity']);
 
             // Rental
             Route::get('/rentals', [ApiAdminRentalController::class, 'index']);

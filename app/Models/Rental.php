@@ -93,4 +93,44 @@ class Rental extends Model
     {
         return $this->belongsTo(User::class, 'driver_id');
     }
+
+    // ✅ TAMBAHKAN accessors
+    public function getPaymentTypeAttribute(): ?string
+    {
+        return $this->payment?->payment_type;
+    }
+
+    public function getPaymentStatusLabelAttribute(): ?string
+    {
+        return $this->payment?->status_label;
+    }
+
+    public function getPaymentStatusAttribute(): ?string
+    {
+        return $this->payment?->status;
+    }
+
+    public function getIsPaidAttribute(): bool
+    {
+        return $this->payment && $this->payment->status === 'paid';
+    }
+
+    public function getCanCancelAttribute(): bool
+    {
+        if (in_array($this->status, ['cancelled', 'completed', 'active', 'returned'])) {
+            return false;
+        }
+        
+        if ($this->status === 'paid' && $this->start_datetime->isPast()) {
+            return false;
+        }
+        
+        return in_array($this->status, ['pending', 'paid']);
+    }
+
+    public function getCancellationFeeAttribute(): float
+    {
+        if ($this->status !== 'paid') return 0;
+        return round($this->total_price * 0.25, 2);
+    }
 }
