@@ -59,62 +59,92 @@
     }
 @endphp
 
-<div>
-    {{-- Stats --}}
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        <div class="bg-white border border-[#E5E7EB] rounded-[12px] p-5 shadow-gomad">
-            <p class="text-[10px] font-mono uppercase tracking-wider text-gray-400">Saldo Tersedia</p>
-            <p class="text-xl font-bold text-[#BA1826] mt-1">Rp {{ number_format($balance['available_balance'], 0, ',', '.') }}</p>
+<div x-data="{ loading: true }" x-init="setTimeout(() => loading = false, 800)">
+
+    {{-- ✅ SKELETON LOADING --}}
+    <div x-show="loading" x-cloak>
+        {{-- Stat Cards Skeleton --}}
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+            <x-skeleton-stat :count="4" :cols="4" />
         </div>
-        <div class="bg-white border border-[#E5E7EB] rounded-[12px] p-5 shadow-gomad">
-            <p class="text-[10px] font-mono uppercase tracking-wider text-gray-400">Jadwal Hari Ini</p>
-            <p class="text-2xl font-bold text-[#111827] mt-1">{{ $todaySchedules }}</p>
+
+        {{-- Charts Skeleton --}}
+        <div class="grid md:grid-cols-2 gap-6 mb-8">
+            <div class="bg-white border border-[#E5E7EB] rounded-[12px] p-6 shadow-gomad">
+                <div class="h-5 bg-gray-200 rounded w-48 mb-4 animate-pulse"></div>
+                <div class="bg-gray-200 rounded animate-pulse" style="height: 280px;"></div>
+            </div>
+            <div class="bg-white border border-[#E5E7EB] rounded-[12px] p-6 shadow-gomad">
+                <div class="h-5 bg-gray-200 rounded w-48 mb-4 animate-pulse"></div>
+                <div class="bg-gray-200 rounded animate-pulse" style="height: 280px;"></div>
+            </div>
         </div>
-        <div class="bg-white border border-[#E5E7EB] rounded-[12px] p-5 shadow-gomad">
-            <p class="text-[10px] font-mono uppercase tracking-wider text-gray-400">Booking Bulan Ini</p>
-            <p class="text-2xl font-bold text-[#111827] mt-1">{{ $monthBookings }}</p>
-        </div>
-        <div class="bg-white border border-[#E5E7EB] rounded-[12px] p-5 shadow-gomad">
-            <p class="text-[10px] font-mono uppercase tracking-wider text-gray-400">Revenue Bulan Ini</p>
-            <p class="text-lg font-bold text-green-600 mt-1">Rp {{ number_format($monthRevenue, 0, ',', '.') }}</p>
+
+        {{-- Quick Actions Skeleton --}}
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <x-skeleton-card :count="4" />
         </div>
     </div>
 
-    {{-- Charts --}}
-    <div class="grid md:grid-cols-2 gap-6 mb-8">
-        <div class="bg-white border border-[#E5E7EB] rounded-[12px] p-6 shadow-gomad">
-            <h3 class="font-bold text-[#111827] mb-4">📈 Booking 7 Hari Terakhir</h3>
-            <div class="relative" style="height: 280px;">
-                <canvas id="agencyDailyChart"></canvas>
+    {{-- ✅ KONTEN ASLI --}}
+    <div x-show="!loading" x-cloak>
+        {{-- Stats --}}
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+            <div class="bg-white border border-[#E5E7EB] rounded-[12px] p-5 shadow-gomad">
+                <p class="text-[10px] font-mono uppercase tracking-wider text-gray-400">Saldo Tersedia</p>
+                <p class="text-xl font-bold text-[#BA1826] mt-1">Rp {{ number_format($balance['available_balance'], 0, ',', '.') }}</p>
+            </div>
+            <div class="bg-white border border-[#E5E7EB] rounded-[12px] p-5 shadow-gomad">
+                <p class="text-[10px] font-mono uppercase tracking-wider text-gray-400">Jadwal Hari Ini</p>
+                <p class="text-2xl font-bold text-[#111827] mt-1">{{ $todaySchedules }}</p>
+            </div>
+            <div class="bg-white border border-[#E5E7EB] rounded-[12px] p-5 shadow-gomad">
+                <p class="text-[10px] font-mono uppercase tracking-wider text-gray-400">Booking Bulan Ini</p>
+                <p class="text-2xl font-bold text-[#111827] mt-1">{{ $monthBookings }}</p>
+            </div>
+            <div class="bg-white border border-[#E5E7EB] rounded-[12px] p-5 shadow-gomad">
+                <p class="text-[10px] font-mono uppercase tracking-wider text-gray-400">Revenue Bulan Ini</p>
+                <p class="text-lg font-bold text-green-600 mt-1">Rp {{ number_format($monthRevenue, 0, ',', '.') }}</p>
             </div>
         </div>
-        <div class="bg-white border border-[#E5E7EB] rounded-[12px] p-6 shadow-gomad">
-            <h3 class="font-bold text-[#111827] mb-4">💰 Revenue 6 Bulan Terakhir</h3>
-            <div class="relative" style="height: 280px;">
-                <canvas id="agencyRevenueChart"></canvas>
+
+        {{-- Charts --}}
+        <div class="grid md:grid-cols-2 gap-6 mb-8">
+            <div class="bg-white border border-[#E5E7EB] rounded-[12px] p-6 shadow-gomad">
+                <h3 class="font-bold text-[#111827] mb-4">📈 Booking 7 Hari Terakhir</h3>
+                <div class="relative" style="height: 280px;">
+                    <canvas id="agencyDailyChart"></canvas>
+                </div>
             </div>
+            <div class="bg-white border border-[#E5E7EB] rounded-[12px] p-6 shadow-gomad">
+                <h3 class="font-bold text-[#111827] mb-4">💰 Revenue 6 Bulan Terakhir</h3>
+                <div class="relative" style="height: 280px;">
+                    <canvas id="agencyRevenueChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        {{-- Quick Actions --}}
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <a href="{{ route('agency.schedules.create') }}" class="bg-white border border-[#E5E7EB] rounded-[12px] p-6 text-center shadow-gomad hover:border-[#BA1826] transition-colors group">
+                <div class="w-12 h-12 bg-[#BA1826]/5 rounded-[10px] flex items-center justify-center text-xl mx-auto mb-3 group-hover:scale-110 transition-transform border border-[#E5E7EB]">📅</div>
+                <p class="font-semibold text-[#111827] text-sm">Buat Jadwal</p>
+            </a>
+            <a href="{{ route('agency.bookings.index') }}" class="bg-white border border-[#E5E7EB] rounded-[12px] p-6 text-center shadow-gomad hover:border-[#BA1826] transition-colors group">
+                <div class="w-12 h-12 bg-[#BA1826]/5 rounded-[10px] flex items-center justify-center text-xl mx-auto mb-3 group-hover:scale-110 transition-transform border border-[#E5E7EB]">🎫</div>
+                <p class="font-semibold text-[#111827] text-sm">Lihat Booking</p>
+            </a>
+            <a href="{{ route('agency.wallet.index') }}" class="bg-white border border-[#E5E7EB] rounded-[12px] p-6 text-center shadow-gomad hover:border-[#BA1826] transition-colors group">
+                <div class="w-12 h-12 bg-[#BA1826]/5 rounded-[10px] flex items-center justify-center text-xl mx-auto mb-3 group-hover:scale-110 transition-transform border border-[#E5E7EB]">💰</div>
+                <p class="font-semibold text-[#111827] text-sm">Dompet</p>
+            </a>
+            <a href="{{ route('agency.transfers.index') }}" class="bg-white border border-[#E5E7EB] rounded-[12px] p-6 text-center shadow-gomad hover:border-[#BA1826] transition-colors group">
+                <div class="w-12 h-12 bg-[#BA1826]/5 rounded-[10px] flex items-center justify-center text-xl mx-auto mb-3 group-hover:scale-110 transition-transform border border-[#E5E7EB]">🔄</div>
+                <p class="font-semibold text-[#111827] text-sm">Transfer</p>
+            </a>
         </div>
     </div>
 
-    {{-- Quick Actions --}}
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <a href="{{ route('agency.schedules.create') }}" class="bg-white border border-[#E5E7EB] rounded-[12px] p-6 text-center shadow-gomad hover:border-[#BA1826] transition-colors group">
-            <div class="w-12 h-12 bg-[#BA1826]/5 rounded-[10px] flex items-center justify-center text-xl mx-auto mb-3 group-hover:scale-110 transition-transform border border-[#E5E7EB]">📅</div>
-            <p class="font-semibold text-[#111827] text-sm">Buat Jadwal</p>
-        </a>
-        <a href="{{ route('agency.bookings.index') }}" class="bg-white border border-[#E5E7EB] rounded-[12px] p-6 text-center shadow-gomad hover:border-[#BA1826] transition-colors group">
-            <div class="w-12 h-12 bg-[#BA1826]/5 rounded-[10px] flex items-center justify-center text-xl mx-auto mb-3 group-hover:scale-110 transition-transform border border-[#E5E7EB]">🎫</div>
-            <p class="font-semibold text-[#111827] text-sm">Lihat Booking</p>
-        </a>
-        <a href="{{ route('agency.wallet.index') }}" class="bg-white border border-[#E5E7EB] rounded-[12px] p-6 text-center shadow-gomad hover:border-[#BA1826] transition-colors group">
-            <div class="w-12 h-12 bg-[#BA1826]/5 rounded-[10px] flex items-center justify-center text-xl mx-auto mb-3 group-hover:scale-110 transition-transform border border-[#E5E7EB]">💰</div>
-            <p class="font-semibold text-[#111827] text-sm">Dompet</p>
-        </a>
-        <a href="{{ route('agency.transfers.index') }}" class="bg-white border border-[#E5E7EB] rounded-[12px] p-6 text-center shadow-gomad hover:border-[#BA1826] transition-colors group">
-            <div class="w-12 h-12 bg-[#BA1826]/5 rounded-[10px] flex items-center justify-center text-xl mx-auto mb-3 group-hover:scale-110 transition-transform border border-[#E5E7EB]">🔄</div>
-            <p class="font-semibold text-[#111827] text-sm">Transfer</p>
-        </a>
-    </div>
 </div>
 @endif
 
@@ -147,10 +177,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: { 
-                    legend: { 
-                        display: false,
-                        labels: { color: '#111827' } 
-                    } 
+                    legend: { display: false } 
                 },
                 scales: {
                     y: { 
@@ -191,10 +218,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
-                    legend: { 
-                        display: false,
-                        labels: { color: '#111827' }
-                    },
+                    legend: { display: false },
                     tooltip: {
                         callbacks: {
                             label: function(ctx) {

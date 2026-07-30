@@ -142,7 +142,7 @@
     </main>
 
     {{-- BOTTOM NAV --}}
-    <nav class="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-[#E5E7EB] z-40 lg:hidden">
+    <nav class="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-[#E5E7EB] z-40 lg:hidden safe-area-bottom">
         <div class="flex items-center justify-around py-2">
             <a href="{{ route('home') }}" class="flex flex-col items-center gap-1 text-[10px] {{ request()->routeIs('home') ? 'text-[#BA1826]' : 'text-gray-500' }}">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3"/></svg>
@@ -203,8 +203,8 @@
                 <div>
                     <h4 class="font-semibold text-white mb-4">Kontak</h4>
                     <ul class="space-y-2 text-gray-400">
-                        <li> {{ \App\Models\PlatformSetting::getValue('support_email', 'support@gomad.id') }}</li>
-                        <li> {{ \App\Models\PlatformSetting::getValue('support_phone', '081234567890') }}</li>
+                        <li>{{ \App\Models\PlatformSetting::getValue('support_email', 'support@gomad.id') }}</li>
+                        <li>{{ \App\Models\PlatformSetting::getValue('support_phone', '081234567890') }}</li>
                         <li>Sumenep, Madura</li>
                     </ul>
                 </div>
@@ -215,6 +215,90 @@
             &copy; {{ date('Y') }} {{ \App\Models\PlatformSetting::getValue('app_name', 'GoMad') }}. All rights reserved.
         </div>
     </footer>
+
+    {{-- ═══════════════════════════════════════ --}}
+    {{-- ✅ GLOBAL SLOW NETWORK SPINNER --}}
+    {{-- ═══════════════════════════════════════ --}}
+    <div id="slowNetworkSpinner" 
+         style="display: none; position: fixed; inset: 0; z-index: 9999; background: rgba(255,255,255,0.85); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);"
+         class="flex items-center justify-center">
+        <div class="text-center">
+            <x-loading-spinner size="lg" color="#BA1826" />
+            <p class="mt-4 text-sm text-gray-500 font-light">Masih memuat... Jaringan Anda mungkin lambat</p>
+        </div>
+    </div>
+
+    <script>
+    (function() {
+        var slowTimer = null;
+        var SLOW_THRESHOLD = 3000; // 3 detik dianggap lambat
+        
+        var spinnerEl = document.getElementById('slowNetworkSpinner');
+        
+        function showSpinner() {
+            if (spinnerEl) spinnerEl.style.display = 'flex';
+        }
+        
+        function hideSpinner() {
+            if (spinnerEl) spinnerEl.style.display = 'none';
+        }
+        
+        function clearTimer() {
+            if (slowTimer) {
+                clearTimeout(slowTimer);
+                slowTimer = null;
+            }
+        }
+        
+        // Deteksi navigasi (klik link)
+        document.addEventListener('click', function(e) {
+            var link = e.target.closest('a');
+            if (link && link.href && !link.href.startsWith('javascript:') && !link.target && !link.hasAttribute('download')) {
+                var href = link.getAttribute('href');
+                if (href && href !== '#' && !href.endsWith('#') && !href.startsWith('mailto:') && !href.startsWith('tel:')) {
+                    clearTimer();
+                    slowTimer = setTimeout(showSpinner, SLOW_THRESHOLD);
+                }
+            }
+        });
+        
+        // Deteksi form submit
+        document.addEventListener('submit', function(e) {
+            var form = e.target;
+            if (form.method && form.method.toUpperCase() !== 'GET') {
+                clearTimer();
+                slowTimer = setTimeout(showSpinner, SLOW_THRESHOLD);
+            }
+        });
+        
+        // Deteksi fetch/XHR lambat (untuk Alpine.js)
+        var originalFetch = window.fetch;
+        window.fetch = function() {
+            var fetchTimer = setTimeout(showSpinner, SLOW_THRESHOLD);
+            
+            return originalFetch.apply(this, arguments)
+                .finally(function() {
+                    clearTimeout(fetchTimer);
+                    hideSpinner();
+                });
+        };
+        
+        // Halaman selesai dimuat
+        window.addEventListener('load', function() {
+            clearTimer();
+            hideSpinner();
+        });
+        
+        // Back/forward cache
+        window.addEventListener('pageshow', function() {
+            clearTimer();
+            hideSpinner();
+        });
+        
+        // Safety: sembunyikan setelah 30 detik
+        setTimeout(hideSpinner, 30000);
+    })();
+    </script>
 
     @stack('scripts')
 </body>

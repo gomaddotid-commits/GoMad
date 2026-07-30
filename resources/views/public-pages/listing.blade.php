@@ -12,7 +12,7 @@
         ->orderByDesc('rating')->paginate(12);
 @endphp
 
-<div class="section">
+<div class="section" x-data="{ loading: true }" x-init="setTimeout(() => loading = false, 500)">
     <div class="container-magazine">
         <div class="mb-8">
             <h1 class="text-3xl md:text-4xl font-bold text-[#111827] mb-2">Daftar Agency Travel</h1>
@@ -39,65 +39,75 @@
             </div>
         </div>
 
-        @if($agencies->isEmpty())
-        <div class="card-gomad p-12 text-center border-[#E5E7EB]">
-            <p class="text-gray-500 text-lg font-light">Belum ada agency terdaftar.</p>
-        </div>
-        @else
-            @if($viewMode == 'grid')
+        {{-- ✅ SKELETON LOADING --}}
+        <div x-show="loading" x-cloak>
             <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                @foreach($agencies as $agency)
-                <a href="{{ route('agency.profile', $agency->slug) }}" class="card-gomad overflow-hidden group block border-[#E5E7EB] hover:border-[#BA1826] p-0">
-                    <div class="h-32 bg-[#F9FAFB] flex items-center justify-center overflow-hidden border-b border-[#E5E7EB]">
-                        @if($agency->cover_image)
-                        <img src="{{ $agency->cover_image }}" alt="" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
-                        @else <span class="text-4xl text-gray-300">🏢</span> @endif
-                    </div>
-                    <div class="p-5">
-                        <div class="flex items-center gap-3 mb-3">
-                            <div class="w-12 h-12 rounded-full border-2 border-white -mt-10 bg-white shadow overflow-hidden flex-shrink-0">
-                                @if($agency->logo)<img src="{{ $agency->logo }}" alt="" class="w-full h-full object-cover">
-                                @else <div class="w-full h-full bg-[#F9FAFB] flex items-center justify-center text-lg">🏢</div> @endif
-                            </div>
-                            <div class="pt-2">
-                                <h3 class="font-bold text-[#111827] group-hover:text-[#BA1826] transition">{{ $agency->agency_name }}</h3>
-                                @if($agency->is_verified)<span class="text-xs text-[#BA1826] font-mono uppercase tracking-wider">Terverifikasi</span>@endif
-                            </div>
-                        </div>
-                        <p class="text-sm text-gray-500 line-clamp-2 font-light mb-3">{{ $agency->description ?? 'Belum ada deskripsi.' }}</p>
-                        <div class="flex items-center justify-between text-sm border-t border-[#E5E7EB] pt-3">
-                            <span class="text-gray-500 font-mono">⭐ {{ number_format($agency->rating, 1) }}</span>
-                            <span class="text-gray-400 text-xs font-mono uppercase tracking-wider">{{ $agency->total_bookings }} booking</span>
-                        </div>
-                    </div>
-                </a>
-                @endforeach
+                <x-skeleton-card :count="12" />
+            </div>
+        </div>
+
+        {{-- ✅ KONTEN ASLI --}}
+        <div x-show="!loading" x-cloak>
+            @if($agencies->isEmpty())
+            <div class="card-gomad p-12 text-center border-[#E5E7EB]">
+                <p class="text-gray-500 text-lg font-light">Belum ada agency terdaftar.</p>
             </div>
             @else
-            <div class="space-y-4">
-                @foreach($agencies as $agency)
-                <a href="{{ route('agency.profile', $agency->slug) }}" class="card-gomad p-5 flex flex-col sm:flex-row items-start gap-4 group border-[#E5E7EB] hover:border-[#BA1826]">
-                    <div class="w-16 h-16 rounded-[12px] bg-[#F9FAFB] flex items-center justify-center text-2xl overflow-hidden flex-shrink-0">
-                        @if($agency->logo)<img src="{{ $agency->logo }}" alt="" class="w-full h-full object-cover">@else 🏢 @endif
-                    </div>
-                    <div class="flex-1">
-                        <div class="flex items-center gap-2">
-                            <h3 class="font-bold text-[#111827] group-hover:text-[#BA1826] transition">{{ $agency->agency_name }}</h3>
-                            @if($agency->is_verified)<span class="text-xs text-[#BA1826] font-mono uppercase tracking-wider">✓</span>@endif
+                @if($viewMode == 'grid')
+                <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    @foreach($agencies as $agency)
+                    <a href="{{ route('agency.profile', $agency->slug) }}" class="card-gomad overflow-hidden group block border-[#E5E7EB] hover:border-[#BA1826] p-0">
+                        <div class="h-32 bg-[#F9FAFB] flex items-center justify-center overflow-hidden border-b border-[#E5E7EB]">
+                            @if($agency->cover_image)
+                            <img src="{{ $agency->cover_image }}" alt="" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                            @else <span class="text-4xl text-gray-300">🏢</span> @endif
                         </div>
-                        <p class="text-sm text-gray-500 mt-1 line-clamp-2 font-light">{{ $agency->description ?? 'Belum ada deskripsi.' }}</p>
-                        <p class="text-xs text-gray-400 mt-1 font-mono tracking-wider">{{ $agency->address }}</p>
-                    </div>
-                    <div class="text-right flex-shrink-0">
-                        <p class="text-gray-500 font-mono">⭐ {{ number_format($agency->rating, 1) }}</p>
-                        <p class="text-xs text-gray-400 font-mono uppercase tracking-wider">{{ $agency->total_bookings }} booking</p>
-                    </div>
-                </a>
-                @endforeach
-            </div>
+                        <div class="p-5">
+                            <div class="flex items-center gap-3 mb-3">
+                                <div class="w-12 h-12 rounded-full border-2 border-white -mt-10 bg-white shadow overflow-hidden flex-shrink-0">
+                                    @if($agency->logo)<img src="{{ $agency->logo }}" alt="" class="w-full h-full object-cover">
+                                    @else <div class="w-full h-full bg-[#F9FAFB] flex items-center justify-center text-lg">🏢</div> @endif
+                                </div>
+                                <div class="pt-2">
+                                    <h3 class="font-bold text-[#111827] group-hover:text-[#BA1826] transition">{{ $agency->agency_name }}</h3>
+                                    @if($agency->is_verified)<span class="text-xs text-[#BA1826] font-mono uppercase tracking-wider">Terverifikasi</span>@endif
+                                </div>
+                            </div>
+                            <p class="text-sm text-gray-500 line-clamp-2 font-light mb-3">{{ $agency->description ?? 'Belum ada deskripsi.' }}</p>
+                            <div class="flex items-center justify-between text-sm border-t border-[#E5E7EB] pt-3">
+                                <span class="text-gray-500 font-mono">⭐ {{ number_format($agency->rating, 1) }}</span>
+                                <span class="text-gray-400 text-xs font-mono uppercase tracking-wider">{{ $agency->total_bookings }} booking</span>
+                            </div>
+                        </div>
+                    </a>
+                    @endforeach
+                </div>
+                @else
+                <div class="space-y-4">
+                    @foreach($agencies as $agency)
+                    <a href="{{ route('agency.profile', $agency->slug) }}" class="card-gomad p-5 flex flex-col sm:flex-row items-start gap-4 group border-[#E5E7EB] hover:border-[#BA1826]">
+                        <div class="w-16 h-16 rounded-[12px] bg-[#F9FAFB] flex items-center justify-center text-2xl overflow-hidden flex-shrink-0">
+                            @if($agency->logo)<img src="{{ $agency->logo }}" alt="" class="w-full h-full object-cover">@else 🏢 @endif
+                        </div>
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2">
+                                <h3 class="font-bold text-[#111827] group-hover:text-[#BA1826] transition">{{ $agency->agency_name }}</h3>
+                                @if($agency->is_verified)<span class="text-xs text-[#BA1826] font-mono uppercase tracking-wider">✓</span>@endif
+                            </div>
+                            <p class="text-sm text-gray-500 mt-1 line-clamp-2 font-light">{{ $agency->description ?? 'Belum ada deskripsi.' }}</p>
+                            <p class="text-xs text-gray-400 mt-1 font-mono tracking-wider">{{ $agency->address }}</p>
+                        </div>
+                        <div class="text-right flex-shrink-0">
+                            <p class="text-gray-500 font-mono">⭐ {{ number_format($agency->rating, 1) }}</p>
+                            <p class="text-xs text-gray-400 font-mono uppercase tracking-wider">{{ $agency->total_bookings }} booking</p>
+                        </div>
+                    </a>
+                    @endforeach
+                </div>
+                @endif
+                <div class="mt-8">{{ $agencies->links() }}</div>
             @endif
-            <div class="mt-8">{{ $agencies->links() }}</div>
-        @endif
+        </div>
     </div>
 </div>
 @endsection
