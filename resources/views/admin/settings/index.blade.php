@@ -180,7 +180,7 @@
         @endforeach
     </div>
 
-    <form action="{{ route('admin.settings.update') }}" method="POST" @submit="saved = true">
+    <form action="{{ route('admin.settings.update') }}" method="POST" id="settings-form" @submit="saved = true">
         @csrf
         @method('PUT')
 
@@ -477,9 +477,11 @@ Sitemap: {{ url('/sitemap.xml') }}</pre>
         @endforeach
 
         {{-- Save Button --}}
+        {{-- AFTER (Diperbaiki) --}}
         <div class="mt-8 flex gap-4 justify-end">
             <button type="submit" 
-                    class="px-8 py-3 bg-[#C1121F] text-white rounded-[12px] font-semibold hover:bg-[#8A0F18] transition text-sm">
+                    form="settings-form"
+                    class="px-8 py-3 bg-[#C1121F] text-white rounded-[12px] font-semibold hover:bg-[#8A0F18] transition text-sm cursor-pointer">
                 💾 SIMPAN SEMUA PENGATURAN
             </button>
         </div>
