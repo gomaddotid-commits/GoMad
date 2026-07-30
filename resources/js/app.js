@@ -13,9 +13,97 @@ L.Icon.Default.mergeOptions({
 });
 
 // --- SETTING GLOBAL CHART.JS ---
-// Agar chart tidak putih semua, set warna teks dan grid menjadi gelap
-Chart.defaults.color = '#111827'; // Warna teks (label, legend, tooltip) - gomad-dark
-Chart.defaults.borderColor = '#E5E7EB'; // Warna grid line - gomad-divider
+Chart.defaults.color = '#111827';
+Chart.defaults.borderColor = '#E5E7EB';
+
+// ═══════════════════════════════════════════
+// ✅ ALPINE STORE: TOP BANNER (SMOOTH)
+// ═══════════════════════════════════════════
+document.addEventListener('alpine:init', () => {
+    Alpine.store('banner', {
+        // State
+        open: true,
+        text: '',
+        link: '',
+        active: false,
+        isAnimating: false,
+        autoCloseTimer: null,
+        
+        // Initialize from localStorage
+        init() {
+            // Ambil data banner dari hidden element
+            const bannerData = document.querySelector('[data-banner]');
+            if (bannerData) {
+                this.active = bannerData.dataset.bannerActive === '1';
+                this.text = bannerData.dataset.bannerText || '';
+                this.link = bannerData.dataset.bannerLink || '';
+            }
+            
+            // ✅ SELALU muncul jika aktif, IGNORE localStorage
+            // Ini adalah Opsi 1: Banner selalu muncul setiap kali page reload
+            this.open = this.active && !!this.text;
+            
+            // Auto-close after 5 seconds
+            if (this.open) {
+                this.startAutoClose();
+            }
+            
+            // Debug log (hapus di production)
+            console.log('🔔 Banner initialized:', {
+                active: this.active,
+                text: this.text,
+                link: this.link,
+                open: this.open
+            });
+        },
+        
+        // Open banner
+        openBanner() {
+            if (this.active && this.text && !this.isAnimating) {
+                this.isAnimating = true;
+                this.open = true;
+                localStorage.removeItem('topBannerClosed');
+                
+                // Force reflow untuk smooth transition
+                requestAnimationFrame(() => {
+                    this.isAnimating = false;
+                });
+                
+                this.startAutoClose();
+            }
+        },
+        
+        // Close banner
+        closeBanner() {
+            if (!this.isAnimating) {
+                this.isAnimating = true;
+                this.open = false;
+                localStorage.setItem('topBannerClosed', 'true');
+                this.clearAutoClose();
+                
+                requestAnimationFrame(() => {
+                    this.isAnimating = false;
+                });
+            }
+        },
+        
+        // Start auto-close timer
+        startAutoClose() {
+            this.clearAutoClose();
+            this.autoCloseTimer = setTimeout(() => {
+                this.closeBanner();
+            }, 5000);
+        },
+        
+        // Clear auto-close timer
+        clearAutoClose() {
+            if (this.autoCloseTimer) {
+                clearTimeout(this.autoCloseTimer);
+                this.autoCloseTimer = null;
+            }
+        }
+    });
+});
 
 window.Alpine = Alpine;
 window.Chart = Chart;
@@ -23,7 +111,7 @@ Alpine.start();
 
 // --- Connected Journey: Line Animation & Transformations ---
 document.addEventListener('DOMContentLoaded', () => {
-    // 1. Sticky Header Transformation
+    // 1. Sticky Header Transformation (untuk customer/agency/driver layouts)
     const header = document.getElementById('mainHeader');
     if (header) {
         const updateHeader = () => {

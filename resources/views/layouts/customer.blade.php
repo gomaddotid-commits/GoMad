@@ -10,6 +10,53 @@
 </head>
 <body class="bg-[#F9FAFB] font-sans text-[#111827]" x-data="{ mobileMenu: false }">
 
+    {{-- ✅ TOP ANNOUNCEMENT BANNER --}}
+    @php
+        $bannerActive = \App\Models\PlatformSetting::getValue('top_banner_active', '0');
+        $bannerText = \App\Models\PlatformSetting::getValue('top_banner_text');
+        $bannerLink = \App\Models\PlatformSetting::getValue('top_banner_link');
+    @endphp
+
+    @if($bannerActive == '1' && $bannerText)
+    <div x-data="{ 
+        show: true,
+        init() {
+            if (localStorage.getItem('topBannerClosed') === 'true') {
+                this.show = false;
+            } else {
+                setTimeout(() => { this.show = false }, 5000);
+            }
+        }
+    }" 
+    x-show="show" 
+    x-transition:enter="transition ease-out duration-500"
+    x-transition:enter-start="opacity-0 -translate-y-full"
+    x-transition:enter-end="opacity-100 translate-y-0"
+    x-transition:leave="transition ease-in duration-300"
+    x-transition:leave-start="opacity-100 translate-y-0"
+    x-transition:leave-end="opacity-0 -translate-y-full"
+    x-cloak
+    class="relative z-50">
+        <div class="bg-gradient-to-r from-[#BA1826] via-[#E42535] to-[#BA1826] text-white">
+            <div class="container-magazine py-2.5 flex items-center justify-between">
+                <div class="flex items-center gap-2 text-sm font-medium flex-1 justify-center min-w-0">
+                    <span>📢</span>
+                    <span class="truncate">{{ $bannerText }}</span>
+                    @if($bannerLink)
+                    <a href="{{ $bannerLink }}" class="underline font-bold hover:text-white/80 transition ml-1 flex-shrink-0">Selengkapnya</a>
+                    @endif
+                </div>
+                <button @click="show = false; localStorage.setItem('topBannerClosed', 'true')" 
+                        class="flex-shrink-0 ml-4 p-1.5 rounded-full hover:bg-white/20 transition text-white/80 hover:text-white">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+    @endif
+
     {{-- HEADER CUSTOMER --}}
     <header class="bg-white border-b border-[#E5E7EB] sticky top-0 z-40 shadow-sm">
         <div class="container-magazine">

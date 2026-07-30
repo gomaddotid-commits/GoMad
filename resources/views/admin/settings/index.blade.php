@@ -14,6 +14,11 @@
             'fields' => [
                 'app_tagline' => ['label' => 'Tagline Aplikasi', 'type' => 'text', 'hint' => 'Tagline yang muncul di hero section'],
                 'app_version' => ['label' => 'Versi Aplikasi', 'type' => 'text', 'hint' => 'Versi saat ini (contoh: 2.0.0)'],
+                
+                // ✅ TAMBAHKAN INI
+                'top_banner_active' => ['label' => 'Top Banner Aktif', 'type' => 'toggle', 'hint' => 'Tampilkan banner pengumuman di bagian atas halaman'],
+                'top_banner_text' => ['label' => 'Teks Banner', 'type' => 'text', 'hint' => 'Teks pengumuman (contoh: Promo Spesial! Diskon 50%)'],
+                'top_banner_link' => ['label' => 'Link Banner', 'type' => 'text', 'hint' => 'Link tujuan saat banner diklik (opsional)'],
             ],
         ],
         'commission' => [

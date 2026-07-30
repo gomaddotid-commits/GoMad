@@ -39,8 +39,71 @@
 </head>
 <body class="bg-[#F9FAFB] text-[#111827] font-sans antialiased">
 
+    {{-- ═══════════════════════════════════════ --}}
+    {{-- DATA BANNER (HANYA DI HOME) --}}
+    {{-- ═══════════════════════════════════════ --}}
+    @php
+        $bannerActive = \App\Models\PlatformSetting::getValue('top_banner_active', '0');
+        $bannerText = \App\Models\PlatformSetting::getValue('top_banner_text');
+        $bannerLink = \App\Models\PlatformSetting::getValue('top_banner_link');
+        
+        // ✅ HANYA tampil di halaman home
+        $showBanner = $bannerActive == '1' && $bannerText && request()->routeIs('home');
+    @endphp
+
+    @if($showBanner)
+    <div data-banner
+         data-banner-active="{{ $bannerActive }}"
+         data-banner-text="{{ $bannerText }}"
+         data-banner-link="{{ $bannerLink }}"
+         style="display:none;">
+    </div>
+    @endif
+
+    {{-- ═══════════════════════════════════════ --}}
+    {{-- ✅ TOP ANNOUNCEMENT BANNER (HANYA DI HOME) --}}
+    {{-- ═══════════════════════════════════════ --}}
+    @if($showBanner)
+    <div x-data
+         x-init="$store.banner.init()"
+         x-show="$store.banner.open"
+         x-cloak
+         :class="$store.banner.open ? 'banner-enter' : 'banner-leave'"
+         class="fixed top-0 left-0 right-0 z-50">
+        <div class="bg-gradient-to-r from-[#BA1826] via-[#E42535] to-[#BA1826] text-white">
+            <div class="container-magazine py-2.5 flex items-center justify-between">
+                <div class="flex items-center gap-2 text-sm font-medium flex-1 justify-center min-w-0">
+                    <span>📢</span>
+                    <span class="truncate" x-text="$store.banner.text"></span>
+                    <a x-show="$store.banner.link"
+                       :href="$store.banner.link"
+                       class="underline font-bold hover:text-white/80 transition ml-1 flex-shrink-0">
+                        Selengkapnya
+                    </a>
+                </div>
+                <button @click="$store.banner.closeBanner()"
+                        class="flex-shrink-0 ml-4 p-1.5 rounded-full hover:bg-white/20 transition text-white/80 hover:text-white"
+                        title="Tutup">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+    @endif
+
+    {{-- ═══════════════════════════════════════ --}}
     {{-- HEADER --}}
-    <header class="fixed top-0 left-0 right-0 z-50 h-16 md:h-20" id="mainHeader" x-data="{ mobileMenu: false }">
+    {{-- ═══════════════════════════════════════ --}}
+    <header class="fixed left-0 right-0 z-40 h-16 md:h-20 bg-[#BA1826] text-white"
+            :class="$store.banner.open ? 'top-banner' : 'top-0'"
+            id="mainHeader"
+            x-data="{ mobileMenu: false }"
+            x-init="$watch('$store.banner.open', (value) => {
+                $el.classList.toggle('top-banner', value);
+                $el.classList.toggle('top-0', !value);
+            })">
         <div class="container-magazine h-full flex items-center justify-between">
 
             {{-- LOGO --}}
@@ -136,8 +199,18 @@
         </div>
     </header>
 
-    {{-- MAIN --}}
-    <main class="pt-16 md:pt-20 min-h-screen">
+    {{-- ═══════════════════════════════════════ --}}
+    {{-- MAIN CONTENT --}}
+    {{-- ═══════════════════════════════════════ --}}
+    <main class="min-h-screen bg-[#F9FAFB]"
+          :class="$store.banner.open ? 'pt-banner-header md:pt-banner-header-md' : 'pt-16 md:pt-20'"
+          id="mainContent"
+          x-init="$watch('$store.banner.open', (value) => {
+              $el.classList.toggle('pt-banner-header', value);
+              $el.classList.toggle('md:pt-banner-header-md', value);
+              $el.classList.toggle('pt-16', !value);
+              $el.classList.toggle('md:pt-20', !value);
+          })">
         @yield('content')
     </main>
 
@@ -181,7 +254,6 @@
                     {{ \App\Models\PlatformSetting::getValue('app_tagline', 'Solusi transportasi Anda.') }}
                 </p>
             </div>
-
             <div class="md:col-span-3 grid grid-cols-2 md:grid-cols-3 gap-8 text-sm">
                 <div>
                     <h4 class="font-semibold text-white mb-4">Layanan</h4>
@@ -210,7 +282,6 @@
                 </div>
             </div>
         </div>
-
         <div class="container-magazine mt-12 pt-8 border-t border-white/10 text-center text-gray-500 text-xs relative z-10">
             &copy; {{ date('Y') }} {{ \App\Models\PlatformSetting::getValue('app_name', 'GoMad') }}. All rights reserved.
         </div>
@@ -231,26 +302,13 @@
     <script>
     (function() {
         var slowTimer = null;
-        var SLOW_THRESHOLD = 3000; // 3 detik dianggap lambat
-        
+        var SLOW_THRESHOLD = 3000;
         var spinnerEl = document.getElementById('slowNetworkSpinner');
         
-        function showSpinner() {
-            if (spinnerEl) spinnerEl.style.display = 'flex';
-        }
+        function showSpinner() { if (spinnerEl) spinnerEl.style.display = 'flex'; }
+        function hideSpinner() { if (spinnerEl) spinnerEl.style.display = 'none'; }
+        function clearTimer() { if (slowTimer) { clearTimeout(slowTimer); slowTimer = null; } }
         
-        function hideSpinner() {
-            if (spinnerEl) spinnerEl.style.display = 'none';
-        }
-        
-        function clearTimer() {
-            if (slowTimer) {
-                clearTimeout(slowTimer);
-                slowTimer = null;
-            }
-        }
-        
-        // Deteksi navigasi (klik link)
         document.addEventListener('click', function(e) {
             var link = e.target.closest('a');
             if (link && link.href && !link.href.startsWith('javascript:') && !link.target && !link.hasAttribute('download')) {
@@ -262,7 +320,6 @@
             }
         });
         
-        // Deteksi form submit
         document.addEventListener('submit', function(e) {
             var form = e.target;
             if (form.method && form.method.toUpperCase() !== 'GET') {
@@ -271,31 +328,17 @@
             }
         });
         
-        // Deteksi fetch/XHR lambat (untuk Alpine.js)
         var originalFetch = window.fetch;
         window.fetch = function() {
             var fetchTimer = setTimeout(showSpinner, SLOW_THRESHOLD);
-            
-            return originalFetch.apply(this, arguments)
-                .finally(function() {
-                    clearTimeout(fetchTimer);
-                    hideSpinner();
-                });
+            return originalFetch.apply(this, arguments).finally(function() {
+                clearTimeout(fetchTimer);
+                hideSpinner();
+            });
         };
         
-        // Halaman selesai dimuat
-        window.addEventListener('load', function() {
-            clearTimer();
-            hideSpinner();
-        });
-        
-        // Back/forward cache
-        window.addEventListener('pageshow', function() {
-            clearTimer();
-            hideSpinner();
-        });
-        
-        // Safety: sembunyikan setelah 30 detik
+        window.addEventListener('load', function() { clearTimer(); hideSpinner(); });
+        window.addEventListener('pageshow', function() { clearTimer(); hideSpinner(); });
         setTimeout(hideSpinner, 30000);
     })();
     </script>

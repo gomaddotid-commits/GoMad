@@ -179,3 +179,78 @@ body {
 .group\/slider:hover .animate-scroll {
     animation-play-state: paused;
 }
+
+
+/* ========================================= */
+/* ✅ TOP BANNER SMOOTH ANIMATION */
+/* ========================================= */
+:root {
+    --banner-height: 40px;
+    --transition-duration: 300ms;
+}
+
+/* Banner Slide Animation */
+@keyframes bannerSlideDown {
+    0% {
+        opacity: 0;
+        transform: translateY(-100%);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes bannerSlideUp {
+    0% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    100% {
+        opacity: 0;
+        transform: translateY(-100%);
+    }
+}
+
+.banner-enter {
+    animation: bannerSlideDown var(--transition-duration) ease-out forwards;
+    will-change: transform, opacity;
+}
+
+.banner-leave {
+    animation: bannerSlideUp var(--transition-duration) ease-in forwards;
+    will-change: transform, opacity;
+}
+
+/* Header & Content Smooth Transition */
+#mainHeader,
+#mainContent,
+#mainContent > * {
+    transition: all var(--transition-duration) ease;
+    will-change: top, padding-top, margin-top;
+}
+
+/* Header dengan banner aktif */
+.top-banner {
+    top: var(--banner-height) !important;
+}
+
+/* Main content padding dengan banner */
+.pt-banner-header {
+    padding-top: calc(var(--banner-height) + 56px) !important; /* banner + header mobile */
+}
+
+.pt-banner-header-md {
+    padding-top: calc(var(--banner-height) + 64px) !important; /* banner + header desktop */
+}
+
+@media (min-width: 768px) {
+    .pt-banner-header {
+        padding-top: calc(var(--banner-height) + 64px) !important;
+    }
+}
+
+/* Safe area untuk mobile */
+.safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+}

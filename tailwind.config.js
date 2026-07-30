@@ -8,31 +8,36 @@ export default {
     theme: {
         extend: {
             fontFamily: {
-                sans: ['Montserrat', 'sans-serif'], // Mengganti Geist Sans -> Montserrat
-                mono: ['Montserrat', 'monospace'], // Fallback mono agar konsisten
+                sans: ['Montserrat', 'sans-serif'],
+                mono: ['Montserrat', 'monospace'],
             },
             colors: {
-                // GoMad Design System Palette
                 gomad: {
-                    primary: '#BA1826',    // Classic Crimson (Brand Utama)
-                    cta: '#E42535',        // Vibrant Red (Tombol Aksi)
-                    dark: '#111827',       // Jet Black (Teks Utama)
-                    body: '#4B5563',       // Slate Grey (Teks Sekunder)
-                    bg: '#F9FAFB',         // Off-White (Background Web)
-                    accent: '#F5A623',     // Warm Amber (Wallet/Promo)
-                    success: '#10B981',    // Emerald (Status Berhasil)
-                    warning: '#F59E0B',    // Amber (Status Pending)
-                    divider: '#E5E7EB',    // Cool Grey (Border/Divider)
+                    primary: '#BA1826',
+                    cta: '#E42535',
+                    dark: '#111827',
+                    body: '#4B5563',
+                    bg: '#F9FAFB',
+                    accent: '#F5A623',
+                    success: '#10B981',
+                    warning: '#F59E0B',
+                    divider: '#E5E7EB',
                 }
             },
             borderRadius: {
-                'gomad': '10px',      // Tombol/Input umum
-                'gomad-lg': '12px',   // Kartu/Modal
+                'gomad': '10px',
+                'gomad-lg': '12px',
             },
             boxShadow: {
                 'gomad': '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)',
                 'gomad-lg': '0 10px 25px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.025)',
-            }
+            },
+            // ✅ TAMBAHKAN INI - Custom spacing untuk banner
+            spacing: {
+                'banner': '40px',           // Tinggi banner
+                'banner-header': '104px',   // Banner + header mobile (40 + 64)
+                'banner-header-md': '120px', // Banner + header desktop (40 + 80)
+            },
         },
     },
     plugins: [],
