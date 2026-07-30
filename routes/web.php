@@ -385,12 +385,72 @@ Route::middleware(['auth', \App\Http\Middleware\Web\AdminMiddleware::class])
         Route::post('/documents/{document}/verify', [App\Http\Controllers\Web\Admin\RentalController::class, 'verifyDocument'])->name('documents.verify');
         Route::post('/documents/{document}/reject', [App\Http\Controllers\Web\Admin\RentalController::class, 'rejectDocument'])->name('documents.reject');
     });
+// =========================================
+// ROBOTS.TXT
+// =========================================
+Route::get('/robots.txt', function () {
+    $isProduction = app()->environment('production');
+    $host = request()->getHost();
+    
+    // Base content
+    $content = "# robots.txt for GoMad\n";
+    $content .= "# Generated: " . now()->toIso8601String() . "\n";
+    $content .= "# Host: " . $host . "\n\n";
+    
+    if ($isProduction) {
+        // PRODUCTION MODE
+        $content .= "User-agent: *\n";
+        $content .= "Allow: /\n\n";
+        
+        // Sitemap
+        $content .= "Sitemap: https://" . $host . "/sitemap.xml\n\n";
+        
+        // Disallow rules
+        $content .= "# Disallow: Admin & Auth pages\n";
+        $content .= "Disallow: /admin/\n";
+        $content .= "Disallow: /agency/\n";
+        $content .= "Disallow: /driver/\n";
+        $content .= "Disallow: /payment-agent/\n";
+        $content .= "Disallow: /customer/\n";
+        $content .= "Disallow: /login\n";
+        $content .= "Disallow: /register\n";
+        $content .= "Disallow: /forgot-password\n";
+        $content .= "Disallow: /reset-password\n";
+        $content .= "Disallow: /email/verify\n\n";
+        
+        // Parameter disallow (opsional)
+        $content .= "# Disallow: Parameter-based URLs\n";
+        $content .= "Disallow: /*?page=\n";
+        $content .= "Disallow: /*?sort=\n";
+        $content .= "Disallow: /*?filter=\n\n";
+        
+        // Crawl delay
+        $content .= "# Crawl Delay\n";
+        $content .= "Crawl-delay: 2\n\n";
+        
+        // Googlebot specific
+        $content .= "# Googlebot Specific\n";
+        $content .= "User-agent: Googlebot\n";
+        $content .= "Allow: /\n";
+        $content .= "Crawl-delay: 1\n\n";
+        
+    } else {
+        // DEVELOPMENT MODE - Block all
+        $content .= "User-agent: *\n";
+        $content .= "Disallow: /\n\n";
+        $content .= "# Development mode - no indexing allowed\n";
+    }
+    
+    return response($content, 200)
+        ->header('Content-Type', 'text/plain')
+        ->header('Cache-Control', 'public, max-age=86400'); // Cache 24 jam
+})->name('robots');
+
 /*
 |--------------------------------------------------------------------------
 | Public Routes (No Auth)
 |--------------------------------------------------------------------------
 */
-
 Route::get('/', [WebPublicHomeController::class, 'index'])->name('home');
 Route::get('/search', [WebPublicSearchController::class, 'search'])->name('search');
 Route::get('/listing', [WebPublicListingController::class, 'index'])->name('listing');
@@ -433,35 +493,6 @@ Route::post('/reset-password', [App\Http\Controllers\Web\Auth\ForgotPasswordCont
 Route::get('/sitemap.xml', [App\Http\Controllers\Web\Public\SitemapController::class, 'index'])->name('sitemap');
 Route::get('/sitemap/generate', [App\Http\Controllers\Web\Public\SitemapController::class, 'save'])->name('sitemap.generate');
 Route::get('/sitemap/clear', [App\Http\Controllers\Web\Public\SitemapController::class, 'clear'])->name('sitemap.clear');
-
-Route::get('/robots.txt', function () {
-    $isProduction = app()->environment('production');
-    
-    $content = "# robots.txt for GoMad\n\n";
-    
-    if ($isProduction) {
-        $content .= "User-agent: *\n";
-        $content .= "Allow: /\n\n";
-        $content .= "Sitemap: " . url('/sitemap.xml') . "\n\n";
-        $content .= "# Disallow admin and auth pages\n";
-        $content .= "Disallow: /admin/\n";
-        $content .= "Disallow: /agency/\n";
-        $content .= "Disallow: /driver/\n";
-        $content .= "Disallow: /payment-agent/\n";
-        $content .= "Disallow: /customer/\n";
-        $content .= "Disallow: /login\n";
-        $content .= "Disallow: /register\n";
-        $content .= "Disallow: /forgot-password\n";
-        $content .= "Disallow: /reset-password\n";
-        $content .= "Disallow: /email/verify\n";
-    } else {
-        $content .= "User-agent: *\n";
-        $content .= "Disallow: /\n";
-    }
-    
-    return response($content, 200)
-        ->header('Content-Type', 'text/plain');
-})->name('robots');
 
 // routes/web.php
 Route::get('/health', function () {
