@@ -360,7 +360,15 @@ Route::middleware(['auth', \App\Http\Middleware\Web\AdminMiddleware::class])
         Route::get('/reports', [WebAdminReportController::class, 'index'])->name('reports');
         Route::get('/settings', [WebAdminSettingController::class, 'index'])->name('settings');
         Route::put('/settings', [WebAdminSettingController::class, 'update'])->name('settings.update');
-        Route::post('/test-whatsapp', [WebAdminSettingController::class, 'testWhatsApp'])->name('test-whatsapp');      
+        Route::post('/test-whatsapp', [WebAdminSettingController::class, 'testWhatsApp'])->name('test-whatsapp');   
+        
+        Route::post('/sitemap/generate', function () {
+            $service = app(\App\Services\SitemapService::class);
+            $service->generateAndSave();
+            $service->clearCache();
+            
+            return back()->with('success', 'Sitemap berhasil di-generate!');
+        })->name('sitemap.generate');
     });
 // ADMIN - RENTAL ROUTES
 Route::middleware(['auth', \App\Http\Middleware\Web\AdminMiddleware::class])
@@ -420,7 +428,41 @@ Route::get('/reset-password/{token}', [App\Http\Controllers\Web\Auth\ForgotPassw
 Route::post('/reset-password', [App\Http\Controllers\Web\Auth\ForgotPasswordController::class, 'resetPassword'])
     ->middleware('guest')
     ->name('password.update');
+  
+// Sitemap
+Route::get('/sitemap.xml', [App\Http\Controllers\Web\Public\SitemapController::class, 'index'])->name('sitemap');
+Route::get('/sitemap/generate', [App\Http\Controllers\Web\Public\SitemapController::class, 'save'])->name('sitemap.generate');
+Route::get('/sitemap/clear', [App\Http\Controllers\Web\Public\SitemapController::class, 'clear'])->name('sitemap.clear');
+
+Route::get('/robots.txt', function () {
+    $isProduction = app()->environment('production');
     
+    $content = "# robots.txt for GoMad\n\n";
+    
+    if ($isProduction) {
+        $content .= "User-agent: *\n";
+        $content .= "Allow: /\n\n";
+        $content .= "Sitemap: " . url('/sitemap.xml') . "\n\n";
+        $content .= "# Disallow admin and auth pages\n";
+        $content .= "Disallow: /admin/\n";
+        $content .= "Disallow: /agency/\n";
+        $content .= "Disallow: /driver/\n";
+        $content .= "Disallow: /payment-agent/\n";
+        $content .= "Disallow: /customer/\n";
+        $content .= "Disallow: /login\n";
+        $content .= "Disallow: /register\n";
+        $content .= "Disallow: /forgot-password\n";
+        $content .= "Disallow: /reset-password\n";
+        $content .= "Disallow: /email/verify\n";
+    } else {
+        $content .= "User-agent: *\n";
+        $content .= "Disallow: /\n";
+    }
+    
+    return response($content, 200)
+        ->header('Content-Type', 'text/plain');
+})->name('robots');
+
 // routes/web.php
 Route::get('/health', function () {
     return response()->json(['status' => 'ok', 'time' => now()]);

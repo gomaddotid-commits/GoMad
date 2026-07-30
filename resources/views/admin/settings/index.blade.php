@@ -14,9 +14,7 @@
             'fields' => [
                 'app_tagline' => ['label' => 'Tagline Aplikasi', 'type' => 'text', 'hint' => 'Tagline yang muncul di hero section'],
                 'app_version' => ['label' => 'Versi Aplikasi', 'type' => 'text', 'hint' => 'Versi saat ini (contoh: 2.0.0)'],
-                
-                // ✅ TAMBAHKAN INI
-                'top_banner_active' => ['label' => 'Top Banner Aktif', 'type' => 'toggle', 'hint' => 'Tampilkan banner pengumuman di bagian atas halaman'],
+                'top_banner_active' => ['label' => 'Top Banner Aktif', 'type' => 'toggle', 'hint' => 'Tampilkan banner pengumuman di bagian atas halaman (hanya di halaman Home)'],
                 'top_banner_text' => ['label' => 'Teks Banner', 'type' => 'text', 'hint' => 'Teks pengumuman (contoh: Promo Spesial! Diskon 50%)'],
                 'top_banner_link' => ['label' => 'Link Banner', 'type' => 'text', 'hint' => 'Link tujuan saat banner diklik (opsional)'],
             ],
@@ -142,16 +140,21 @@
                 'google_maps_api_key' => ['label' => 'Google Maps API Key', 'type' => 'text', 'hint' => 'API Key untuk Google Maps'],
             ],
         ],
+        'seo' => [
+            'title' => '🗺️ SEO & Sitemap',
+            'icon' => '🗺️',
+            'description' => 'Generate sitemap.xml dan kelola robots.txt untuk SEO.',
+            'fields' => [
+                'meta_title' => ['label' => 'Meta Title Default', 'type' => 'text', 'hint' => 'Judul default untuk halaman (fallback)'],
+                'meta_description' => ['label' => 'Meta Description Default', 'type' => 'text', 'hint' => 'Deskripsi default untuk halaman (fallback)'],
+            ],
+        ],
     ];
 @endphp
 
 <div x-data="{ 
     activeTab: '{{ request('tab', 'branding') }}', 
-    saved: false,
-    saveSettings() {
-        this.saved = true;
-        setTimeout(() => this.saved = false, 3000);
-    }
+    saved: false 
 }">
     <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 border-b border-[#E5E5E5] pb-4">
         <div>
@@ -177,7 +180,7 @@
         @endforeach
     </div>
 
-    <form action="{{ route('admin.settings.update') }}" method="POST" @submit="saveSettings()">
+    <form action="{{ route('admin.settings.update') }}" method="POST" @submit="saved = true">
         @csrf
         @method('PUT')
 
@@ -259,6 +262,126 @@
                     </div>
                     @endforeach
                 </div>
+
+                {{-- ═══════════════════════════════════ --}}
+                {{-- SEO SECTION: SITEMAP & ROBOTS --}}
+                {{-- ═══════════════════════════════════ --}}
+                @if($key === 'seo')
+                <div class="mt-6 border-t border-[#E5E5E5] pt-6">
+                    <h3 class="font-mono uppercase tracking-wider text-xs font-bold text-[#111111] mb-3">🗺️ Sitemap & Robots.txt</h3>
+                    <p class="text-sm text-gray-500 font-light mb-4">
+                        Generate sitemap.xml untuk membantu search engine mengindeks halaman Anda.
+                        Sitemap di-cache selama 1 jam dan otomatis di-generate setiap hari jam 02:00.
+                    </p>
+                    
+                    <div class="flex flex-wrap gap-3">
+                        {{-- Generate Sitemap dengan FORM --}}
+                        <form action="{{ route('admin.sitemap.generate') }}" method="POST" class="inline">
+                            @csrf
+                            <button type="submit" 
+                                    class="bg-[#C1121F] text-white px-6 py-2 rounded-[12px] text-sm font-semibold hover:bg-[#8A0F18] transition flex items-center gap-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                                </svg>
+                                Generate Sitemap
+                            </button>
+                        </form>
+
+                        {{-- Lihat Sitemap --}}
+                        <a href="{{ url('/sitemap.xml') }}" target="_blank" 
+                           class="border border-[#E5E5E5] text-gray-700 px-6 py-2 rounded-[12px] text-sm font-medium hover:bg-[#F5F5F5] transition flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 21h7a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v11m0 5l4.879-4.879m0 0a3 3 0 104.243-4.242 3 3 0 00-4.243 4.242z"/>
+                            </svg>
+                            Lihat Sitemap
+                        </a>
+
+                        {{-- Robots.txt --}}
+                        <a href="{{ url('/robots.txt') }}" target="_blank" 
+                           class="border border-[#E5E5E5] text-gray-700 px-6 py-2 rounded-[12px] text-sm font-medium hover:bg-[#F5F5F5] transition flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                            </svg>
+                            Robots.txt
+                        </a>
+
+                        {{-- Submit ke Google --}}
+                        <a href="https://search.google.com/search-console" target="_blank" 
+                           class="border border-[#E5E5E5] text-gray-700 px-6 py-2 rounded-[12px] text-sm font-medium hover:bg-[#F5F5F5] transition flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9"/>
+                            </svg>
+                            Google Search Console
+                        </a>
+                    </div>
+
+                    {{-- Info Sitemap Stats --}}
+                    @php
+                        $totalAgencies = \App\Models\Agency::where('is_verified', true)->count();
+                        $totalRoutes = \App\Models\Route::where('is_active', true)->count();
+                        $totalRentals = \App\Models\VehicleRentalSetting::where('is_available_for_rental', true)
+                            ->whereHas('vehicle', fn($q) => $q->where('is_active', true))
+                            ->whereHas('vehicle.agency', fn($q) => $q->where('is_verified', true))
+                            ->count();
+                        $totalStatic = 8;
+                        $totalPages = $totalStatic + $totalAgencies + $totalRoutes + $totalRentals;
+                    @endphp
+                    <div class="mt-4 bg-[#F5F5F5] border border-[#E5E5E5] rounded-[12px] p-4 text-sm">
+                        <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+                            <div>
+                                <span class="text-[10px] font-mono uppercase tracking-wider text-gray-400">Total Halaman</span>
+                                <p class="font-bold text-[#111111] text-lg">{{ $totalPages }}</p>
+                            </div>
+                            <div>
+                                <span class="text-[10px] font-mono uppercase tracking-wider text-gray-400">Static</span>
+                                <p class="font-bold text-[#111111] text-lg">{{ $totalStatic }}</p>
+                            </div>
+                            <div>
+                                <span class="text-[10px] font-mono uppercase tracking-wider text-gray-400">Agency</span>
+                                <p class="font-bold text-[#111111] text-lg">{{ $totalAgencies }}</p>
+                            </div>
+                            <div>
+                                <span class="text-[10px] font-mono uppercase tracking-wider text-gray-400">Rute</span>
+                                <p class="font-bold text-[#111111] text-lg">{{ $totalRoutes }}</p>
+                            </div>
+                            <div>
+                                <span class="text-[10px] font-mono uppercase tracking-wider text-gray-400">Rental</span>
+                                <p class="font-bold text-[#111111] text-lg">{{ $totalRentals }}</p>
+                            </div>
+                        </div>
+                        <p class="text-[10px] text-gray-400 mt-2 font-light">
+                            🔄 Sitemap di-cache selama 1 jam dan otomatis di-generate setiap hari jam 02:00.
+                            Gunakan tombol <strong>"Generate Sitemap"</strong> untuk memperbarui secara manual.
+                        </p>
+                    </div>
+
+                    {{-- Robots.txt Info --}}
+                    <div class="mt-3 bg-blue-50 border border-blue-200 rounded-[12px] p-4 text-sm text-blue-800">
+                        <div class="flex items-start gap-2">
+                            <span class="text-lg">🤖</span>
+                            <div>
+                                <p class="font-medium">Robots.txt</p>
+                                <p class="text-xs text-blue-700 font-light mt-1">
+                                    Di-production, robots.txt mengizinkan semua halaman publik dan melarang halaman admin/auth.
+                                    Di-development, robots.txt melarang semua halaman.
+                                </p>
+                                <div class="mt-2 bg-white/50 rounded-lg p-2 font-mono text-xs text-blue-600 overflow-x-auto">
+                                    <pre class="whitespace-pre-wrap">User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /agency/
+Disallow: /driver/
+Disallow: /payment-agent/
+Disallow: /customer/
+Disallow: /login
+Disallow: /register
+Sitemap: {{ url('/sitemap.xml') }}</pre>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                @endif
 
                 {{-- ═══════════════════════════════════ --}}
                 {{-- TEST WHATSAPP (Hanya di tab Notifikasi) --}}
@@ -392,7 +515,6 @@ function whatsappTester() {
                 alert('Nomor HP admin tidak ditemukan. Masukkan manual.');
                 return;
             }
-            // Clean phone for display
             let clean = this.phone.replace(/[^0-9]/g, '');
             if (clean.startsWith('0')) clean = clean.slice(1);
             if (clean.startsWith('62')) clean = clean.slice(2);
@@ -407,7 +529,6 @@ function whatsappTester() {
             this.status = '';
             this.statusDetail = '';
             
-            // Bersihkan nomor
             let phone = this.phone.replace(/[^0-9]/g, '');
             if (phone.startsWith('0')) phone = '62' + phone.slice(1);
             if (!phone.startsWith('62')) phone = '62' + phone;

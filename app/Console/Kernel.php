@@ -29,6 +29,9 @@ class Kernel extends ConsoleKernel
         
         // Bersihkan cache lama setiap minggu
         $schedule->command('cache:prune-stale-tags')->weekly();
+
+        // Generate sitemap setiap hari jam 02:00
+        $schedule->command('sitemap:generate')->dailyAt('02:00');
     }
 
     protected function commands(): void
