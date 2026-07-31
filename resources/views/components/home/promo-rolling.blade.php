@@ -31,8 +31,10 @@
             <div class="h-6 md:h-8 bg-gray-200 rounded w-32 md:w-48 animate-pulse"></div>
         </div>
         <div class="relative max-w-3xl mx-auto">
-            <div class="bg-white border border-[#E5E7EB] rounded-[12px] shadow-gomad animate-pulse" style="height: 300px; md:height: 420px;">
-                <div class="w-full h-full bg-gray-200 rounded-[12px]"></div>
+            <div class="bg-white border border-[#E5E7EB] rounded-[12px] shadow-gomad animate-pulse">
+                <div class="w-full" style="aspect-ratio: 16/9;">
+                    <div class="w-full h-full bg-gray-200 rounded-[12px]"></div>
+                </div>
             </div>
         </div>
     </div>
@@ -96,58 +98,68 @@
             </div>
         </div>
 
-        {{-- Promo Card --}}
+        {{-- ✅ PROMO CARD DENGAN ASPECT-RATIO --}}
         <div class="relative max-w-3xl mx-auto">
-            <div class="relative overflow-hidden rounded-[12px] bg-white border border-[#E5E7EB] shadow-gomad" style="height: 300px; md:height: 420px;">
-                <div class="relative w-full h-full overflow-hidden">
-                    <template x-for="(promo, index) in promoItems" :key="index">
-                        <div x-show="currentPromoIndex === index"
-                             x-transition:enter="transition-all duration-500 ease-in-out"
-                             x-transition:enter-start="opacity-0 translate-y-full"
-                             x-transition:enter-end="opacity-100 translate-y-0"
-                             x-transition:leave="transition-all duration-500 ease-in-out"
-                             x-transition:leave-start="opacity-100 translate-y-0"
-                             x-transition:leave-end="opacity-0 -translate-y-full"
-                             class="absolute inset-0">
-                            <a href="{{ auth()->check() ? route('search') : route('login') }}" 
-                               class="block w-full h-full group">
-                                <div class="relative w-full h-full">
-                                    <div class="w-full h-full overflow-hidden bg-[#F9FAFB]">
-                                        <template x-if="promo.image">
-                                            <img :src="promo.image" :alt="promo.name" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700">
-                                        </template>
-                                        <template x-if="!promo.image">
-                                            <div class="w-full h-full bg-gradient-to-br from-[#BA1826]/10 to-[#BA1826]/5 flex items-center justify-center">
-                                                <span class="text-5xl md:text-7xl">🎫</span>
+            <div class="relative overflow-hidden rounded-[12px] bg-white border border-[#E5E7EB] shadow-gomad">
+                {{-- Aspect-ratio wrapper --}}
+                <div class="relative w-full" style="aspect-ratio: 16/9;">
+                    <div class="absolute inset-0 bg-[#F9FAFB] overflow-hidden">
+                        <template x-for="(promo, index) in promoItems" :key="index">
+                            <div x-show="currentPromoIndex === index"
+                                 x-transition:enter="transition-all duration-500 ease-in-out"
+                                 x-transition:enter-start="opacity-0 translate-y-full"
+                                 x-transition:enter-end="opacity-100 translate-y-0"
+                                 x-transition:leave="transition-all duration-500 ease-in-out"
+                                 x-transition:leave-start="opacity-100 translate-y-0"
+                                 x-transition:leave-end="opacity-0 -translate-y-full"
+                                 class="absolute inset-0">
+                                <a href="{{ auth()->check() ? route('search') : route('login') }}" 
+                                   class="block w-full h-full group">
+                                    <div class="relative w-full h-full">
+                                        {{-- Gambar dengan object-contain agar utuh --}}
+                                        <div class="w-full h-full bg-[#F9FAFB] flex items-center justify-center overflow-hidden">
+                                            <template x-if="promo.image">
+                                                <img :src="promo.image" 
+                                                     :alt="promo.name" 
+                                                     class="w-full h-full object-contain group-hover:scale-105 transition-transform duration-700">
+                                            </template>
+                                            <template x-if="!promo.image">
+                                                <div class="w-full h-full bg-gradient-to-br from-[#BA1826]/10 to-[#BA1826]/5 flex items-center justify-center">
+                                                    <span class="text-5xl md:text-7xl">🎫</span>
+                                                </div>
+                                            </template>
+                                        </div>
+                                        
+                                        {{-- Overlay Gradient --}}
+                                        <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent pointer-events-none"></div>
+                                        
+                                        {{-- Konten Promo di atas gambar --}}
+                                        <div class="absolute bottom-0 left-0 right-0 p-4 md:p-6 lg:p-8 text-white pointer-events-none">
+                                            <div class="flex flex-wrap items-center gap-1 md:gap-2 mb-2 md:mb-3">
+                                                <span class="px-2 md:px-3 py-0.5 md:py-1 rounded-full text-[8px] md:text-[10px] font-mono uppercase tracking-wider border border-white/30"
+                                                      :class="promo.module === 'travel' ? 'bg-blue-500/70' : promo.module === 'rental' ? 'bg-orange-500/70' : 'bg-purple-500/70'"
+                                                      x-text="promo.module_label">
+                                                </span>
+                                                <span x-show="promo.type === 'selective'" 
+                                                      class="px-2 md:px-3 py-0.5 md:py-1 rounded-full text-[8px] md:text-[10px] font-mono uppercase tracking-wider bg-purple-500/70 border border-white/30">
+                                                    Selektif
+                                                </span>
+                                                <span class="ml-auto bg-[#BA1826] text-white px-2 md:px-4 py-0.5 md:py-1.5 rounded-full text-[10px] md:text-sm font-bold shadow-lg"
+                                                      x-text="promo.discount_text">
+                                                </span>
                                             </div>
-                                        </template>
-                                    </div>
-                                    <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
-                                    <div class="absolute bottom-0 left-0 right-0 p-4 md:p-6 lg:p-8 text-white">
-                                        <div class="flex flex-wrap items-center gap-1 md:gap-2 mb-2 md:mb-3">
-                                            <span class="px-2 md:px-3 py-0.5 md:py-1 rounded-full text-[8px] md:text-[10px] font-mono uppercase tracking-wider border border-white/30"
-                                                  :class="promo.module === 'travel' ? 'bg-blue-500/70' : promo.module === 'rental' ? 'bg-orange-500/70' : 'bg-purple-500/70'"
-                                                  x-text="promo.module_label">
-                                            </span>
-                                            <span x-show="promo.type === 'selective'" 
-                                                  class="px-2 md:px-3 py-0.5 md:py-1 rounded-full text-[8px] md:text-[10px] font-mono uppercase tracking-wider bg-purple-500/70 border border-white/30">
-                                                Selektif
-                                            </span>
-                                            <span class="ml-auto bg-[#BA1826] text-white px-2 md:px-4 py-0.5 md:py-1.5 rounded-full text-[10px] md:text-sm font-bold shadow-lg"
-                                                  x-text="promo.discount_text">
-                                            </span>
-                                        </div>
-                                        <h3 class="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold mb-1 md:mb-2" x-text="promo.name"></h3>
-                                        <p class="text-white/80 text-xs sm:text-sm md:text-base font-light line-clamp-2" x-text="promo.description || 'Nikmati potongan harga spesial untuk perjalanan Anda.'"></p>
-                                        <div class="flex items-center gap-3 md:gap-4 mt-2 md:mt-4 text-[10px] md:text-sm text-white/60">
-                                            <span x-text="'📅 ' + promo.period"></span>
-                                            <span class="text-white/80 group-hover:translate-x-2 transition-transform inline-block">→ Selengkapnya</span>
+                                            <h3 class="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold mb-1 md:mb-2" x-text="promo.name"></h3>
+                                            <p class="text-white/80 text-xs sm:text-sm md:text-base font-light line-clamp-2" x-text="promo.description || 'Nikmati potongan harga spesial untuk perjalanan Anda.'"></p>
+                                            <div class="flex items-center gap-3 md:gap-4 mt-2 md:mt-4 text-[10px] md:text-sm text-white/60">
+                                                <span x-text="'📅 ' + promo.period"></span>
+                                                <span class="text-white/80 group-hover:translate-x-2 transition-transform inline-block pointer-events-auto">→ Selengkapnya</span>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            </a>
-                        </div>
-                    </template>
+                                </a>
+                            </div>
+                        </template>
+                    </div>
                 </div>
             </div>
             
