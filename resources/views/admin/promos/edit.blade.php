@@ -14,7 +14,21 @@
         } else {
             $selectedMethods = [];
         }
+        
+        $isRentalFixed = $promo->module === 'rental' && ($promo->rental_discount_type ?? 'percent') === 'fixed';
+        $isRentalPercent = $promo->module === 'rental' && ($promo->rental_discount_type ?? 'percent') === 'percent';
     @endphp
+
+    @if($errors->any())
+    <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-[12px] mb-6 text-sm">
+        <p class="font-medium mb-1">⚠️ Terjadi kesalahan:</p>
+        <ul class="list-disc list-inside">
+            @foreach($errors->all() as $error)
+            <li>{{ $error }}</li>
+            @endforeach
+        </ul>
+    </div>
+    @endif
 
     <form action="{{ route('admin.promos.update', $promo) }}" method="POST" enctype="multipart/form-data" class="bg-white border border-[#E5E5E5] rounded-[12px] p-6 shadow-sm space-y-6">
         @csrf @method('PUT')
@@ -77,25 +91,31 @@
         {{-- ═══════════════════════════════════════ --}}
         {{-- DISKON TRAVEL --}}
         {{-- ═══════════════════════════════════════ --}}
-        <div id="travelDiscountFields">
+        <div id="travelDiscountFields" style="display: {{ in_array($promo->module, ['travel', 'all']) ? 'block' : 'none' }};">
             <div class="border-t border-[#E5E5E5] pt-4">
                 <h3 class="font-mono uppercase tracking-wider text-xs font-bold text-[#111111] mb-3">🚐 Diskon Travel</h3>
                 <div class="grid grid-cols-3 gap-4">
                     <div>
                         <label class="block text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">Diskon (%)</label>
-                        <input type="number" name="discount_percent" value="{{ old('discount_percent', $promo->discount_percent) }}" 
-                               class="w-full px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111] transition" min="1" max="100">
+                        <input type="number" name="discount_percent" 
+                               value="{{ old('discount_percent', $promo->discount_percent) }}" 
+                               class="w-full px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111] transition" 
+                               min="1" max="100" step="0.01"
+                               id="discountPercentInput"
+                               {{ $isRentalFixed ? 'disabled' : '' }}>
+                        @if($isRentalFixed)
+                        <p class="text-[10px] text-orange-500 mt-1 font-light">⏸️ Dinonaktifkan karena tipe diskon Rental adalah Nominal Tetap</p>
+                        @endif
                     </div>
                     <div>
                         <label class="block text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">Maks Diskon (Rp)</label>
                         <input type="number" name="max_discount" value="{{ old('max_discount', $promo->max_discount) }}" 
-                               class="w-full px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111] transition">
+                               class="w-full px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111] transition" min="0">
                     </div>
                     <div>
                         <label class="block text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">Min Pembelian Travel (Rp)</label>
                         <input type="number" name="min_purchase" value="{{ old('min_purchase', $promo->min_purchase) }}" 
-                               class="w-full px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111] transition"
-                               placeholder="0" min="0">
+                               class="w-full px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111] transition" min="0">
                     </div>
                 </div>
             </div>
@@ -104,7 +124,7 @@
         {{-- ═══════════════════════════════════════ --}}
         {{-- DISKON RENTAL --}}
         {{-- ═══════════════════════════════════════ --}}
-        <div id="rentalDiscountFields">
+        <div id="rentalDiscountFields" style="display: {{ in_array($promo->module, ['rental', 'all']) ? 'block' : 'none' }};">
             <div class="border-t border-[#E5E5E5] pt-4">
                 <h3 class="font-mono uppercase tracking-wider text-xs font-bold text-[#111111] mb-3">🚗 Diskon Rental</h3>
                 
@@ -122,7 +142,8 @@
                         </label>
                         <input type="number" name="rental_discount_amount" value="{{ old('rental_discount_amount', $promo->rental_discount_amount) }}"
                                class="w-full px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111] transition"
-                               placeholder="{{ ($promo->rental_discount_type ?? 'percent') == 'fixed' ? '75000' : '10' }}" min="0">
+                               placeholder="{{ ($promo->rental_discount_type ?? 'percent') == 'fixed' ? '75000' : '10' }}" min="0"
+                               id="rentalDiscountAmountInput">
                         <p class="text-[10px] text-gray-400 mt-1 font-light" id="rentalDiscountHint">
                             {{ ($promo->rental_discount_type ?? 'percent') == 'fixed' ? 'Nominal potongan tetap' : 'Persentase diskon (1-100%)' }}
                         </p>
@@ -139,8 +160,7 @@
                 <div class="mt-3">
                     <label class="block text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">Minimal Sewa Rental (Rp)</label>
                     <input type="number" name="rental_min_purchase" value="{{ old('rental_min_purchase', $promo->rental_min_purchase ?? 0) }}" 
-                           class="w-48 px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111] transition"
-                           placeholder="0" min="0">
+                           class="w-48 px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111] transition" min="0">
                     <p class="text-[10px] text-gray-400 mt-1 font-light">Minimal subtotal sewa agar promo berlaku</p>
                 </div>
                 
@@ -155,7 +175,7 @@
         </div>
 
         {{-- Selective Target --}}
-        <div id="selectiveTarget" style="display: none;" class="grid md:grid-cols-2 gap-4">
+        <div id="selectiveTarget" style="display: {{ ($promo->type === 'selective' && $promo->module !== 'rental') ? 'grid' : 'none' }};" class="grid md:grid-cols-2 gap-4">
             <div>
                 <label class="block text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">Target Rute</label>
                 <select name="route_id" class="w-full px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111] transition">
@@ -228,6 +248,9 @@
 
 @push('scripts')
 <script>
+// ═══════════════════════════════════
+// TOGGLE MODULE FIELDS
+// ═══════════════════════════════════
 function togglePromoType() {
     var type = document.getElementById('promoType').value;
     var module = document.getElementById('promoModule').value;
@@ -255,21 +278,61 @@ function toggleModuleFields() {
     } else {
         selectiveTarget.style.display = 'none';
     }
+    
+    // Toggle discount percent disabled state
+    toggleDiscountPercentDisabled();
 }
 
-document.getElementById('rentalDiscountType').addEventListener('change', function() {
+// ═══════════════════════════════════
+// RENTAL DISCOUNT TYPE - TOGGLE
+// ═══════════════════════════════════
+function toggleDiscountPercentDisabled() {
+    var module = document.getElementById('promoModule').value;
+    var discountType = document.getElementById('rentalDiscountType');
+    var discountPercent = document.getElementById('discountPercentInput');
     var label = document.getElementById('rentalDiscountLabel');
     var hint = document.getElementById('rentalDiscountHint');
+    var amountInput = document.getElementById('rentalDiscountAmountInput');
     
-    if (this.value === 'fixed') {
+    if (!discountType || !discountPercent) return;
+    
+    // Cek apakah module adalah rental atau all, dan tipe diskon rental = fixed
+    var isRentalModule = (module === 'rental' || module === 'all');
+    var isFixed = discountType.value === 'fixed';
+    
+    // ✅ DISABLE discount_percent saat module rental + tipe fixed
+    if (isRentalModule && isFixed) {
+        discountPercent.disabled = true;
+        discountPercent.value = 0;
+        if (amountInput) {
+            amountInput.required = true;
+        }
+    } else {
+        discountPercent.disabled = false;
+        if (amountInput) {
+            amountInput.required = false;
+        }
+    }
+    
+    // Update label dan hint
+    if (discountType.value === 'fixed') {
         label.textContent = 'Jumlah Diskon (Rp)';
         hint.textContent = 'Nominal potongan tetap';
+        if (amountInput) {
+            amountInput.placeholder = '75000';
+        }
     } else {
         label.textContent = 'Jumlah Diskon (%)';
         hint.textContent = 'Persentase diskon (1-100%)';
+        if (amountInput) {
+            amountInput.placeholder = '10';
+        }
     }
-});
+}
 
+// ═══════════════════════════════════
+// IMAGE PREVIEW
+// ═══════════════════════════════════
 function previewPromoImage(event) {
     const file = event.target.files[0];
     if (file) {
@@ -282,13 +345,32 @@ function previewPromoImage(event) {
     }
 }
 
+// ═══════════════════════════════════
+// INIT
+// ═══════════════════════════════════
 document.addEventListener('DOMContentLoaded', function() {
+    // Setup initial state
     toggleModuleFields();
     
-    var rentalType = document.getElementById('rentalDiscountType');
-    if (rentalType) {
-        rentalType.dispatchEvent(new Event('change'));
+    // Event listener untuk rental discount type
+    var discountType = document.getElementById('rentalDiscountType');
+    if (discountType) {
+        discountType.addEventListener('change', toggleDiscountPercentDisabled);
     }
+    
+    // Event listener untuk module change (trigger ulang)
+    var moduleSelect = document.getElementById('promoModule');
+    if (moduleSelect) {
+        moduleSelect.addEventListener('change', function() {
+            toggleModuleFields();
+            toggleDiscountPercentDisabled();
+        });
+    }
+    
+    // Trigger initial state untuk discount percent
+    setTimeout(function() {
+        toggleDiscountPercentDisabled();
+    }, 100);
 });
 </script>
 @endpush
