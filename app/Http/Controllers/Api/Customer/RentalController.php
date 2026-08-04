@@ -53,6 +53,7 @@ class RentalController extends Controller
             'start_datetime' => ['required', 'date', 'after:now'],
             'end_datetime' => ['required', 'date', 'after:start_datetime'],
             'duration_unit' => ['required', 'in:hour,day'],
+            'payment_method' => ['required', 'in:midtrans,ots'],
             'notes' => ['nullable', 'string', 'max:500'],
         ]);
 

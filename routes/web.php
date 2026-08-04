@@ -183,6 +183,7 @@ Route::middleware(['auth', \App\Http\Middleware\Web\AgencyMiddleware::class])
         Route::get('/rental/dashboard', [WebAgencyRentalController::class, 'dashboard'])->name('rental.dashboard');
         Route::get('/rentals', [WebAgencyRentalController::class, 'index'])->name('rental.index');
         Route::get('/rentals/{rental}', [WebAgencyRentalController::class, 'show'])->name('rental.show');
+        Route::post('/rentals/{rental}/confirm-ots', [WebAgencyRentalController::class, 'confirmOtsPayment'])->name('rental.confirm-ots');
         Route::post('/rentals/{rental}/verify-pickup', [WebAgencyRentalController::class, 'verifyPickup'])->name('rental.verify-pickup');
         Route::post('/rentals/{rental}/verify-return', [WebAgencyRentalController::class, 'verifyReturn'])->name('rental.verify-return');
         Route::post('/rentals/{rental}/complete', [WebAgencyRentalController::class, 'complete'])->name('rental.complete');

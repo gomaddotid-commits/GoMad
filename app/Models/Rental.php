@@ -112,7 +112,7 @@ class Rental extends Model
 
     public function getIsPaidAttribute(): bool
     {
-        return $this->payment && $this->payment->status === 'paid';
+        return $this->payment && in_array($this->payment->status, ['paid', 'ots_confirmed']);
     }
 
     public function getCanCancelAttribute(): bool

@@ -135,6 +135,10 @@
                         <input type="checkbox" name="allow_with_driver" value="1" class="w-5 h-5 rounded border-[#E5E5E5] text-[#C1121F] focus:ring-[#C1121F]" {{ ($setting->allow_with_driver ?? true) ? 'checked' : '' }} onchange="toggleDriverFee()">
                         <div><span class="font-semibold text-[#111111]">👨‍✈️ Dengan Supir</span><p class="text-xs text-gray-500 font-light">Termasuk supir profesional dari agency.</p></div>
                     </label>
+                    <label class="flex items-center gap-3 p-3 border border-[#E5E5E5] rounded-[12px] cursor-pointer hover:bg-[#F5F5F5]">
+                        <input type="checkbox" name="allow_ots" value="1" class="w-5 h-5 rounded border-[#E5E5E5] text-[#C1121F] focus:ring-[#C1121F]" {{ ($setting->allow_ots ?? true) ? 'checked' : '' }}>
+                        <div><span class="font-semibold text-[#111111]">💵 Bayar di Tempat (OTS)</span><p class="text-xs text-gray-500 font-light">Customer boleh bayar tunai langsung saat pengambilan mobil.</p></div>
+                    </label>
                     <div id="driverFeeSection" class="grid grid-cols-2 gap-4 pl-8 {{ ($setting->allow_with_driver ?? true) ? '' : 'hidden' }}">
                         <div>
                             <label class="block text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">Biaya Supir/Hari (Rp)</label>

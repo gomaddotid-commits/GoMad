@@ -49,7 +49,7 @@
 @else
 
 <div class="max-w-5xl mx-auto" x-data="{ 
-    activeTab: '{{ $isReturn ? 'pulang' : 'pergi' }}',
+    activeTab: '{{ $activeTab ?? ($isReturn ? 'pulang' : 'pergi') }}',
     showStopConfigGo: false,
     showStopConfigPP: false
 }">

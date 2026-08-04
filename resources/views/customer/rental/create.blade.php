@@ -180,15 +180,20 @@
             {{-- Durasi --}}
             <div class="mb-6">
                 <label class="block text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-3">Durasi Sewa <span class="text-[#C1121F]">*</span></label>
+                @php $hasHourlyRate = ($vehicleSetting->price_per_hour ?? 0) > 0; @endphp
                 <div class="flex gap-3 mb-4">
                     <label class="flex items-center gap-2 cursor-pointer">
-                        <input type="radio" name="duration_unit" value="day" class="text-[#C1121F] focus:ring-[#C1121F]" {{ old('duration_unit', 'day') == 'day' ? 'checked' : '' }} onchange="updateDurationUnit('day')">
+                        <input type="radio" name="duration_unit" value="day" class="text-[#C1121F] focus:ring-[#C1121F]" {{ old('duration_unit', 'day') == 'day' || !$hasHourlyRate ? 'checked' : '' }} onchange="updateDurationUnit('day')">
                         <span class="text-sm text-[#111111] font-medium">Per Hari</span>
                     </label>
+                    @if($hasHourlyRate)
                     <label class="flex items-center gap-2 cursor-pointer">
                         <input type="radio" name="duration_unit" value="hour" class="text-[#C1121F] focus:ring-[#C1121F]" {{ old('duration_unit') == 'hour' ? 'checked' : '' }} onchange="updateDurationUnit('hour')">
                         <span class="text-sm text-[#111111] font-medium">Per Jam</span>
                     </label>
+                    @else
+                    <span class="flex items-center gap-2 text-sm text-gray-400 font-light">Per Jam <span class="text-[10px] text-gray-400">(tidak tersedia)</span></span>
+                    @endif
                 </div>
                 <div class="grid grid-cols-2 gap-4">
                     <div>
@@ -292,6 +297,33 @@
                 <label class="block text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">Catatan (Opsional)</label>
                 <textarea name="notes" rows="2" class="w-full px-3 py-2 border border-[#E5E5E5] rounded-[12px] focus:border-[#C1121F] outline-none bg-white text-[#111111] transition"
                     placeholder="{{ $defaultType == 'self_drive' ? 'Contoh: Saya akan datang sekitar jam 09:00...' : 'Contoh: Butuh car seat untuk anak...' }}">{{ old('notes') }}</textarea>
+            </div>
+
+            {{-- Metode Pembayaran --}}
+            <div class="mb-6">
+                <label class="block text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-3">Metode Pembayaran <span class="text-[#C1121F]">*</span></label>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <label class="payment-method-card flex items-start gap-3 p-4 border-2 border-[#E5E5E5] rounded-[12px] cursor-pointer hover:border-[#C1121F] transition" id="payMidtransCard">
+                        <input type="radio" name="payment_method" value="midtrans" id="payMidtrans" class="mt-1 text-[#C1121F] focus:ring-[#C1121F]" {{ old('payment_method', 'midtrans') == 'midtrans' ? 'checked' : '' }} onchange="selectPaymentMethod('midtrans')">
+                        <div>
+                            <p class="font-semibold text-[#111111] text-sm">💳 Pembayaran Online</p>
+                            <p class="text-[10px] text-gray-500 mt-1 font-light">Transfer Bank, Virtual Account, QRIS, E-Wallet</p>
+                        </div>
+                    </label>
+                    @if($vehicleSetting->allow_ots)
+                    <label class="payment-method-card flex items-start gap-3 p-4 border-2 border-[#E5E5E5] rounded-[12px] cursor-pointer hover:border-[#C1121F] transition" id="payOtsCard">
+                        <input type="radio" name="payment_method" value="ots" id="payOts" class="mt-1 text-[#C1121F] focus:ring-[#C1121F]" {{ old('payment_method') == 'ots' ? 'checked' : '' }} onchange="selectPaymentMethod('ots')">
+                        <div>
+                            <p class="font-semibold text-[#111111] text-sm">💵 Bayar di Tempat (OTS)</p>
+                            <p class="text-[10px] text-gray-500 mt-1 font-light">Bayar tunai langsung ke {{ $agency->agency_name }} saat pengambilan mobil</p>
+                        </div>
+                    </label>
+                    @endif
+                </div>
+                <div id="otsNotice" class="mt-3 bg-yellow-50 border border-yellow-200 rounded-[12px] p-3 text-xs text-yellow-700 {{ old('payment_method') == 'ots' ? '' : 'hidden' }}">
+                    <p class="font-medium">⚠️ Informasi OTS</p>
+                    <p class="font-light mt-1">Anda akan membayar <strong>tunai</strong> sebesar <strong>Rp {{ number_format(($vehicleSetting->price_per_day ?? 0), 0, ',', '.') }}</strong> (disesuaikan durasi) ditambah <strong>deposit Rp {{ number_format($vehicleSetting->deposit_amount ?? 0, 0, ',', '.') }}</strong> langsung ke travel saat pengambilan. Pastikan membawa uang tunai yang cukup.</p>
+                </div>
             </div>
 
             {{-- Ringkasan Harga --}}
@@ -417,6 +449,14 @@ function selectType(type) {
 }
 
 function updateDurationUnit(unit) { durationUnit = unit; calculatePrice(); }
+
+function selectPaymentMethod(method) {
+    document.querySelectorAll('.payment-method-card').forEach(c => { c.classList.remove('border-[#C1121F]','bg-[#C1121F]/5'); c.classList.add('border-[#E5E5E5]'); });
+    var card = document.getElementById(method === 'ots' ? 'payOtsCard' : 'payMidtransCard');
+    if (card) { card.classList.add('border-[#C1121F]','bg-[#C1121F]/5'); card.classList.remove('border-[#E5E5E5]'); }
+    var notice = document.getElementById('otsNotice');
+    if (notice) { if (method === 'ots') { notice.classList.remove('hidden'); } else { notice.classList.add('hidden'); } }
+}
 
 function calculatePrice() {
     var startVal = document.getElementById('startDatetime').value, endVal = document.getElementById('endDatetime').value;

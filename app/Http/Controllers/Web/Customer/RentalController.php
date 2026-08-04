@@ -69,6 +69,7 @@ class RentalController extends Controller
             'start_datetime' => ['required', 'date', 'after:now'],
             'end_datetime' => ['required', 'date', 'after:start_datetime'],
             'duration_unit' => ['required', 'in:hour,day'],
+            'payment_method' => ['required', 'in:midtrans,ots'],
             'promo_id' => ['nullable', 'integer', 'exists:promos,id'],
             'notes' => ['nullable', 'string', 'max:500'],
         ];
@@ -89,8 +90,12 @@ class RentalController extends Controller
 
             $rental = $this->rentalService->createRentalBooking($data);
 
+            $isOts = ($request->payment_method === 'ots');
+
             return redirect()->route('customer.rental.show', $rental)
-                ->with('success', 'Booking rental berhasil! Silakan lakukan pembayaran.');
+                ->with('success', $isOts
+                    ? 'Booking rental OTS berhasil! Silakan bayar tunai di tempat saat pengambilan mobil.'
+                    : 'Booking rental berhasil! Silakan lakukan pembayaran.');
         } catch (\Exception $e) {
             return back()->with('error', $e->getMessage())->withInput();
         }
@@ -219,8 +224,40 @@ class RentalController extends Controller
             return back()->with('error', 'Rental sudah tidak dalam status pending.');
         }
 
+        $request->validate([
+            'payment_method' => ['required', 'in:midtrans,ots'],
+        ]);
+
         try {
-            // Buat payment record
+            // OTS: bayar tunai di tempat → buat payment OTS (tanpa Midtrans)
+            if ($request->payment_method === 'ots') {
+                $existing = \App\Models\Payment::where('rental_id', $rental->id)
+                    ->where('payment_type', 'ots')
+                    ->whereIn('status', [\App\Enums\PaymentStatus::OTS_PENDING->value])
+                    ->first();
+
+                if (!$existing) {
+                    \App\Models\Payment::create([
+                        'booking_id' => null,
+                        'rental_id' => $rental->id,
+                        'amount' => $rental->total_price,
+                        'commission' => $rental->total_price * 0.05,
+                        'agency_revenue' => $rental->total_price * 0.95,
+                        'payment_type' => 'ots',
+                        'status' => \App\Enums\PaymentStatus::OTS_PENDING->value,
+                    ]);
+                }
+
+                $rental->refresh();
+                if (!$rental->payment_id) {
+                    $rental->update(['payment_id' => $existing?->id ?? \App\Models\Payment::where('rental_id', $rental->id)->where('payment_type', 'ots')->value('id')]);
+                }
+
+                return redirect()->route('customer.rental.show', $rental)
+                    ->with('success', 'Booking OTS dikonfirmasi. Silakan bayar tunai di tempat saat pengambilan mobil.');
+            }
+
+            // Midtrans: buat payment record + Snap Token
             $payment = \App\Models\Payment::create([
                 'booking_id' => null,
                 'rental_id' => $rental->id,

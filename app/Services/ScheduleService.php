@@ -474,6 +474,13 @@ class ScheduleService
                     }
                 }
 
+                // FALLBACK: pastikan jadwal PP selalu punya harga.
+                // Saat rute pulang belum ada (PP pertama kali), wizard mengirim stop id = null,
+                // sehingga isset() di atas false dan tidak ada pricing yang dibuat.
+                if (RoutePricing::where('schedule_id', $schedulePP->id)->count() === 0) {
+                    $this->autoGeneratePricing($schedulePP, (float) ($data['pp_price'] ?? $data['price_per_seat']));
+                }
+
                 // SET KETERSEDIAAN RENTAL
                 if ($isRentalVehicle) {
                     $lastArrival = $estimatedArrivalPP ?? $ppDateTime;

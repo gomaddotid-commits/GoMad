@@ -213,6 +213,7 @@ class RentalService
                     'price_per_day' => $data['price_per_day'] ?? null,
                     'allow_self_drive' => $data['allow_self_drive'] ?? false,
                     'allow_with_driver' => $data['allow_with_driver'] ?? true,
+                    'allow_ots' => $data['allow_ots'] ?? true,
                     'driver_fee_per_hour' => $data['driver_fee_per_hour'] ?? null,
                     'driver_fee_per_day' => $data['driver_fee_per_day'] ?? null,
                     'deposit_amount' => $data['deposit_amount'] ?? 0,
@@ -392,6 +393,15 @@ class RentalService
 
             // Validasi tipe rental
             $type = RentalType::from($data['type']);
+            $paymentMethod = $data['payment_method'] ?? 'midtrans';
+
+            if (!in_array($paymentMethod, ['midtrans', 'ots'])) {
+                throw new \Exception('Metode pembayaran tidak valid.');
+            }
+
+            if ($paymentMethod === 'ots' && !$vehicleSetting->allow_ots) {
+                throw new \Exception('Kendaraan ini tidak menyediakan pembayaran di tempat (OTS).');
+            }
 
             if ($type === RentalType::SELF_DRIVE) {
                 if (!$vehicleSetting->allow_self_drive) {
@@ -506,7 +516,8 @@ class RentalService
                 : $vehicleSetting->price_per_day;
 
             if (!$pricePerUnit || $pricePerUnit <= 0) {
-                throw new \Exception('Harga sewa belum diatur untuk kendaraan ini.');
+                $satuan = $durationUnit === 'hour' ? 'per jam' : 'per hari';
+                throw new \Exception("Harga sewa {$satuan} belum diatur untuk kendaraan ini.");
             }
 
             $driverFeePerUnit = 0;
@@ -522,7 +533,7 @@ class RentalService
 
             // Generate rental code
             $baseCode = 'RN-' . now()->format('Ymd') . '-';
-            $lastRental = Rental::where('rental_code', 'like', $baseCode . '%')
+            $lastRental = Rental::withTrashed()->where('rental_code', 'like', $baseCode . '%')
                 ->orderBy('rental_code', 'desc')
                 ->first();
 
@@ -535,7 +546,8 @@ class RentalService
 
             $rentalCode = $baseCode . str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
 
-            while (Rental::where('rental_code', $rentalCode)->exists()) {
+            // ⚡ Sertakan rental soft-deleted (unique index DB tetap menghitungnya)
+            while (Rental::withTrashed()->where('rental_code', $rentalCode)->exists()) {
                 $nextNumber++;
                 $rentalCode = $baseCode . str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
             }
@@ -597,7 +609,26 @@ class RentalService
                 }
             }
 
+            // Buat pembayaran sesuai metode
+            if ($paymentMethod === 'ots') {
+                $payment = \App\Models\Payment::create([
+                    'rental_id' => $rental->id,
+                    'amount' => $finalPrice,
+                    'commission' => round($finalPrice * 0.05, 2),
+                    'agency_revenue' => round($finalPrice * 0.95, 2),
+                    'payment_type' => 'ots',
+                    'status' => \App\Enums\PaymentStatus::OTS_PENDING->value,
+                ]);
+                $rental->update(['payment_id' => $payment->id]);
+            }
+
             // Notifikasi customer
+            $isOts = $paymentMethod === 'ots';
+            $paymentNote = $isOts
+                ? "Pembayaran: *Tunai di Tempat (OTS)*\n\n" .
+                  "Silakan datang ke {$agency->agency_name} dan bayar tunai saat pengambilan mobil."
+                : "Silakan lakukan pembayaran online.";
+
             $this->notificationService->sendWhatsApp(
                 $customer->phone,
                 "✅ *Booking Rental Berhasil!*\n\n" .
@@ -606,7 +637,7 @@ class RentalService
                 "Tipe: {$type->label()}\n" .
                 "Durasi: {$duration} {$durationUnit}\n" .
                 "Total: Rp " . number_format($finalPrice, 0, ',', '.') . "\n\n" .
-                "Silakan lakukan pembayaran."
+                $paymentNote
             );
 
             // Notifikasi agency
@@ -619,7 +650,8 @@ class RentalService
                     "Mobil: {$vehicle->plate_number}\n" .
                     "Tipe: {$type->label()}\n" .
                     "Durasi: {$duration} {$durationUnit}\n" .
-                    "Total: Rp " . number_format($finalPrice, 0, ',', '.')
+                    "Total: Rp " . number_format($finalPrice, 0, ',', '.') . "\n" .
+                    "Metode: " . ($isOts ? "*Tunai di Tempat (OTS)* - tunggu pembayaran tunai saat pickup" : "Online (Midtrans)")
                 );
             }
 
@@ -740,6 +772,59 @@ class RentalService
     }
 
     // ═══════════════════════════════════════════
+    // OTS: KONFIRMASI PEMBAYARAN TUNAI + SERAH TERIMA
+    // ═══════════════════════════════════════════
+
+    public function confirmOtsPayment(Rental $rental): Rental
+    {
+        return DB::transaction(function () use ($rental) {
+            if ($rental->status !== RentalStatus::PENDING->value) {
+                throw new \Exception('Rental harus dalam status Menunggu Pembayaran.');
+            }
+
+            if (!$rental->payment || $rental->payment->payment_type !== 'ots') {
+                throw new \Exception('Rental ini bukan pembayaran OTS (tunai di tempat).');
+            }
+
+            if ($rental->payment->status !== \App\Enums\PaymentStatus::OTS_PENDING->value) {
+                throw new \Exception('Pembayaran OTS tidak dalam status menunggu pembayaran.');
+            }
+
+            // Tandai lunas + serah terima kendaraan
+            $rental->payment->update([
+                'status' => \App\Enums\PaymentStatus::OTS_CONFIRMED->value,
+                'paid_at' => now(),
+            ]);
+
+            $rental->update([
+                'status' => RentalStatus::ACTIVE->value,
+                'started_at' => now(),
+            ]);
+
+            if ($rental->customer->phone) {
+                $this->notificationService->sendWhatsApp(
+                    $rental->customer->phone,
+                    "✅ *Pembayaran OTS Diterima!*\n\n" .
+                    "Kode: *{$rental->rental_code}*\n" .
+                    "Mobil: {$rental->vehicle->plate_number}\n" .
+                    "Pembayaran tunai diterima, mobil sudah diserahkan.\n" .
+                    "Sampai: {$rental->end_datetime->format('d M Y H:i')}\n\n" .
+                    "Selamat berkendara!"
+                );
+            }
+
+            Log::info('Rental OTS payment confirmed', [
+                'rental_code' => $rental->rental_code,
+                'rental_id' => $rental->id,
+                'agency_id' => $rental->agency_id,
+                'amount' => $rental->total_price,
+            ]);
+
+            return $rental;
+        });
+    }
+
+    // ═══════════════════════════════════════════
     // COMPLETE RENTAL
     // ═══════════════════════════════════════════
 
@@ -754,16 +839,29 @@ class RentalService
                 throw new \Exception('Rental tidak memiliki data pembayaran.');
             }
 
-            if ($rental->payment->status !== \App\Enums\PaymentStatus::PAID->value) {
+            $isOts = $rental->payment->payment_type === 'ots';
+            $allowedPaidStatuses = [\App\Enums\PaymentStatus::PAID->value];
+            if ($isOts) {
+                $allowedPaidStatuses[] = \App\Enums\PaymentStatus::OTS_CONFIRMED->value;
+            }
+
+            if (!in_array($rental->payment->status, $allowedPaidStatuses)) {
                 throw new \Exception('Pembayaran rental belum dikonfirmasi. Status: ' . $rental->payment->status_label);
             }
 
             $rental->update(['status' => RentalStatus::COMPLETED->value]);
 
-            $revenue = $rental->subtotal - $rental->platform_fee;
+            $revenue = 0;
+            if ($isOts) {
+                // OTS: customer sudah bayar tunai langsung ke agency.
+                // Jangan kredit revenue ke dompet; tagih komisi platform dari saldo agency.
+                $this->walletService->chargeOtsCommission($rental);
+            } else {
+                $revenue = $rental->subtotal - $rental->platform_fee;
 
-            if ($revenue > 0) {
-                $this->walletService->creditRentalRevenue($rental);
+                if ($revenue > 0) {
+                    $this->walletService->creditRentalRevenue($rental);
+                }
             }
 
             if ($rental->customer->phone) {
@@ -779,7 +877,9 @@ class RentalService
             Log::info('Rental completed', [
                 'rental_code' => $rental->rental_code,
                 'agency_id' => $rental->agency_id,
-                'revenue' => $revenue,
+                'payment_type' => $rental->payment?->payment_type,
+                'revenue_credited' => $revenue,
+                'commission_charged' => $isOts ? $rental->platform_fee : 0,
             ]);
 
             return $rental;

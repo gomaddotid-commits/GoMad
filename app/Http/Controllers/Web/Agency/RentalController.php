@@ -84,6 +84,7 @@ class RentalController extends Controller
             'price_per_day' => ['nullable', 'numeric', 'min:0'],
             'allow_self_drive' => ['nullable', 'boolean'],
             'allow_with_driver' => ['nullable', 'boolean'],
+            'allow_ots' => ['nullable', 'boolean'],
             'driver_fee_per_hour' => ['nullable', 'numeric', 'min:0'],
             'driver_fee_per_day' => ['nullable', 'numeric', 'min:0'],
             'deposit_amount' => ['nullable', 'numeric', 'min:0'],
@@ -138,6 +139,19 @@ class RentalController extends Controller
             ->get();
 
         return view('agency.rental.vehicles', compact('vehicles'));
+    }
+
+    /**
+     * Konfirmasi pembayaran OTS (tunai di tempat) + serah terima kendaraan
+     */
+    public function confirmOtsPayment(Rental $rental): RedirectResponse
+    {
+        try {
+            $this->rentalService->confirmOtsPayment($rental);
+            return back()->with('success', 'Pembayaran tunai OTS diterima, kendaraan diserahkan.');
+        } catch (\Exception $e) {
+            return back()->with('error', $e->getMessage());
+        }
     }
 
     /**

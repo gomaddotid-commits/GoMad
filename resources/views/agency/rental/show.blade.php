@@ -137,8 +137,10 @@
                 <div class="flex justify-between text-base font-bold"><span>Total</span><span class="text-[#C1121F] font-mono">Rp {{ number_format($rental->total_price, 0, ',', '.') }}</span></div>
             </div>
             @if($rental->payment)
-            <div class="mt-4 p-3 rounded-[12px] text-sm border @if($rental->payment->status == 'paid') bg-green-50 border-green-200 text-green-700 @elseif($rental->payment->status == 'pending') bg-yellow-50 border-yellow-200 text-yellow-700 @else bg-[#F5F5F5] border-[#E5E5E5] text-gray-600 @endif">
+            <div class="mt-4 p-3 rounded-[12px] text-sm border @if(in_array($rental->payment->status, ['paid','ots_confirmed'])) bg-green-50 border-green-200 text-green-700 @elseif(in_array($rental->payment->status, ['pending','ots_pending'])) bg-yellow-50 border-yellow-200 text-yellow-700 @else bg-[#F5F5F5] border-[#E5E5E5] text-gray-600 @endif">
+                <span class="font-medium">Metode:</span> {{ $rental->payment->payment_type == 'ots' ? '💵 Tunai di Tempat (OTS)' : '💳 Online (Midtrans)' }}<br>
                 <span class="font-medium">Status:</span> {{ $rental->payment->status_label ?? $rental->payment->status }}
+                @if($rental->payment->paid_at)<br><span class="font-medium">Dibayar:</span> {{ $rental->payment->paid_at->format('d M Y H:i') }}@endif
             </div>
             @endif
         </div>
@@ -222,6 +224,25 @@
         <h2 class="font-bold text-lg text-[#111111] mb-4">Aksi</h2>
         
         <div class="flex flex-wrap gap-3">
+            @if($rental->status == 'pending' && $rental->payment && $rental->payment->payment_type == 'ots' && $rental->payment->status == 'ots_pending')
+            <div class="w-full bg-green-50 border border-green-200 rounded-[12px] p-4">
+                <p class="font-semibold text-green-800 text-sm">💵 Pembayaran OTS (Tunai di Tempat)</p>
+                <div class="mt-2 text-sm bg-white border border-green-200 rounded-[12px] p-3">
+                    <div class="flex justify-between"><span class="text-gray-500 font-light">Total tunai diterima</span><span class="font-bold text-green-700">Rp {{ number_format($rental->total_price + ($setting?->deposit_amount ?? 0), 0, ',', '.') }}</span></div>
+                    @if(($setting?->deposit_amount ?? 0) > 0)
+                    <div class="flex justify-between mt-1 text-xs"><span class="text-gray-500 font-light">termasuk deposit (dikembalikan saat return)</span><span class="text-[#111111]">Rp {{ number_format($setting->deposit_amount, 0, ',', '.') }}</span></div>
+                    @endif
+                </div>
+                <p class="text-xs text-green-600 font-light mt-2">Terima pembayaran tunai dari customer, lalu konfirmasi untuk menyerahkan kendaraan.</p>
+            </div>
+            <form action="{{ route('agency.rental.confirm-ots', $rental) }}" method="POST" class="flex-1">
+                @csrf
+                <button type="submit" class="w-full bg-green-600 text-white py-3 rounded-[12px] font-semibold hover:bg-green-700 transition" onclick="return confirm('Konfirmasi pembayaran tunai OTS diterima dan serah terima kendaraan?')">
+                    💵 Konfirmasi Pembayaran OTS & Serah Terima
+                </button>
+            </form>
+            @endif
+
             @if($rental->status == 'paid')
             <form action="{{ route('agency.rental.verify-pickup', $rental) }}" method="POST" class="flex-1">
                 @csrf

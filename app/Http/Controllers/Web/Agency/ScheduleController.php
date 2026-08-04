@@ -129,6 +129,17 @@ class ScheduleController extends Controller
     public function show(Schedule $schedule): View
     {
         $schedule->load(['ppSchedule', 'childSchedule', 'parentSchedule']);
+
+        // Jika ini jadwal pulang (return), tampilkan lewat jadwal perginya
+        // dengan tab "Pulang" aktif agar konten & harga PP tetap dirender.
+        if ($schedule->parentSchedule) {
+            $goSchedule = $schedule->parentSchedule;
+            $goSchedule->load(['ppSchedule', 'childSchedule', 'parentSchedule']);
+            $scheduleData = $this->scheduleService->getScheduleWithPricing($goSchedule);
+            $scheduleData['activeTab'] = 'pulang';
+            return view('agency.schedules.show', $scheduleData);
+        }
+
         $scheduleData = $this->scheduleService->getScheduleWithPricing($schedule);
         return view('agency.schedules.show', $scheduleData);
     }

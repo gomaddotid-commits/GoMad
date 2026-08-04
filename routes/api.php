@@ -454,9 +454,6 @@ Route::prefix('v1')->group(function () {
             Route::get('/bookings/{booking}', [ApiAdminBookingController::class, 'show']);
             Route::post('/bookings/{booking}/cancel', [ApiAdminBookingController::class, 'cancel']);
 
-            // Schedules
-            Route::get('/schedules/by-city', [ApiAdminScheduleController::class, 'byCity']);
-
             // Rental
             Route::get('/rentals', [ApiAdminRentalController::class, 'index']);
             Route::get('/rentals/{rental}', [ApiAdminRentalController::class, 'show']);

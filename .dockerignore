@@ -1,7 +1,13 @@
 vendor/
 node_modules/
 .env
+.env.add
+.env.dev
+.env.production
+.env.backup
 .git
+.gitignore
+.gitattributes
 storage/logs/
 storage/framework/cache/
 storage/framework/sessions/

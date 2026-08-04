@@ -151,7 +151,7 @@
                     <div>
                         <label class="block text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">Harga Dasar per Seat (Rp) <span class="text-[#C1121F]">*</span></label>
                         <input type="number" name="price_per_seat" id="basePrice" value="{{ old('price_per_seat', 150000) }}" 
-                               class="w-full px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111] transition" min="1000" required>
+                               class="w-full px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111] transition" min="1000" required onchange="updateGoSummaryPrice()" oninput="updateGoSummaryPrice()">
                     </div>
                     <div class="flex gap-4">
                         <div class="flex-1">
@@ -712,6 +712,13 @@ function updatePPSummaryPrice() {
     var ppPrice = parseInt(document.getElementById('ppPrice')?.value) || parseInt(document.getElementById('basePrice')?.value) || 150000;
     pricingListPP.forEach(function(p) { p.price = ppPrice; });
     updatePricingSummary('pricingListPP', 'pricingSummaryPP', pricingListPP, 'pp');
+}
+
+// Sinkronkan semua pasangan harga pergi saat Harga Dasar berubah
+function updateGoSummaryPrice() {
+    var basePrice = parseInt(document.getElementById('basePrice').value) || 150000;
+    pricingListGo.forEach(function(p) { p.price = basePrice; });
+    updatePricingSummary('pricingListGo', 'pricingSummaryGo', pricingListGo, 'go');
 }
 
 // ═══════════════════════════════════

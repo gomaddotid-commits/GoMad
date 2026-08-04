@@ -91,16 +91,36 @@
         </div>
 
         {{-- Add Stop Form --}}
-        <form id="addStopForm" action="{{ route('admin.routes.stops.add', $route) }}" method="POST" class="hidden bg-[#F5F5F5] border border-[#E5E5E5] p-4 rounded-[12px] mb-4">
+        <form id="addStopForm" action="{{ route('admin.routes.stops.add', $route) }}" method="POST" class="hidden bg-[#F5F5F5] border border-[#E5E5E5] p-4 rounded-[12px] mb-4" x-data="stopSelect()">
             @csrf
-            <div class="flex gap-3">
-                <select name="city_code" class="flex-1 px-3 py-2 border border-[#E5E5E5] rounded-[12px] focus:border-[#C1121F] outline-none bg-white text-[#111111]" required>
-                    <option value="">Pilih Kota</option>
-                    @foreach(\App\Models\City::with('province')->orderBy('name')->get() as $city)
-                    <option value="{{ $city->code }}">{{ $city->name }} ({{ $city->province->name }})</option>
-                    @endforeach
-                </select>
-                <button type="submit" class="bg-[#C1121F] text-white px-4 py-2 rounded-[12px] text-sm">Simpan</button>
+            <div class="flex gap-3 items-start">
+                <div class="flex-1 relative">
+                    <input type="hidden" name="city_code" :value="selectedCode">
+                    <div class="flex items-center border border-[#E5E5E5] rounded-[12px] focus-within:border-[#C1121F] bg-white transition">
+                        <input type="text" x-model="query"
+                               @focus="open = true" @input="open = true" @keydown.escape="open = false"
+                               :placeholder="selectedName || 'Ketik untuk cari kota…'"
+                               class="w-full px-3 py-2 bg-transparent outline-none text-[#111111] text-sm rounded-[12px]">
+                        <button type="button" x-show="selectedCode" @mousedown.prevent="clear()"
+                                class="text-gray-400 hover:text-[#C1121F] px-2 text-sm shrink-0">✕</button>
+                    </div>
+                    <div x-show="open" x-cloak x-transition
+                         class="absolute z-50 mt-1 w-full max-h-64 overflow-auto bg-white border border-[#E5E5E5] rounded-[12px] shadow-lg">
+                        <template x-for="city in filtered" :key="city.code">
+                            <button type="button" @mousedown.prevent="select(city.code)"
+                                    class="w-full text-left px-4 py-2 hover:bg-[#F5F5F5] flex items-center justify-between"
+                                    :class="selectedCode === city.code ? 'bg-[#C1121F]/5' : ''">
+                                <span>
+                                    <span class="block font-medium text-[#111111] text-sm" x-text="city.name"></span>
+                                    <span class="block text-[10px] text-gray-400" x-text="city.province"></span>
+                                </span>
+                                <span x-show="selectedCode === city.code" class="text-[#C1121F] text-sm">✓</span>
+                            </button>
+                        </template>
+                        <div x-show="filtered.length === 0" class="px-4 py-3 text-sm text-gray-500">Tidak ada kota yang cocok.</div>
+                    </div>
+                </div>
+                <button type="submit" class="bg-[#C1121F] text-white px-4 py-2 rounded-[12px] text-sm whitespace-nowrap">Simpan</button>
             </div>
         </form>
 
@@ -213,4 +233,35 @@
     </div>
     @endif
 </div>
+
+@php
+    $stopCities = \App\Models\City::with('province')->orderBy('name')->get()
+        ->reject(fn($c) => $route->stops->pluck('city_code')->contains($c->code))
+        ->map(fn($c) => ['code' => $c->code, 'name' => $c->name, 'province' => $c->province->name ?? ''])
+        ->values();
+@endphp
+@push('scripts')
+<script>
+function stopSelect() {
+    return {
+        selectedCode: '',
+        query: '',
+        open: false,
+        cities: @json($stopCities),
+        get selectedName() {
+            const c = this.cities.find(c => c.code === this.selectedCode);
+            return c ? c.name : '';
+        },
+        get filtered() {
+            const q = (this.query || '').toLowerCase();
+            return this.cities
+                .filter(c => !q || (c.name + ' ' + c.province).toLowerCase().includes(q))
+                .slice(0, 60);
+        },
+        select(code) { this.selectedCode = code; this.query = ''; this.open = false; },
+        clear() { this.selectedCode = ''; this.query = ''; this.open = true; }
+    };
+}
+</script>
+@endpush
 @endsection

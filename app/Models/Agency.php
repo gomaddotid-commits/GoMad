@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 
@@ -131,9 +132,20 @@ class Agency extends Model
         return $this->hasMany(User::class)->where('role', 'driver');
     }
 
-    public function bookings(): HasMany
+    /**
+     * Booking milik agency — melalui Schedule (booking.schedule_id -> schedules.agency_id).
+     * Booking tidak punya kolom agency_id.
+     */
+    public function bookings(): HasManyThrough
     {
-        return $this->hasMany(Booking::class);
+        return $this->hasManyThrough(
+            Booking::class,
+            Schedule::class,
+            'agency_id',   // FK di schedules
+            'schedule_id', // FK di bookings
+            'id',          // local key di agencies
+            'id'           // local key di schedules
+        );
     }
 
     public function reviews(): HasMany

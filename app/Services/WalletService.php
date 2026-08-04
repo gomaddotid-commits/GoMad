@@ -7,6 +7,7 @@ namespace App\Services;
 use App\Models\Agency;
 use App\Models\AgencyWallet;
 use App\Models\Booking;
+use App\Models\Rental;
 use App\Models\WalletTransaction;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Http;
@@ -185,6 +186,102 @@ class WalletService
                 'rental_code' => $rental->rental_code,
                 'agency_id' => $agency->id,
                 'amount' => $revenue,
+            ]);
+        });
+    }
+
+    /**
+     * Tagih komisi platform untuk rental OTS (tunai di tempat).
+     *
+     * Karena customer sudah bayar tunai langsung ke agency, sistem TIDAK mengkredit
+     * revenue ke dompet. Sebaliknya, komisi platform (platform_fee) ditagih dari
+     * saldo agency. Jika saldo tidak cukup, transaksi dicatat sebagai outstanding
+     * (tidak memblokir penyelesaian rental).
+     */
+    public function chargeOtsCommission(Rental $rental): void
+    {
+        DB::transaction(function () use ($rental) {
+            // 🔒 Idempotency check
+            $alreadyCharged = WalletTransaction::where('reference_type', 'ots_commission')
+                ->where('reference_id', $rental->id)
+                ->exists();
+
+            if ($alreadyCharged) {
+                Log::warning('OTS commission already charged - skipping', [
+                    'rental_code' => $rental->rental_code,
+                    'rental_id' => $rental->id,
+                ]);
+                return;
+            }
+
+            $agency = $rental->agency;
+            $commission = (float) $rental->platform_fee;
+
+            if ($commission <= 0) {
+                Log::warning('OTS commission is zero or negative', [
+                    'rental_code' => $rental->rental_code,
+                    'platform_fee' => $rental->platform_fee,
+                ]);
+                return;
+            }
+
+            $wallet = AgencyWallet::where('agency_id', $agency->id)
+                ->lockForUpdate()
+                ->first();
+
+            if (!$wallet) {
+                $wallet = $this->getOrCreateWallet($agency);
+            }
+
+            $balanceBefore = (float) $wallet->available_balance;
+
+            if ($balanceBefore < $commission) {
+                // Saldo tidak cukup → catat sebagai outstanding, jangan blokir
+                Log::warning('OTS commission - insufficient wallet balance, marked outstanding', [
+                    'rental_code' => $rental->rental_code,
+                    'agency_id' => $agency->id,
+                    'commission' => $commission,
+                    'available_balance' => $balanceBefore,
+                ]);
+
+                $paymentDetail = $rental->payment?->payment_detail ?? [];
+                $paymentDetail['ots_commission_outstanding'] = true;
+                $paymentDetail['ots_commission_amount'] = $commission;
+                $rental->payment?->update(['payment_detail' => $paymentDetail]);
+                return;
+            }
+
+            $balanceAfter = $balanceBefore - $commission;
+
+            $wallet->update([
+                'available_balance' => $balanceAfter,
+            ]);
+
+            WalletTransaction::create([
+                'agency_id' => $agency->id,
+                'type' => 'debit',
+                'amount' => $commission,
+                'balance_before' => $balanceBefore,
+                'balance_after' => $balanceAfter,
+                'description' => "Komisi platform rental OTS {$rental->rental_code}",
+                'reference_type' => 'ots_commission',
+                'reference_id' => $rental->id,
+                'created_at' => now(),
+            ]);
+
+            // Bersihkan flag outstanding bila sebelumnya ditandai (saldo kurang)
+            if ($rental->payment) {
+                $paymentDetail = $rental->payment->payment_detail ?? [];
+                if (!empty($paymentDetail['ots_commission_outstanding'])) {
+                    unset($paymentDetail['ots_commission_outstanding'], $paymentDetail['ots_commission_amount']);
+                    $rental->payment->update(['payment_detail' => $paymentDetail]);
+                }
+            }
+
+            Log::info('OTS commission charged', [
+                'rental_code' => $rental->rental_code,
+                'agency_id' => $agency->id,
+                'amount' => $commission,
             ]);
         });
     }
@@ -553,9 +650,11 @@ class WalletService
 
         // ═══════════════════════════════════════════
         // 🔒 IDEMPOTENCY CHECK
+        // ⚡ reference_id adalah kolom INTEGER, jadi cek via description
+        //    (yang menyimpan order_id TOPUP-... untuk traceability)
         // ═══════════════════════════════════════════
         $alreadyProcessed = WalletTransaction::where('reference_type', 'topup')
-            ->where('reference_id', $orderId)
+            ->where('description', 'like', '%' . $orderId . '%')
             ->exists();
 
         if ($alreadyProcessed) {
@@ -624,10 +723,11 @@ class WalletService
                 'amount' => $depositAmount,
                 'balance_before' => $balanceBefore,
                 'balance_after' => $balanceAfter,
-                'description' => 'Top Up Saldo Deposit (Rp ' . number_format($depositAmount, 0, ',', '.')
+                'description' => 'Top Up Saldo Deposit #' . $orderId . ' (Rp '
+                    . number_format($depositAmount, 0, ',', '.')
                     . ' + Biaya Admin Rp ' . number_format($adminFee, 0, ',', '.') . ')',
                 'reference_type' => 'topup',
-                'reference_id' => $orderId,
+                'reference_id' => $agency->id,
                 'created_at' => now(),
             ]);
 

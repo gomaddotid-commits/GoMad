@@ -73,14 +73,15 @@ class NotificationService
     private function attemptSend(string $driver, string $phone, string $message): bool
     {
         try {
-            match ($driver) {
+            // ⚡ FIX: gunakan return value driver (true = berhasil, false = gagal/tdk terkonfigurasi)
+            //    sehingga fallback chain benar-benar berjalan saat driver utama gagal.
+            return match ($driver) {
                 'baileys' => $this->sendViaBaileys($phone, $message),
                 'fonnte' => $this->sendViaFonnte($phone, $message),
                 'meta'   => $this->sendViaMeta($phone, $message),
                 'twilio' => $this->sendViaTwilio($phone, $message),
                 default  => $this->sendViaLog($phone, $message),
             };
-            return true;
         } catch (\Exception $e) {
             Log::warning("WhatsApp driver '{$driver}' failed: " . $e->getMessage(), ['to' => $phone]);
             return false;
@@ -144,14 +145,14 @@ class NotificationService
     // DRIVER: BAILEYS (Microservice)
     // ═══════════════════════════════════
 
-    private function sendViaBaileys(string $phone, string $message): void
+    private function sendViaBaileys(string $phone, string $message): bool
     {
         $apiUrl = config('gomad.whatsapp.baileys.api_url');
         $apiKey = config('gomad.whatsapp.baileys.api_key');
 
         if (empty($apiUrl) || empty($apiKey)) {
             Log::warning('Baileys: Not configured. Message skipped.', ['to' => $phone]);
-            return;
+            return false;
         }
 
         try {
@@ -168,17 +169,20 @@ class NotificationService
 
             if ($response->successful()) {
                 Log::info("📤 WHATSAPP SENT [baileys] ✅", ['to' => $phone]);
-            } else {
-                Log::warning("📤 WHATSAPP FAILED [baileys] ❌", [
-                    'to' => $phone,
-                    'status' => $response->status(),
-                ]);
+                return true;
             }
+
+            Log::warning("📤 WHATSAPP FAILED [baileys] ❌", [
+                'to' => $phone,
+                'status' => $response->status(),
+            ]);
+            return false;
         } catch (\Exception $e) {
             Log::warning("📤 WHATSAPP FAILED [baileys] ❌", [
                 'to' => $phone,
                 'error' => $e->getMessage(),
             ]);
+            return false;
         }
     }
 
@@ -186,14 +190,14 @@ class NotificationService
     // DRIVER: FONNTE (Recommended)
     // ═══════════════════════════════════
 
-    private function sendViaFonnte(string $phone, string $message): void
+    private function sendViaFonnte(string $phone, string $message): bool
     {
         $token = config('gomad.whatsapp.fonnte.token');
         $apiUrl = config('gomad.whatsapp.fonnte.api_url');
 
         if (empty($token)) {
             Log::warning('Fonnte: Token not configured. Message skipped.', ['to' => $phone]);
-            return;
+            return false;
         }
 
         try {
@@ -210,17 +214,20 @@ class NotificationService
 
             if ($response->successful()) {
                 Log::info("📤 WHATSAPP SENT [fonnte] ✅", ['to' => $phone]);
-            } else {
-                Log::warning("📤 WHATSAPP FAILED [fonnte] ❌", [
-                    'to' => $phone,
-                    'status' => $response->status(),
-                ]);
+                return true;
             }
+
+            Log::warning("📤 WHATSAPP FAILED [fonnte] ❌", [
+                'to' => $phone,
+                'status' => $response->status(),
+            ]);
+            return false;
         } catch (\Exception $e) {
             Log::warning("📤 WHATSAPP FAILED [fonnte] ❌", [
                 'to' => $phone,
                 'error' => $e->getMessage(),
             ]);
+            return false;
         }
     }
 
@@ -228,7 +235,7 @@ class NotificationService
     // DRIVER: META WHATSAPP CLOUD API
     // ═══════════════════════════════════
 
-    private function sendViaMeta(string $phone, string $message): void
+    private function sendViaMeta(string $phone, string $message): bool
     {
         $phoneNumberId = config('gomad.whatsapp.meta.phone_number_id');
         $accessToken = config('gomad.whatsapp.meta.access_token');
@@ -236,7 +243,7 @@ class NotificationService
 
         if (empty($phoneNumberId) || empty($accessToken)) {
             Log::warning('Meta: Credentials not configured. Message skipped.', ['to' => $phone]);
-            return;
+            return false;
         }
 
         try {
@@ -259,18 +266,21 @@ class NotificationService
 
             if ($response->successful()) {
                 Log::info("📤 WHATSAPP SENT [meta] ✅", ['to' => $phone]);
-            } else {
-                Log::warning("📤 WHATSAPP FAILED [meta] ❌", [
-                    'to' => $phone,
-                    'status' => $response->status(),
-                    'error' => $response->json('error.message') ?? 'Unknown',
-                ]);
+                return true;
             }
+
+            Log::warning("📤 WHATSAPP FAILED [meta] ❌", [
+                'to' => $phone,
+                'status' => $response->status(),
+                'error' => $response->json('error.message') ?? 'Unknown',
+            ]);
+            return false;
         } catch (\Exception $e) {
             Log::warning("📤 WHATSAPP FAILED [meta] ❌", [
                 'to' => $phone,
                 'error' => $e->getMessage(),
             ]);
+            return false;
         }
     }
 
@@ -278,7 +288,7 @@ class NotificationService
     // DRIVER: TWILIO (Legacy)
     // ═══════════════════════════════════
 
-    private function sendViaTwilio(string $phone, string $message): void
+    private function sendViaTwilio(string $phone, string $message): bool
     {
         $sid = config('gomad.whatsapp.twilio.sid');
         $token = config('gomad.whatsapp.twilio.auth_token');
@@ -286,7 +296,7 @@ class NotificationService
 
         if (empty($sid) || empty($token) || empty($from)) {
             Log::warning('Twilio: Credentials not configured. Message skipped.', ['to' => $phone]);
-            return;
+            return false;
         }
 
         try {
@@ -302,17 +312,20 @@ class NotificationService
 
             if ($response->successful()) {
                 Log::info("📤 WHATSAPP SENT [twilio] ✅", ['to' => $phone]);
-            } else {
-                Log::warning("📤 WHATSAPP FAILED [twilio] ❌", [
-                    'to' => $phone,
-                    'status' => $response->status(),
-                ]);
+                return true;
             }
+
+            Log::warning("📤 WHATSAPP FAILED [twilio] ❌", [
+                'to' => $phone,
+                'status' => $response->status(),
+            ]);
+            return false;
         } catch (\Exception $e) {
             Log::warning("📤 WHATSAPP FAILED [twilio] ❌", [
                 'to' => $phone,
                 'error' => $e->getMessage(),
             ]);
+            return false;
         }
     }
 
@@ -320,12 +333,13 @@ class NotificationService
     // DRIVER: LOG (Development)
     // ═══════════════════════════════════
 
-    private function sendViaLog(string $phone, string $message): void
+    private function sendViaLog(string $phone, string $message): bool
     {
         Log::info('📤 WHATSAPP SENT [log] ✅', [
             'to' => $phone,
             'message_preview' => \Illuminate\Support\Str::limit($message, 100),
         ]);
+        return true;
     }
 
     // ═══════════════════════════════════════════

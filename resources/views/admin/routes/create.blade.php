@@ -27,29 +27,70 @@
             <h2 class="font-bold text-lg text-[#111111] mb-4">📍 Pilih Kota</h2>
             
             <div class="grid md:grid-cols-2 gap-4 mb-4">
+                {{-- Kota Asal (searchable) --}}
                 <div>
                     <label class="block text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">
                         Kota Asal <span class="text-[#C1121F]">*</span>
                     </label>
-                    <select name="origin_city_code" x-model="origin" @change="loadAvailableStops()" 
-                            class="w-full px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111] transition" required>
-                        <option value="">Pilih Kota Asal</option>
-                        @foreach($cities as $city)
-                        <option value="{{ $city->code }}">{{ $city->name }} ({{ $city->province->name }})</option>
-                        @endforeach
-                    </select>
+                    <div class="relative">
+                        <input type="hidden" name="origin_city_code" :value="origin">
+                        <div class="flex items-center border-b-2 border-[#E5E5E5] focus-within:border-[#C1121F] transition">
+                            <input type="text" x-model="originQuery"
+                                   @focus="originOpen = true" @input="originOpen = true" @keydown.escape="originOpen = false"
+                                   :placeholder="origin ? selectedOriginName : 'Ketik untuk cari kota asal…'"
+                                   class="w-full px-0 py-2 bg-transparent outline-none text-[#111111] text-sm">
+                            <button type="button" x-show="origin" @mousedown.prevent="clearOrigin()"
+                                    class="text-gray-400 hover:text-[#C1121F] px-1 text-sm shrink-0">✕</button>
+                        </div>
+                        <div x-show="originOpen" x-cloak x-transition
+                             class="absolute z-50 mt-1 w-full max-h-64 overflow-auto bg-white border border-[#E5E5E5] rounded-[12px] shadow-lg">
+                            <template x-for="city in originFiltered" :key="city.code">
+                                <button type="button" @mousedown.prevent="selectOrigin(city.code)"
+                                        class="w-full text-left px-4 py-2 hover:bg-[#F5F5F5] flex items-center justify-between"
+                                        :class="origin === city.code ? 'bg-[#C1121F]/5' : ''">
+                                    <span>
+                                        <span class="block font-medium text-[#111111] text-sm" x-text="city.name"></span>
+                                        <span class="block text-[10px] text-gray-400" x-text="city.province"></span>
+                                    </span>
+                                    <span x-show="origin === city.code" class="text-[#C1121F] text-sm">✓</span>
+                                </button>
+                            </template>
+                            <div x-show="originFiltered.length === 0" class="px-4 py-3 text-sm text-gray-500">Tidak ada kota yang cocok.</div>
+                        </div>
+                    </div>
                 </div>
+
+                {{-- Kota Tujuan (searchable) --}}
                 <div>
                     <label class="block text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">
                         Kota Tujuan <span class="text-[#C1121F]">*</span>
                     </label>
-                    <select name="destination_city_code" x-model="destination" @change="loadAvailableStops()"
-                            class="w-full px-0 py-2 border-b-2 border-[#E5E5E5] focus:border-[#C1121F] outline-none bg-transparent text-[#111111] transition" required>
-                        <option value="">Pilih Kota Tujuan</option>
-                        @foreach($cities as $city)
-                        <option value="{{ $city->code }}" :disabled="origin === '{{ $city->code }}'">{{ $city->name }} ({{ $city->province->name }})</option>
-                        @endforeach
-                    </select>
+                    <div class="relative">
+                        <input type="hidden" name="destination_city_code" :value="destination">
+                        <div class="flex items-center border-b-2 border-[#E5E5E5] focus-within:border-[#C1121F] transition">
+                            <input type="text" x-model="destQuery"
+                                   @focus="destOpen = true" @input="destOpen = true" @keydown.escape="destOpen = false"
+                                   :placeholder="destination ? selectedDestName : 'Ketik untuk cari kota tujuan…'"
+                                   class="w-full px-0 py-2 bg-transparent outline-none text-[#111111] text-sm">
+                            <button type="button" x-show="destination" @mousedown.prevent="clearDest()"
+                                    class="text-gray-400 hover:text-[#C1121F] px-1 text-sm shrink-0">✕</button>
+                        </div>
+                        <div x-show="destOpen" x-cloak x-transition
+                             class="absolute z-50 mt-1 w-full max-h-64 overflow-auto bg-white border border-[#E5E5E5] rounded-[12px] shadow-lg">
+                            <template x-for="city in destFiltered" :key="city.code">
+                                <button type="button" @mousedown.prevent="selectDest(city.code)"
+                                        class="w-full text-left px-4 py-2 hover:bg-[#F5F5F5] flex items-center justify-between"
+                                        :class="destination === city.code ? 'bg-[#C1121F]/5' : ''">
+                                    <span>
+                                        <span class="block font-medium text-[#111111] text-sm" x-text="city.name"></span>
+                                        <span class="block text-[10px] text-gray-400" x-text="city.province"></span>
+                                    </span>
+                                    <span x-show="destination === city.code" class="text-[#C1121F] text-sm">✓</span>
+                                </button>
+                            </template>
+                            <div x-show="destFiltered.length === 0" class="px-4 py-3 text-sm text-gray-500">Tidak ada kota yang cocok.</div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -151,7 +192,35 @@ function routeForm() {
         destination: '{{ old('destination_city_code', '') }}',
         selectedStops: @json(old('stop_city_codes', [])),
         availableStops: [],
-        cities: @json($cities->map(fn($c) => ['code' => $c->code, 'name' => $c->name])),
+        cities: @json($cities->map(fn($c) => ['code' => $c->code, 'name' => $c->name, 'province' => $c->province->name ?? ''])),
+
+        // ── Searchable combobox: asal & tujuan ──
+        originQuery: '',
+        originOpen: false,
+        destQuery: '',
+        destOpen: false,
+
+        get selectedOrigin() { return this.cities.find(c => c.code === this.origin) || null; },
+        get selectedOriginName() { return this.selectedOrigin ? this.selectedOrigin.name : ''; },
+        get selectedDest() { return this.cities.find(c => c.code === this.destination) || null; },
+        get selectedDestName() { return this.selectedDest ? this.selectedDest.name : ''; },
+
+        get originFiltered() {
+            const q = (this.originQuery || '').toLowerCase();
+            return this.cities
+                .filter(c => c.code !== this.destination && (!q || (c.name + ' ' + c.province).toLowerCase().includes(q)))
+                .slice(0, 60);
+        },
+        get destFiltered() {
+            const q = (this.destQuery || '').toLowerCase();
+            return this.cities
+                .filter(c => c.code !== this.origin && (!q || (c.name + ' ' + c.province).toLowerCase().includes(q)))
+                .slice(0, 60);
+        },
+        selectOrigin(code) { this.origin = code; this.originQuery = ''; this.originOpen = false; this.loadAvailableStops(); },
+        clearOrigin() { this.origin = ''; this.originQuery = ''; this.originOpen = true; },
+        selectDest(code) { this.destination = code; this.destQuery = ''; this.destOpen = false; this.loadAvailableStops(); },
+        clearDest() { this.destination = ''; this.destQuery = ''; this.destOpen = true; },
 
         get routeName() {
             if (!this.origin || !this.destination) return '';

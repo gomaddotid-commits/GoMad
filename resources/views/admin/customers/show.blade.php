@@ -19,14 +19,10 @@
                     </button>
                 </form>
                 @if(!$user->banned_at)
-                <form action="{{ route('admin.customers.ban', $user) }}" method="POST" onsubmit="return prompt('Alasan ban:') != null">
-                    @csrf
-                    <input type="hidden" name="reason" id="banReason">
-                    <button class="px-3 py-1 rounded-[12px] text-sm bg-[#C1121F] text-white hover:bg-[#8A0F18]" 
-                            onclick="document.getElementById('banReason').value = prompt('Alasan ban:'); return document.getElementById('banReason').value != null;">
-                        Ban
-                    </button>
-                </form>
+                <button type="button" onclick="document.getElementById('banModal').classList.remove('hidden')"
+                        class="px-3 py-1 rounded-[12px] text-sm bg-[#C1121F] text-white hover:bg-[#8A0F18]">
+                    Ban
+                </button>
                 @else
                 <form action="{{ route('admin.customers.unban', $user) }}" method="POST">
                     @csrf
@@ -72,6 +68,24 @@
         @else
         <p class="text-gray-500 font-light">Belum ada booking.</p>
         @endif
+    </div>
+</div>
+
+{{-- Modal Ban (menggantikan prompt() browser) --}}
+<div id="banModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+    <div class="bg-white rounded-[16px] p-6 max-w-md w-full shadow-xl">
+        <h3 class="text-lg font-bold text-[#111111] mb-2">🚫 Ban Customer</h3>
+        <p class="text-sm text-gray-500 mb-4 font-light">Apakah Anda yakin ingin mem-banned <strong>{{ $user->name }}</strong>? Customer tidak bisa login setelah di-ban.</p>
+        <form action="{{ route('admin.customers.ban', $user) }}" method="POST">
+            @csrf
+            <label class="text-xs font-semibold text-[#111111] block mb-1">Alasan Ban *</label>
+            <textarea name="reason" required rows="3" class="w-full border border-[#E5E5E5] rounded-[12px] p-3 text-sm mb-4 focus:ring-[#C1121F] focus:border-[#C1121F]" placeholder="Tuliskan alasan ban..."></textarea>
+            <div class="flex gap-2 justify-end">
+                <button type="button" onclick="document.getElementById('banModal').classList.add('hidden')"
+                        class="px-4 py-2 rounded-[12px] text-sm border border-[#E5E5E5] font-medium hover:bg-[#F5F5F5]">Batal</button>
+                <button type="submit" class="px-4 py-2 rounded-[12px] text-sm bg-[#C1121F] text-white font-semibold hover:bg-[#8A0F18]">Ya, Ban</button>
+            </div>
+        </form>
     </div>
 </div>
 @endsection

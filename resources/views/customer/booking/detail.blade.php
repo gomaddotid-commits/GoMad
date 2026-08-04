@@ -337,6 +337,41 @@
     @endif
 
     {{-- =========================================================== --}}
+    {{-- REVIEW (khusus booking selesai & belum direview) --}}
+    {{-- =========================================================== --}}
+    @if($booking->status === 'completed' && !$booking->review)
+    <div class="bg-white border border-[#E5E5E5] rounded-[12px] p-6 mb-6 shadow-sm">
+        <h3 class="font-bold text-lg text-[#111111] mb-1">⭐ Beri Rating Perjalanan</h3>
+        <p class="text-sm text-gray-500 font-light mb-4">Bagaimana pengalaman Anda dengan {{ $booking->schedule->agency->agency_name ?? 'agency' }}?</p>
+        <form action="{{ route('customer.booking.review', $booking) }}" method="POST">
+            @csrf
+            <div class="mb-4">
+                <label class="text-xs font-semibold text-[#111111] block mb-2">Rating *</label>
+                <div class="flex gap-2" id="ratingStars">
+                    @for($i = 1; $i <= 5; $i++)
+                    <button type="button" data-rating="{{ $i }}"
+                            class="rating-star text-3xl text-gray-300 hover:text-yellow-400 transition">★</button>
+                    @endfor
+                    <input type="hidden" name="rating" id="ratingValue" value="" required>
+                </div>
+                @error('rating') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+            </div>
+            <div class="mb-4">
+                <label class="text-xs font-semibold text-[#111111] block mb-1">Komentar (Opsional)</label>
+                <textarea name="review" rows="3" maxlength="1000" class="w-full border border-[#E5E5E5] rounded-[12px] p-3 text-sm focus:ring-[#C1121F] focus:border-[#C1121F]" placeholder="Ceritakan pengalaman Anda..."></textarea>
+                @error('review') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+            </div>
+            <button type="submit" class="w-full bg-[#C1121F] text-white py-3 rounded-[12px] font-bold hover:bg-[#8A0F18] transition">⭐ Kirim Review</button>
+        </form>
+    </div>
+    @elseif($booking->status === 'completed' && $booking->review)
+    <div class="bg-yellow-50 border border-yellow-200 rounded-[12px] p-4 mb-6 text-sm text-yellow-800">
+        ⭐ Anda sudah memberi rating <strong>{{ $booking->review->rating }}/5</strong>
+        @if($booking->review->review) — "{{ $booking->review->review }}" @endif
+    </div>
+    @endif
+
+    {{-- =========================================================== --}}
     {{-- ACTIONS --}}
     {{-- =========================================================== --}}
     <div class="space-y-3">
@@ -853,6 +888,38 @@ function confirmCancel() {
     return confirm('Apakah Anda yakin ingin membatalkan booking ini?');
     @endif
 }
+</script>
+@endpush
+
+@push('scripts')
+<script>
+// Interaksi bintang rating
+document.addEventListener('DOMContentLoaded', function() {
+    var stars = document.querySelectorAll('.rating-star');
+    var ratingInput = document.getElementById('ratingValue');
+    if (!stars.length || !ratingInput) return;
+
+    function highlight(n) {
+        stars.forEach(function(s) {
+            s.classList.toggle('text-yellow-400', parseInt(s.dataset.rating) <= n);
+            s.classList.toggle('text-gray-300', parseInt(s.dataset.rating) > n);
+        });
+    }
+
+    stars.forEach(function(star) {
+        star.addEventListener('mouseenter', function() {
+            highlight(parseInt(star.dataset.rating));
+        });
+        star.addEventListener('click', function() {
+            ratingInput.value = star.dataset.rating;
+            highlight(parseInt(star.dataset.rating));
+        });
+    });
+
+    document.getElementById('ratingStars').addEventListener('mouseleave', function() {
+        highlight(ratingInput.value ? parseInt(ratingInput.value) : 0);
+    });
+});
 </script>
 @endpush
 @endsection

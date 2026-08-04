@@ -348,6 +348,14 @@ class RouteService
         
         // Destination
         $destinationStop->update(['stop_order' => $order]);
+
+        // ⚠️ SINKRONKAN rute dengan stop terjauh (destination)
+        // Sebelumnya destination_city_code & distance_km tidak diupdate saat
+        // stop ditambah/dihapus, sehingga data rute tidak konsisten.
+        $route->update([
+            'destination_city_code' => $destinationStop->city_code,
+            'distance_km' => (float) $destinationStop->distance_from_origin,
+        ]);
         
         Log::info('Stops reordered by distance', [
             'route_id' => $route->id,

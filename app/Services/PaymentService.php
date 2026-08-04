@@ -336,9 +336,10 @@ class PaymentService
         $booking = Booking::where('booking_code', $orderId)->first();
         if (!$booking) {
             // Extract booking code dari order_id (format: GM-YYYYMMDD-XXXX-TIMESTAMP)
+            // booking_code hanya 3 bagian (GM-YYYYMMDD-XXXX), timestamp adalah bagian ke-4
             $parts = explode('-', $orderId);
             if (count($parts) >= 4) {
-                $possibleCode = $parts[0] . '-' . $parts[1] . '-' . $parts[2] . '-' . $parts[3];
+                $possibleCode = $parts[0] . '-' . $parts[1] . '-' . $parts[2];
                 $booking = Booking::where('booking_code', $possibleCode)->first();
             }
         }
@@ -347,6 +348,8 @@ class PaymentService
             Log::error('Booking not found for order ID', ['order_id' => $orderId]);
             throw new \Exception("Booking not found: {$orderId}");
         }
+
+        $payment = $booking->payment;
 
         // ═══════════════════════════════════════════
         // 🔒 IDEMPOTENCY GUARD: Cegah double processing

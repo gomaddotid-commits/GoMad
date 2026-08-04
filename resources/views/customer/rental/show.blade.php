@@ -37,7 +37,9 @@
         </div>
         <h2 class="text-xl font-bold text-[#111111]">{{ $rental->status_label }}</h2>
         <p class="text-sm mt-1 font-light text-gray-600">
-            @if($rental->status == 'pending' && $rental->payment && $rental->payment->status == 'pending')
+            @if($rental->status == 'pending' && $rental->payment && $rental->payment->status == 'ots_pending')
+                Bayar <strong>tunai</strong> di tempat saat pengambilan mobil. Menunggu konfirmasi {{ $agency->agency_name }}.
+            @elseif($rental->status == 'pending' && $rental->payment && $rental->payment->status == 'pending')
                 Menunggu pembayaran. Silakan selesaikan pembayaran di bawah.
             @elseif($rental->status == 'pending' && !$rental->payment)
                 Silakan pilih metode pembayaran di bawah.
@@ -244,25 +246,50 @@
     </div>
 
     {{-- Form Pembayaran --}}
-    @if($rental->status == 'pending' && (!$rental->payment || $rental->payment->status == 'pending'))
+    @if($rental->status == 'pending' && (!$rental->payment || in_array($rental->payment->status, ['pending', 'ots_pending'])))
     <div class="bg-white border border-[#E5E5E5] rounded-[12px] p-6 mb-6 shadow-sm">
         <h2 class="text-lg font-bold text-[#111111] mb-4">{{ $rental->payment ? 'Metode Pembayaran' : 'Pilih Metode Pembayaran' }}</h2>
 
         @if(!$rental->payment)
         <form action="{{ route('customer.rental.pay', $rental) }}" method="POST" id="paymentForm">
             @csrf
-            <input type="hidden" name="payment_method" value="midtrans">
-            <div class="bg-blue-50 border border-blue-200 rounded-[12px] p-4 mb-6">
-                <div class="flex items-center gap-3">
+            <div class="space-y-3 mb-6">
+                <label class="flex items-center gap-3 p-4 border-2 border-[#C1121F] bg-[#C1121F]/5 rounded-[12px] cursor-pointer">
+                    <input type="radio" name="payment_method" value="midtrans" class="text-[#C1121F] focus:ring-[#C1121F]" checked>
                     <span class="text-2xl">💳</span>
                     <div>
                         <p class="font-semibold text-[#111111]">Pembayaran Online (Midtrans)</p>
                         <p class="text-xs text-gray-500 font-light">Transfer Bank, Virtual Account, QRIS, E-Wallet</p>
                     </div>
-                </div>
+                </label>
+                @if($setting?->allow_ots)
+                <label class="flex items-center gap-3 p-4 border-2 border-[#E5E5E5] rounded-[12px] cursor-pointer hover:border-[#C1121F] transition">
+                    <input type="radio" name="payment_method" value="ots" class="text-[#C1121F] focus:ring-[#C1121F]">
+                    <span class="text-2xl">💵</span>
+                    <div>
+                        <p class="font-semibold text-[#111111]">Bayar di Tempat (OTS)</p>
+                        <p class="text-xs text-gray-500 font-light">Bayar tunai langsung ke {{ $agency->agency_name }} saat pengambilan mobil</p>
+                    </div>
+                </label>
+                @endif
             </div>
-            <button type="submit" id="btnPay" class="w-full bg-[#C1121F] text-white py-4 rounded-[12px] font-bold text-lg hover:bg-[#8A0F18] transition">💳 BAYAR SEKARANG</button>
+            <button type="submit" id="btnPay" class="w-full bg-[#C1121F] text-white py-4 rounded-[12px] font-bold text-lg hover:bg-[#8A0F18] transition">💳 PILIH METODE PEMBAYARAN</button>
         </form>
+        @elseif($rental->payment->payment_type == 'ots' && $rental->payment->status == 'ots_pending')
+        <div class="bg-green-50 border border-green-200 rounded-[12px] p-4">
+            <span class="text-3xl block mb-2">💵</span>
+            <p class="font-bold text-green-800">Bayar di Tempat (OTS)</p>
+            <p class="text-sm text-green-700 font-light mt-1">Bayar tunai saat pengambilan mobil di <strong>{{ $agency->agency_name }}</strong>.</p>
+            <div class="mt-3 bg-white border border-green-200 rounded-[12px] p-3 text-sm">
+                <div class="flex justify-between"><span class="text-gray-500 font-light">Total Sewa</span><span class="font-semibold text-[#111111]">Rp {{ number_format($rental->total_price, 0, ',', '.') }}</span></div>
+                @if($setting?->deposit_amount > 0)
+                <div class="flex justify-between mt-1"><span class="text-gray-500 font-light">Deposit (dikembalikan)</span><span class="font-semibold text-[#111111]">Rp {{ number_format($setting->deposit_amount, 0, ',', '.') }}</span></div>
+                @endif
+                <hr class="border-green-200 my-2">
+                <div class="flex justify-between font-bold"><span>Total Tunai Dibawa</span><span class="text-[#C1121F]">Rp {{ number_format($rental->total_price + ($setting?->deposit_amount ?? 0), 0, ',', '.') }}</span></div>
+            </div>
+            <p class="text-xs text-green-600 font-light mt-2">⚠️ Pembayaran dikonfirmasi oleh travel saat Anda datang mengambil mobil.</p>
+        </div>
         @else
         <div class="bg-yellow-50 border border-yellow-200 rounded-[12px] p-4 text-center">
             <span class="text-3xl block mb-2">⏳</span>
@@ -279,13 +306,18 @@
     @endif
 
     {{-- Pembayaran Sukses --}}
-    @if($rental->payment && $rental->payment->status == 'paid')
+    @if($rental->payment && in_array($rental->payment->status, ['paid', 'ots_confirmed']))
     <div class="bg-white border border-[#E5E5E5] rounded-[12px] p-6 mb-6 shadow-sm">
         <h2 class="text-lg font-bold text-[#111111] mb-4">Status Pembayaran</h2>
         <div class="bg-green-50 border border-green-200 rounded-[12px] p-4 text-center">
             <span class="text-3xl block mb-2">✅</span>
             <p class="font-bold text-green-800">Pembayaran Berhasil</p>
+            @if($rental->payment->payment_type == 'ots')
+            <p class="text-sm text-green-600 font-light">Metode: 💵 Tunai di Tempat (OTS) — Diterima {{ $agency->agency_name }}</p>
+            @else
             <p class="text-sm text-green-600 font-light">Metode: 💳 Online (Midtrans)</p>
+            @endif
+            @if($rental->payment->paid_at)<p class="text-[10px] text-green-500 mt-1 font-mono">Dibayar: {{ $rental->payment->paid_at->format('d M Y H:i') }}</p>@endif
             @if($rental->payment->transaction_id)<p class="text-[10px] text-green-500 mt-1 font-mono">ID: {{ $rental->payment->transaction_id }}</p>@endif
         </div>
     </div>
