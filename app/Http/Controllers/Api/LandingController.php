@@ -136,8 +136,8 @@ class LandingController extends Controller
             ->map(fn($r) => [
                 'id' => $r->id,
                 'route_name' => $r->route_name,
-                'origin_city' => $r->origin_city,
-                'destination_city' => $r->destination_city,
+                'origin_city' => $r->origin_city_name,
+                'destination_city' => $r->destination_city_name,
                 'schedules_count' => $r->schedules_count,
                 'photo_url' => $r->photo_url,
                 'min_price' => (float) ($r->schedules()->min('price_per_seat') ?? 0),

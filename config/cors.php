@@ -6,11 +6,20 @@ return [
     'allowed_methods' => ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
 
     'allowed_origins' => [
-        // ✅ HANYA domain production yang diizinkan
+        // Production domains
         env('APP_URL', 'https://web.gomad.id'),
         env('API_URL', 'https://api.gomad.id'),
         env('LANDING_URL', 'https://gomad.id'),
-        'capacitor://localhost', // Untuk mobile app
+        'capacitor://localhost',
+        // Local development (only when APP_ENV=local)
+        ...(env('APP_ENV') === 'local' ? [
+            'http://localhost:8000',
+            'http://localhost:8080',
+            'http://localhost:5000',
+            'http://127.0.0.1:8000',
+            'http://127.0.0.1:8080',
+            'http://127.0.0.1:5000',
+        ] : []),
     ],
 
     'allowed_origins_patterns' => [

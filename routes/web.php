@@ -492,8 +492,10 @@ Route::post('/reset-password', [App\Http\Controllers\Web\Auth\ForgotPasswordCont
   
 // Sitemap
 Route::get('/sitemap.xml', [App\Http\Controllers\Web\Public\SitemapController::class, 'index'])->name('sitemap');
-Route::get('/sitemap/generate', [App\Http\Controllers\Web\Public\SitemapController::class, 'save'])->name('sitemap.generate');
-Route::get('/sitemap/clear', [App\Http\Controllers\Web\Public\SitemapController::class, 'clear'])->name('sitemap.clear');
+Route::middleware(['auth', \App\Http\Middleware\Web\AdminMiddleware::class])->group(function () {
+    Route::get('/sitemap/generate', [App\Http\Controllers\Web\Public\SitemapController::class, 'save'])->name('sitemap.generate');
+    Route::get('/sitemap/clear', [App\Http\Controllers\Web\Public\SitemapController::class, 'clear'])->name('sitemap.clear');
+});
 
 // routes/web.php
 Route::get('/health', function () {

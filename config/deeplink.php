@@ -79,7 +79,7 @@ return [
     */
     'resolver' => [
         'api_endpoint' => '/api/v1/deeplink/resolve',
-        'fallback_url' => env('APP_URL', 'http://web.gomad.test'),
+        'fallback_url' => env('APP_URL', 'https://web.gomad.id'),
     ],
 ];
 

@@ -43,9 +43,9 @@ RUN mkdir -p storage/framework/cache \
     storage/logs \
     bootstrap/cache
 
-# Set permissions
+# Set permissions (775 instead of 777 for security)
 RUN chown -R www-data:www-data /var/www/html && \
-    chmod -R 777 storage bootstrap/cache
+    chmod -R 775 storage bootstrap/cache
 
 # Nginx configuration
 RUN echo 'server { \
@@ -66,5 +66,5 @@ RUN echo 'server { \
 
 EXPOSE 80
 
-# Run config cache + migrate _ storage:link saat runtime
-ENTRYPOINT ["sh", "-c", "php artisan config:clear && php artisan config:cache && php artisan route:cache && php artisan view:cache && php artisan storage:link --force && php artisan migrate --force && php-fpm -D && nginx -g 'daemon off;'"]
+# Run config cache + storage:link saat runtime (migrate dijalankan manual/terpisah)
+ENTRYPOINT ["sh", "-c", "php artisan config:clear && php artisan config:cache && php artisan route:cache && php artisan view:cache && php artisan storage:link --force && php-fpm -D && nginx -g 'daemon off;'"]

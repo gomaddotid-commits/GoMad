@@ -92,10 +92,9 @@ Route::prefix('v1')->group(function () {
         ->middleware('throttle:2,30');
     Route::post('/auth/register-payment-agent', [ApiAuthRegisterController::class, 'registerPaymentAgent'])
         ->middleware('throttle:2,30');
-    Route::post('/auth/forgot-password', [/* controller */])
-        ->middleware('throttle:3,10');
-
-    Route::post('/auth/logout-all', [ApiAuthLoginController::class, 'logoutAll']);
+    // TODO: Implement API ForgotPasswordController
+    // Route::post('/auth/forgot-password', [ApiAuthForgotPasswordController::class, 'sendResetLink'])
+    //     ->middleware('throttle:3,10');
 
     // ═══════════════════════════════════════
     // PUBLIC ROUTES (NO AUTH) - dengan rate limit
@@ -117,9 +116,6 @@ Route::prefix('v1')->group(function () {
         
         // Return route (untuk PP) — HARUS DI ATAS /routes/{id}
         Route::get('/routes/{route}/return-route', [\App\Http\Controllers\Api\RouteController::class, 'returnRoute']);
-
-        // Route detail
-        Route::get('/routes/{id}', [ApiPublicSearchController::class, 'routeDetail']);
 
         // ⚡ TAMBAHKAN INI: Rental vehicle availability (PUBLIC, NO AUTH)
         Route::get('/rental/vehicle/{vehicle}/availability', [App\Http\Controllers\Api\Public\RentalController::class, 'availability'])
@@ -211,6 +207,7 @@ Route::prefix('v1')->group(function () {
         Route::put('/auth/profile', [ApiAuthLoginController::class, 'updateProfile']);
         Route::put('/auth/password', [ApiAuthLoginController::class, 'updatePassword']);
         Route::post('/auth/logout', [ApiAuthLoginController::class, 'logout']);
+        Route::post('/auth/logout-all', [ApiAuthLoginController::class, 'logoutAll']);
 
         /*
         |--------------------------------------------------------------------------
