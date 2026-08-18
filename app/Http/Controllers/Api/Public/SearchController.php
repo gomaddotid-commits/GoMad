@@ -135,6 +135,46 @@ class SearchController extends Controller
         ]);
     }
 
+    /**
+     * Cari kota berdasarkan nama (untuk autocomplete searchable input)
+     */
+    public function searchCities(Request $request): JsonResponse
+    {
+        $q = trim($request->query('q', ''));
+
+        if (mb_strlen($q) < 2) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Minimal 2 karakter untuk mencari kota.',
+                'data' => [],
+                'meta' => ['total' => 0],
+            ]);
+        }
+
+        $cities = \App\Models\City::with('province')
+            ->where('name', 'like', "%{$q}%")
+            ->orderBy('name')
+            ->limit(20)
+            ->get()
+            ->map(fn($city) => [
+                'code' => $city->code,
+                'name' => $city->name,
+                'province' => $city->province?->name,
+                'latitude' => $city->latitude,
+                'longitude' => $city->longitude,
+            ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Hasil pencarian kota.',
+            'data' => $cities,
+            'meta' => [
+                'total' => $cities->count(),
+                'query' => $q,
+            ],
+        ]);
+    }
+
     public function routes(): JsonResponse
     {
         $routes = $this->routeService->getAllRoutes();

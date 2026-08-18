@@ -51,12 +51,38 @@ class RentalController extends Controller
             ], 403);
         }
 
-        $rental->load(['vehicle.rentalSetting', 'customer', 'payment']);
+        $rental->load(['vehicle.rentalSetting', 'customer.customerDocuments', 'payment']);
+
+        // ✅ Flow Baru: berkas penyewa hanya diekspos ke agency saat masa sewa (sudah diserahkan)
+        $documents = $rental->customer->customerDocuments;
+        $released = !is_null($rental->documents_released_at);
+
+        $data = $rental->toArray();
+        $data['documents'] = [
+            'released' => $released,
+            'released_at' => $rental->documents_released_at?->toDateTimeString(),
+            'selfie_photo' => $released ? ($documents->selfie_photo ?? null) : null,
+            'ktp' => $released ? [
+                'number' => $documents->ktp_number ?? null,
+                'photo' => $documents->ktp_photo ?? null,
+                'verified' => (bool) ($documents->ktp_verified ?? false),
+            ] : null,
+            'sim' => $released ? [
+                'number' => $documents->sim_number ?? null,
+                'photo' => $documents->sim_photo ?? null,
+                'verified' => (bool) ($documents->sim_verified ?? false),
+            ] : null,
+            'npwp' => $released ? [
+                'number' => $documents->npwp_number ?? null,
+                'photo' => $documents->npwp_photo ?? null,
+                'verified' => (bool) ($documents->npwp_verified ?? false),
+            ] : null,
+        ];
 
         return response()->json([
             'success' => true,
             'message' => 'Detail rental berhasil diambil.',
-            'data' => $rental,
+            'data' => $data,
             'meta' => null,
         ]);
     }
@@ -87,6 +113,8 @@ class RentalController extends Controller
             'driver_fee_per_hour' => ['nullable', 'numeric', 'min:0'],
             'driver_fee_per_day' => ['nullable', 'numeric', 'min:0'],
             'deposit_amount' => ['nullable', 'numeric', 'min:0'],
+            'payment_methods' => ['nullable', 'array'],
+            'payment_methods.*' => ['string', 'in:midtrans,ots'],
             'requirements' => ['nullable', 'array'],
             'photos' => ['nullable', 'array'],
             'terms_conditions' => ['nullable', 'array'],

@@ -184,6 +184,7 @@ class RentalController extends Controller
             'sim_photo' => ['required', 'image', 'mimes:jpeg,png,jpg', 'max:2048'],
             'npwp_number' => ['nullable', 'string', 'max:50'],
             'npwp_photo' => ['nullable', 'image', 'mimes:jpeg,png,jpg', 'max:2048'],
+            'selfie_photo' => ['required', 'image', 'mimes:jpeg,png,jpg', 'max:2048'],
         ]);
 
         try {
@@ -196,6 +197,7 @@ class RentalController extends Controller
                 'sim_number' => $request->sim_number,
                 'sim_photo' => $cloudinary->upload($request->file('sim_photo'), 'documents/sim')['url'],
                 'npwp_number' => $request->npwp_number,
+                'selfie_photo' => $cloudinary->upload($request->file('selfie_photo'), 'documents/selfie')['url'],
             ];
 
             if ($request->hasFile('npwp_photo')) {

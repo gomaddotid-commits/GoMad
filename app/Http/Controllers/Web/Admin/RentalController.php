@@ -60,11 +60,14 @@ class RentalController extends Controller
         if ($request->has('npwp_verified')) {
             $updateData['npwp_verified'] = true;
         }
+        if ($request->has('selfie_verified')) {
+            $updateData['selfie_verified'] = true;
+        }
 
         // Cek apakah semua dokumen wajib sudah verified
         $document->update($updateData);
         
-        if ($document->ktp_verified && $document->sim_verified) {
+        if ($document->ktp_verified && $document->sim_verified && $document->selfie_verified) {
             $document->update([
                 'verification_status' => 'verified',
                 'verified_by' => auth()->id(),

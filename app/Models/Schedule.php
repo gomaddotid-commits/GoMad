@@ -75,9 +75,41 @@ class Schedule extends Model
         'max_transfer_fee_percent',
         'allow_cod',
         'cod_min_balance',
+        'payment_methods',
         'started_at',
         'finished_at'
     ];
+
+    /**
+     * Payment methods array (midtrans, cash, cod)
+     */
+    public function getPaymentMethodsArrayAttribute(): array
+    {
+        $value = $this->attributes['payment_methods'] ?? null;
+        if (empty($value)) {
+            // Fallback ke route default
+            return $this->route?->payment_methods_array ?? ['midtrans', 'cash', 'cod'];
+        }
+        if (is_array($value)) return $value;
+        return explode(',', $value);
+    }
+
+    public function setPaymentMethodsAttribute($value): void
+    {
+        if (is_array($value)) {
+            $value = array_values(array_filter($value));
+            $this->attributes['payment_methods'] = !empty($value) ? implode(',', $value) : null;
+        } elseif (is_string($value)) {
+            $this->attributes['payment_methods'] = !empty($value) ? $value : null;
+        } else {
+            $this->attributes['payment_methods'] = null;
+        }
+    }
+
+    public function isPaymentMethodAvailable(string $method): bool
+    {
+        return in_array($method, $this->payment_methods_array);
+    }
 
     protected function casts(): array
     {

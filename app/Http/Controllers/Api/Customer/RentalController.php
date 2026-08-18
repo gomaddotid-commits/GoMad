@@ -131,6 +131,7 @@ class RentalController extends Controller
             'sim_photo' => ['required', 'string'],
             'npwp_number' => ['nullable', 'string', 'max:50'],
             'npwp_photo' => ['nullable', 'string'],
+            'selfie_photo' => ['required', 'string'],
         ]);
 
         try {

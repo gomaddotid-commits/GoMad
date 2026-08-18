@@ -59,6 +59,8 @@ use App\Http\Controllers\Api\PaymentAgent\DashboardController as ApiPaymentAgent
 use App\Http\Controllers\Api\PaymentAgent\PaymentController as ApiPaymentAgentPaymentController;
 use App\Http\Controllers\Api\PaymentAgent\SettlementController as ApiPaymentAgentSettlementController;
 use App\Http\Controllers\Api\PaymentAgent\ProfileController as ApiPaymentAgentProfileController;
+use App\Http\Controllers\Api\PaymentAgent\ProductController as ApiPaymentAgentProductController;
+use App\Http\Controllers\Api\PaymentAgent\CashierController as ApiPaymentAgentCashierController;
 
 // Admin Controllers
 use App\Http\Controllers\Api\Admin\DashboardController as ApiAdminDashboardController;
@@ -105,6 +107,7 @@ Route::prefix('v1')->group(function () {
         Route::get('/routes', [ApiPublicSearchController::class, 'routes']);
         Route::get('/routes/{id}', [ApiPublicSearchController::class, 'routeDetail']);
         Route::get('/cities', [ApiPublicSearchController::class, 'cities']);
+        Route::get('/cities/search', [ApiPublicSearchController::class, 'searchCities']);
         Route::get('/agencies', [ApiPublicListingController::class, 'index']);
         Route::get('/agencies/{slug}', [ApiPublicAgencyProfileController::class, 'show']);
         Route::get('/agencies/{slug}/reviews', [ApiPublicAgencyProfileController::class, 'reviews']);
@@ -208,6 +211,9 @@ Route::prefix('v1')->group(function () {
         Route::put('/auth/password', [ApiAuthLoginController::class, 'updatePassword']);
         Route::post('/auth/logout', [ApiAuthLoginController::class, 'logout']);
         Route::post('/auth/logout-all', [ApiAuthLoginController::class, 'logoutAll']);
+
+        // ⚡ Upload generik (dipakai mobile utk dokumen penyewa / selfie)
+        Route::post('/uploads', [App\Http\Controllers\Api\UploadController::class, 'store']);
 
         /*
         |--------------------------------------------------------------------------
@@ -401,6 +407,23 @@ Route::prefix('v1')->group(function () {
             Route::get('/profile', [ApiPaymentAgentProfileController::class, 'show']);
             Route::put('/profile', [ApiPaymentAgentProfileController::class, 'update']);
             Route::put('/pin', [ApiPaymentAgentProfileController::class, 'updatePin']);
+
+            // ═══ POS — Kasir & Produk ═══
+            // Kasir
+            Route::get('/cashier/dashboard', [ApiPaymentAgentCashierController::class, 'dashboard']);
+            Route::get('/cashier/transactions', [ApiPaymentAgentCashierController::class, 'history']);
+            Route::get('/cashier/transactions/{transaction}', [ApiPaymentAgentCashierController::class, 'show']);
+            Route::post('/cashier/transactions', [ApiPaymentAgentCashierController::class, 'store']);
+            Route::post('/cashier/transactions/{transaction}/void', [ApiPaymentAgentCashierController::class, 'void']);
+
+            // Produk
+            Route::get('/products/barcode/{barcode}', [ApiPaymentAgentProductController::class, 'scanBarcode']);
+            Route::get('/products', [ApiPaymentAgentProductController::class, 'index']);
+            Route::post('/products', [ApiPaymentAgentProductController::class, 'store']);
+            Route::get('/products/{product}', [ApiPaymentAgentProductController::class, 'show']);
+            Route::put('/products/{product}', [ApiPaymentAgentProductController::class, 'update']);
+            Route::delete('/products/{product}', [ApiPaymentAgentProductController::class, 'destroy']);
+            Route::post('/products/{product}/restock', [ApiPaymentAgentProductController::class, 'restock']);
         });
 
         /*

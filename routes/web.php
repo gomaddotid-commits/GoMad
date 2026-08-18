@@ -49,6 +49,7 @@ use App\Http\Controllers\Web\PaymentAgent\DashboardController as WebPaymentAgent
 use App\Http\Controllers\Web\PaymentAgent\PaymentController as WebPaymentAgentPaymentController;
 use App\Http\Controllers\Web\PaymentAgent\SettlementController as WebPaymentAgentSettlementController;
 use App\Http\Controllers\Web\PaymentAgent\ProfileController as WebPaymentAgentProfileController;
+use App\Http\Controllers\Web\PaymentAgent\PosController as WebPaymentAgentPosController;
 
 // Admin Controllers
 use App\Http\Controllers\Web\Admin\DashboardController as WebAdminDashboardController;
@@ -297,6 +298,11 @@ Route::middleware(['auth', \App\Http\Middleware\Web\PaymentAgentMiddleware::clas
         Route::get('/settlements', [WebPaymentAgentSettlementController::class, 'index'])->name('settlements');
         Route::post('/settlements/{settlement}/pay', [WebPaymentAgentSettlementController::class, 'paySettlement'])->name('settlements.pay');
         Route::get('/profile', [WebPaymentAgentProfileController::class, 'show'])->name('profile');
+
+        // POS — Kasir
+        Route::get('/pos', [WebPaymentAgentPosController::class, 'index'])->name('pos.index');
+        Route::get('/pos/products', [WebPaymentAgentPosController::class, 'products'])->name('pos.products');
+        Route::get('/pos/reports', [WebPaymentAgentPosController::class, 'reports'])->name('pos.reports');
     });
 
 /*
@@ -357,6 +363,12 @@ Route::middleware(['auth', \App\Http\Middleware\Web\AdminMiddleware::class])
         
         Route::get('/settlements', [WebAdminSettlementController::class, 'index'])->name('settlements.index');
         Route::post('/settlements/{settlement}/verify', [WebAdminSettlementController::class, 'verify'])->name('settlements.verify');
+
+        // Personalisasi Agency (Kebijakan per-agency)
+        Route::get('/agency-policies', [\App\Http\Controllers\Web\Admin\AgencyPolicyController::class, 'index'])->name('agency-policies.index');
+        Route::get('/agency-policies/{agency}/edit', [\App\Http\Controllers\Web\Admin\AgencyPolicyController::class, 'edit'])->name('agency-policies.edit');
+        Route::put('/agency-policies/{agency}', [\App\Http\Controllers\Web\Admin\AgencyPolicyController::class, 'update'])->name('agency-policies.update');
+        Route::delete('/agency-policies/{agency}', [\App\Http\Controllers\Web\Admin\AgencyPolicyController::class, 'destroy'])->name('agency-policies.destroy');
         
         Route::get('/reports', [WebAdminReportController::class, 'index'])->name('reports');
         Route::get('/settings', [WebAdminSettingController::class, 'index'])->name('settings');

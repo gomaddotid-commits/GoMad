@@ -303,7 +303,7 @@
                     <input type="hidden" name="city_code" :value="selectedCode">
                     <div class="flex items-center border border-[#E5E5E5] rounded-[12px] focus-within:border-[#C1121F] bg-white transition">
                         <input type="text" x-model="query"
-                               @focus="open = true" @input="open = true" @keydown.escape="open = false"
+                               @focus="open = true" @input="open = true; search(query)" @keydown.escape="open = false"
                                :placeholder="selectedName || 'Ketik untuk cari kota…'"
                                class="w-full px-3 py-2 bg-transparent outline-none text-[#111111] text-sm rounded-[12px]">
                         <button type="button" x-show="selectedCode" @mousedown.prevent="clear()"
@@ -358,7 +358,7 @@ function stopSelect() {
         selectedCode: '',
         query: '',
         open: false,
-        cities: @json($stopCities),
+        cities: [],
         get selectedName() {
             const c = this.cities.find(c => c.code === this.selectedCode);
             return c ? c.name : '';
@@ -369,8 +369,18 @@ function stopSelect() {
                 .filter(c => !q || (c.name + ' ' + c.province).toLowerCase().includes(q))
                 .slice(0, 60);
         },
+        async search(q) {
+            if (q.length < 2) { this.cities = []; return; }
+            try {
+                const res = await fetch(`/api/v1/cities/search?q=${encodeURIComponent(q)}`);
+                const data = await res.json();
+                this.cities = data.data || [];
+            } catch (e) {
+                this.cities = [];
+            }
+        },
         select(code) { this.selectedCode = code; this.query = ''; this.open = false; },
-        clear() { this.selectedCode = ''; this.query = ''; this.open = true; }
+        clear() { this.selectedCode = ''; this.query = ''; this.cities = []; this.open = true; }
     };
 }
 

@@ -85,6 +85,7 @@ class RentalController extends Controller
             'ktp_verified' => ['nullable', 'boolean'],
             'sim_verified' => ['nullable', 'boolean'],
             'npwp_verified' => ['nullable', 'boolean'],
+            'selfie_verified' => ['nullable', 'boolean'],
         ]);
 
         $updateData = [];
@@ -97,11 +98,14 @@ class RentalController extends Controller
         if ($request->has('npwp_verified')) {
             $updateData['npwp_verified'] = $request->npwp_verified;
         }
+        if ($request->has('selfie_verified')) {
+            $updateData['selfie_verified'] = $request->selfie_verified;
+        }
 
         // Cek apakah semua dokumen wajib sudah verified
         $document->update($updateData);
         
-        if ($document->ktp_verified && $document->sim_verified) {
+        if ($document->ktp_verified && $document->sim_verified && $document->selfie_verified) {
             $document->update([
                 'verification_status' => 'verified',
                 'verified_by' => $request->user()->id,

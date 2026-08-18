@@ -170,7 +170,7 @@
                 @if($vehicleSetting->allow_self_drive && !$documentStatus['is_complete_for_self_drive'] && $canWithDriver)
                 <div class="mt-3 bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-xs text-yellow-700">
                     <p class="font-medium mb-1">⚠️ Lepas Kunci tidak tersedia</p>
-                    <p class="font-light">Dokumen KTP & SIM belum lengkap. <a href="{{ route('customer.documents') }}" class="text-[#C1121F] underline font-medium">Lengkapi sekarang →</a></p>
+                    <p class="font-light">Dokumen KTP, SIM & Selfie belum lengkap. <a href="{{ route('customer.documents') }}" class="text-[#C1121F] underline font-medium">Lengkapi sekarang →</a></p>
                 </div>
                 @endif
                 

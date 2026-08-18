@@ -53,7 +53,7 @@ class RentalController extends Controller
      */
     public function show(Rental $rental): View
     {
-        $rental->load(['vehicle.rentalSetting', 'customer', 'payment']);
+        $rental->load(['vehicle.rentalSetting', 'customer.customerDocuments', 'payment']);
         return view('agency.rental.show', compact('rental'));
     }
 
@@ -88,6 +88,8 @@ class RentalController extends Controller
             'driver_fee_per_hour' => ['nullable', 'numeric', 'min:0'],
             'driver_fee_per_day' => ['nullable', 'numeric', 'min:0'],
             'deposit_amount' => ['nullable', 'numeric', 'min:0'],
+            'payment_methods' => ['nullable', 'array'],
+            'payment_methods.*' => ['string', 'in:midtrans,ots'],
             'requirements' => ['nullable', 'array'],
             // 👇 TAMBAHKAN VALIDASI
             'use_system_terms' => ['nullable', 'boolean'],

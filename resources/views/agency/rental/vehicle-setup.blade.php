@@ -154,6 +154,21 @@
                 </div>
             </div>
 
+            {{-- Metode Pembayaran --}}
+            <div class="mb-6 border-t border-[#E5E5E5] pt-6">
+                <h3 class="font-mono uppercase tracking-wider text-xs font-bold text-[#111111] mb-3">💳 Metode Pembayaran</h3>
+                <div class="space-y-3">
+                    <label class="flex items-center gap-3 p-3 border border-[#E5E5E5] rounded-[12px] cursor-pointer hover:bg-[#F5F5F5]">
+                        <input type="checkbox" name="payment_methods[]" value="midtrans" class="w-5 h-5 rounded border-[#E5E5E5] text-[#C1121F] focus:ring-[#C1121F]" {{ in_array('midtrans', ($setting->payment_methods_array ?? ['midtrans','ots'])) ? 'checked' : '' }}>
+                        <div><span class="font-semibold text-[#111111]">💳 Pembayaran Online (Midtrans)</span><p class="text-xs text-gray-500 font-light">Customer bayar via transfer/VA/QRIS sebelum pengambilan mobil.</p></div>
+                    </label>
+                    <label class="flex items-center gap-3 p-3 border border-[#E5E5E5] rounded-[12px] cursor-pointer hover:bg-[#F5F5F5]">
+                        <input type="checkbox" name="payment_methods[]" value="ots" class="w-5 h-5 rounded border-[#E5E5E5] text-[#C1121F] focus:ring-[#C1121F]" {{ in_array('ots', ($setting->payment_methods_array ?? ['midtrans','ots'])) ? 'checked' : '' }}>
+                        <div><span class="font-semibold text-[#111111]">💵 Bayar di Tempat (OTS)</span><p class="text-xs text-gray-500 font-light">Customer boleh bayar tunai langsung saat pengambilan mobil.</p></div>
+                    </label>
+                </div>
+            </div>
+
             {{-- Lokasi Pengambilan --}}
             <div class="border-t border-[#E5E5E5] pt-6 mt-6">
                 <h3 class="font-mono uppercase tracking-wider text-xs font-bold text-[#111111] mb-3">📍 Lokasi Pengambilan Mobil</h3>

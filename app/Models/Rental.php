@@ -30,6 +30,7 @@ class Rental extends Model
         'pickup_maps_link',
         'destination_maps_link',
         'driver_id',
+        'documents_released_at',
     ];
 
     protected function casts(): array
@@ -47,6 +48,7 @@ class Rental extends Model
             'started_at' => 'datetime',
             'returned_at' => 'datetime',
             'cancelled_at' => 'datetime',
+            'documents_released_at' => 'datetime',
         ];
     }
 

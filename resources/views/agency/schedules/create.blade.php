@@ -589,7 +589,8 @@ function loadStopsGo(routeId) {
     }
     
     stopsGo = route.stops.map(s => ({
-        id: s.id, city_name: s.city_name, stop_order: s.stop_order,
+        key: String(s.id), id: s.id, city_name: s.city_name, stop_order: s.stop_order,
+        city_code: s.city_code,
         is_pickup_available: s.is_first, is_dropoff_available: s.is_last,
         is_pickup_fixed: s.is_first, is_dropoff_fixed: s.is_last,
         is_first: s.is_first, is_last: s.is_last
@@ -597,8 +598,8 @@ function loadStopsGo(routeId) {
     
     var basePrice = parseInt(document.getElementById('basePrice').value) || 150000;
     pricingListGo.push({
-        origin_stop_id: stopsGo[0].id, origin_city: stopsGo[0].city_name,
-        destination_stop_id: stopsGo[stopsGo.length-1].id, destination_city: stopsGo[stopsGo.length-1].city_name,
+        origin_key: stopsGo[0].key, origin_stop_id: stopsGo[0].id, origin_city: stopsGo[0].city_name, origin_city_code: stopsGo[0].city_code,
+        destination_key: stopsGo[stopsGo.length-1].key, destination_stop_id: stopsGo[stopsGo.length-1].id, destination_city: stopsGo[stopsGo.length-1].city_name, destination_city_code: stopsGo[stopsGo.length-1].city_code,
         price: basePrice
     });
     
@@ -608,10 +609,16 @@ function loadStopsGo(routeId) {
     var methods = route.payment_methods || ['midtrans','cash','cod'];
     var pmContainer = document.getElementById('paymentMethodsContainerGo');
     var html = '';
-    if (methods.includes('midtrans')) html += '<div class="bg-[#F5F5F5] rounded-[12px] p-3 text-center border"><div class="text-xl mb-1">💳</div><p class="font-semibold text-xs">Online</p></div>';
-    if (methods.includes('cash')) html += '<div class="bg-[#F5F5F5] rounded-[12px] p-3 text-center border"><div class="text-xl mb-1">🏪</div><p class="font-semibold text-xs">Warung</p></div>';
-    if (methods.includes('cod') && route.cod_available) {
-        html += '<div class="bg-[#F5F5F5] rounded-[12px] p-3 text-center border"><div class="text-xl mb-1">🚗</div><p class="font-semibold text-xs">COD</p><label class="mt-2 flex items-center justify-center gap-2"><input type="checkbox" name="allow_cod" value="1" class="w-4 h-4 text-[#C1121F]"><span class="text-xs">Aktifkan</span></label></div>';
+    html += '<label class="flex items-center gap-3 p-3 border-2 border-[#E5E5E5] rounded-[12px] cursor-pointer hover:border-[#C1121F] transition has-[:checked]:border-[#C1121F] has-[:checked]:bg-[#C1121F]/5">' +
+        '<input type="checkbox" name="payment_methods[]" value="midtrans" ' + (methods.includes('midtrans') ? 'checked' : '') + ' class="w-4 h-4 text-[#C1121F] rounded border-[#E5E5E5] focus:ring-[#C1121F]">' +
+        '<span class="text-xl">💳</span><span class="text-sm font-medium">Online (Midtrans)</span></label>';
+    html += '<label class="flex items-center gap-3 p-3 border-2 border-[#E5E5E5] rounded-[12px] cursor-pointer hover:border-[#C1121F] transition has-[:checked]:border-[#C1121F] has-[:checked]:bg-[#C1121F]/5">' +
+        '<input type="checkbox" name="payment_methods[]" value="cash" ' + (methods.includes('cash') ? 'checked' : '') + ' class="w-4 h-4 text-[#C1121F] rounded border-[#E5E5E5] focus:ring-[#C1121F]">' +
+        '<span class="text-xl">🏪</span><span class="text-sm font-medium">Warung (Cash)</span></label>';
+    if (route.cod_available) {
+        html += '<label class="flex items-center gap-3 p-3 border-2 border-[#E5E5E5] rounded-[12px] cursor-pointer hover:border-[#C1121F] transition has-[:checked]:border-[#C1121F] has-[:checked]:bg-[#C1121F]/5">' +
+            '<input type="checkbox" name="payment_methods[]" value="cod" ' + (methods.includes('cod') ? 'checked' : '') + ' class="w-4 h-4 text-[#C1121F] rounded border-[#E5E5E5] focus:ring-[#C1121F]">' +
+            '<span class="text-xl">🚗</span><span class="text-sm font-medium">COD</span></label>';
     }
     pmContainer.innerHTML = html;
     document.getElementById('paymentSectionGo').style.display = 'block';
@@ -646,8 +653,13 @@ async function loadStopsPP(routeId) {
         
         if (ppRoute.stops && ppRoute.stops.length > 0) {
             stopsPP = ppRoute.stops.map(function(s, i) {
+                var stopKey = (s.id !== null && s.id !== undefined)
+                    ? String(s.id)
+                    : ('pp-' + (s.stop_order || (i + 1)));
                 return {
+                    key: stopKey,
                     id: s.id,
+                    city_code: s.city_code,
                     city_name: s.city_name,
                     stop_order: s.stop_order || (i + 1),
                     is_pickup_available: s.is_first || false,
@@ -668,10 +680,14 @@ async function loadStopsPP(routeId) {
         
         if (firstStop && lastStop) {
             pricingListPP.push({
+                origin_key: firstStop.key,
                 origin_stop_id: firstStop.id,
                 origin_city: firstStop.city_name,
+                origin_city_code: firstStop.city_code,
+                destination_key: lastStop.key,
                 destination_stop_id: lastStop.id,
                 destination_city: lastStop.city_name,
+                destination_city_code: lastStop.city_code,
                 price: ppPrice,
             });
         }
@@ -727,20 +743,22 @@ function updateGoSummaryPrice() {
 function renderStopsTable(tableId, stopList, target) {
     var html = '';
     stopList.forEach(function(s) {
+        var stopKey = s.key !== undefined ? s.key : String(s.id);
         html += '<tr class="border-t">';
         html += '<td class="px-4 py-3"><span class="text-xs font-mono text-gray-400">Stop ' + s.stop_order + '</span></td>';
         html += '<td class="px-4 py-3"><span class="font-medium">' + s.city_name + '</span></td>';
-        html += '<td class="px-4 py-3 text-center"><input type="checkbox" ' + (s.is_pickup_available ? 'checked' : '') + ' ' + (s.is_pickup_fixed ? 'disabled' : '') + ' onchange="toggleStop(' + s.id + ', \'pickup\', this.checked, \'' + target + '\')" class="w-5 h-5 text-[#C1121F] rounded"></td>';
-        html += '<td class="px-4 py-3 text-center"><input type="checkbox" ' + (s.is_dropoff_available ? 'checked' : '') + ' ' + (s.is_dropoff_fixed ? 'disabled' : '') + ' onchange="toggleStop(' + s.id + ', \'dropoff\', this.checked, \'' + target + '\')" class="w-5 h-5 text-[#C1121F] rounded"></td>';
+        html += '<td class="px-4 py-3 text-center"><input type="checkbox" ' + (s.is_pickup_available ? 'checked' : '') + ' ' + (s.is_pickup_fixed ? 'disabled' : '') + ' onchange="toggleStop(\'' + stopKey + '\', \'pickup\', this.checked, \'' + target + '\')" class="w-5 h-5 text-[#C1121F] rounded"></td>';
+        html += '<td class="px-4 py-3 text-center"><input type="checkbox" ' + (s.is_dropoff_available ? 'checked' : '') + ' ' + (s.is_dropoff_fixed ? 'disabled' : '') + ' onchange="toggleStop(\'' + stopKey + '\', \'dropoff\', this.checked, \'' + target + '\')" class="w-5 h-5 text-[#C1121F] rounded"></td>';
         html += '</tr>';
     });
     document.getElementById(tableId).innerHTML = html;
 }
 
 function toggleStop(stopId, type, enabled, target) {
+    var key = String(stopId);
     var stopList = target === 'go' ? stopsGo : stopsPP;
     var pricingList = target === 'go' ? pricingListGo : pricingListPP;
-    var stop = stopList.find(s => s.id === stopId);
+    var stop = stopList.find(s => String(s.key !== undefined ? s.key : s.id) === key);
     if (!stop) return;
     
     if (type === 'pickup') stop.is_pickup_available = enabled;
@@ -748,11 +766,11 @@ function toggleStop(stopId, type, enabled, target) {
     
     if (!enabled) {
         if (type === 'pickup') {
-            if (target === 'go') pricingListGo = pricingListGo.filter(p => p.origin_stop_id !== stopId);
-            else pricingListPP = pricingListPP.filter(p => p.origin_stop_id !== stopId);
+            if (target === 'go') pricingListGo = pricingListGo.filter(p => String(p.origin_key) !== key);
+            else pricingListPP = pricingListPP.filter(p => String(p.origin_key) !== key);
         } else {
-            if (target === 'go') pricingListGo = pricingListGo.filter(p => p.destination_stop_id !== stopId);
-            else pricingListPP = pricingListPP.filter(p => p.destination_stop_id !== stopId);
+            if (target === 'go') pricingListGo = pricingListGo.filter(p => String(p.destination_key) !== key);
+            else pricingListPP = pricingListPP.filter(p => String(p.destination_key) !== key);
         }
     } else {
         var basePrice;
@@ -784,17 +802,19 @@ function toggleStop(stopId, type, enabled, target) {
 
 function findNewPairs(changedStop, type, stopList, pricingList, basePrice) {
     var pairs = [];
+    var csKey = String(changedStop.key !== undefined ? changedStop.key : changedStop.id);
     if (type === 'pickup') {
         stopList.filter(function(s) {
             return s.is_dropoff_available && s.stop_order > changedStop.stop_order;
         }).forEach(function(ds) {
+            var dsKey = String(ds.key !== undefined ? ds.key : ds.id);
             var exists = pricingList.find(function(p) {
-                return p.origin_stop_id === changedStop.id && p.destination_stop_id === ds.id;
+                return String(p.origin_key) === csKey && String(p.destination_key) === dsKey;
             });
             if (!exists) {
                 pairs.push({ 
-                    origin_stop_id: changedStop.id, origin_city: changedStop.city_name, 
-                    destination_stop_id: ds.id, destination_city: ds.city_name, price: basePrice 
+                    origin_key: csKey, origin_stop_id: changedStop.id, origin_city: changedStop.city_name, origin_city_code: changedStop.city_code,
+                    destination_key: dsKey, destination_stop_id: ds.id, destination_city: ds.city_name, destination_city_code: ds.city_code, price: basePrice 
                 });
             }
         });
@@ -802,13 +822,14 @@ function findNewPairs(changedStop, type, stopList, pricingList, basePrice) {
         stopList.filter(function(s) {
             return s.is_pickup_available && s.stop_order < changedStop.stop_order;
         }).forEach(function(ps) {
+            var psKey = String(ps.key !== undefined ? ps.key : ps.id);
             var exists = pricingList.find(function(p) {
-                return p.origin_stop_id === ps.id && p.destination_stop_id === changedStop.id;
+                return String(p.origin_key) === psKey && String(p.destination_key) === csKey;
             });
             if (!exists) {
                 pairs.push({ 
-                    origin_stop_id: ps.id, origin_city: ps.city_name, 
-                    destination_stop_id: changedStop.id, destination_city: changedStop.city_name, price: basePrice 
+                    origin_key: psKey, origin_stop_id: ps.id, origin_city: ps.city_name, origin_city_code: ps.city_code,
+                    destination_key: csKey, destination_stop_id: changedStop.id, destination_city: changedStop.city_name, destination_city_code: changedStop.city_code, price: basePrice 
                 });
             }
         });
@@ -866,8 +887,8 @@ function saveModalPricing() {
             hasError = true;
         } else {
             validPairs.push({ 
-                origin_stop_id: p.origin_stop_id, origin_city: p.origin_city, 
-                destination_stop_id: p.destination_stop_id, destination_city: p.destination_city, 
+                origin_key: p.origin_key, origin_stop_id: p.origin_stop_id, origin_city: p.origin_city, origin_city_code: p.origin_city_code,
+                destination_key: p.destination_key, destination_stop_id: p.destination_stop_id, destination_city: p.destination_city, destination_city_code: p.destination_city_code,
                 price: price 
             });
         }
@@ -908,7 +929,7 @@ function updatePricingSummary(listDivId, summaryDivId, pricingList, target) {
         html += '<span>' + p.origin_city + ' → ' + p.destination_city + '</span>';
         html += '<div class="flex items-center gap-2">';
         html += '<span class="font-bold text-green-700">Rp ' + formatRupiah(p.price) + '</span>';
-        html += '<button type="button" onclick="removePricing(' + p.origin_stop_id + ',' + p.destination_stop_id + ',\'' + target + '\')" class="text-red-500 text-xs hover:underline ml-2">✕</button>';
+        html += '<button type="button" onclick="removePricing(\'' + p.origin_key + '\',\'' + p.destination_key + '\',\'' + target + '\')" class="text-red-500 text-xs hover:underline ml-2">✕</button>';
         html += '</div>';
         html += '</div>';
     });
@@ -928,11 +949,12 @@ function updatePricingSummary(listDivId, summaryDivId, pricingList, target) {
 }
 
 function removePricing(originId, destId, target) {
+    var ok = String(originId), dk = String(destId);
     if (target === 'go') {
-        pricingListGo = pricingListGo.filter(p => !(p.origin_stop_id === originId && p.destination_stop_id === destId));
+        pricingListGo = pricingListGo.filter(p => !(String(p.origin_key) === ok && String(p.destination_key) === dk));
         updatePricingSummary('pricingListGo', 'pricingSummaryGo', pricingListGo, 'go');
     } else {
-        pricingListPP = pricingListPP.filter(p => !(p.origin_stop_id === originId && p.destination_stop_id === destId));
+        pricingListPP = pricingListPP.filter(p => !(String(p.origin_key) === ok && String(p.destination_key) === dk));
         updatePricingSummary('pricingListPP', 'pricingSummaryPP', pricingListPP, 'pp');
     }
 }
@@ -988,7 +1010,9 @@ function checkMissingPairs(stopList, pricingList) {
     pickups.forEach(function(ps) {
         dropoffs.forEach(function(ds) {
             if (ds.stop_order > ps.stop_order) {
-                if (!pricingList.find(p => p.origin_stop_id === ps.id && p.destination_stop_id === ds.id)) {
+                var psKey = String(ps.key !== undefined ? ps.key : ps.id);
+                var dsKey = String(ds.key !== undefined ? ds.key : ds.id);
+                if (!pricingList.find(p => String(p.origin_key) === psKey && String(p.destination_key) === dsKey)) {
                     missing.push(ps.city_name + ' → ' + ds.city_name);
                 }
             }
@@ -1054,12 +1078,12 @@ function updateSummary() {
 }
 
 function submitForm() {
-    document.getElementById('stopConfigInputGo').value = JSON.stringify(stopsGo.map(s => ({ route_stop_id: s.id, is_pickup_available: s.is_pickup_available, is_dropoff_available: s.is_dropoff_available })));
-    document.getElementById('pricingInputGo').value = JSON.stringify(pricingListGo.map(p => ({ origin_stop_id: p.origin_stop_id, destination_stop_id: p.destination_stop_id, price: p.price })));
+    document.getElementById('stopConfigInputGo').value = JSON.stringify(stopsGo.map(s => ({ route_stop_id: s.id, city_code: s.city_code, is_pickup_available: s.is_pickup_available, is_dropoff_available: s.is_dropoff_available })));
+    document.getElementById('pricingInputGo').value = JSON.stringify(pricingListGo.map(p => ({ origin_stop_id: p.origin_stop_id, origin_city_code: p.origin_city_code, destination_stop_id: p.destination_stop_id, destination_city_code: p.destination_city_code, price: p.price })));
     
     if (isPP) {
-        document.getElementById('stopConfigInputPP').value = JSON.stringify(stopsPP.map(s => ({ route_stop_id: s.id, is_pickup_available: s.is_pickup_available, is_dropoff_available: s.is_dropoff_available })));
-        document.getElementById('pricingInputPP').value = JSON.stringify(pricingListPP.map(p => ({ origin_stop_id: p.origin_stop_id, destination_stop_id: p.destination_stop_id, price: p.price })));
+        document.getElementById('stopConfigInputPP').value = JSON.stringify(stopsPP.map(s => ({ route_stop_id: s.id, city_code: s.city_code, is_pickup_available: s.is_pickup_available, is_dropoff_available: s.is_dropoff_available })));
+        document.getElementById('pricingInputPP').value = JSON.stringify(pricingListPP.map(p => ({ origin_stop_id: p.origin_stop_id, origin_city_code: p.origin_city_code, destination_stop_id: p.destination_stop_id, destination_city_code: p.destination_city_code, price: p.price })));
     }
     
     document.getElementById('scheduleForm').submit();

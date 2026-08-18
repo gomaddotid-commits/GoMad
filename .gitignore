@@ -34,7 +34,6 @@ yarn-error.log
 /storage/logs
 /storage/oauth-private.key
 storage/certs/
-# Database schema & seed data dijalankan lokal (remote ke Aiven), tidak di-commit
 /database/migrations/
 /database/seeders/
 /tests/
@@ -44,3 +43,4 @@ app/Console/Commands/ProductionReadinessCheck.php
 app/Console/Commands/ClearCloudinaryFolder.php
 app/Console/Commands/GoMadProduction.php
 test-production-ready.sh
+check-email-status.sh

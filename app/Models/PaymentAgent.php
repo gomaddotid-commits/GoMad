@@ -98,6 +98,16 @@ class PaymentAgent extends Model
         return $this->hasMany(CashPayment::class);
     }
 
+    public function products(): HasMany
+    {
+        return $this->hasMany(Product::class);
+    }
+
+    public function posTransactions(): HasMany
+    {
+        return $this->hasMany(PosTransaction::class);
+    }
+
     public function settlements(): HasMany
     {
         return $this->hasMany(Settlement::class);

@@ -293,6 +293,9 @@ class ScheduleService
                 'transfer_fee_per_passenger' => 20000,
                 'allow_cod' => !empty($data['allow_cod']) && $data['allow_cod'] == '1',
                 'cod_min_balance' => $route->cod_min_deposit ?? 500000,
+                'payment_methods' => !empty($data['payment_methods'])
+                    ? $data['payment_methods']
+                    : $route->payment_methods,
             ]);
 
             // Buat schedule stops dasar
@@ -448,9 +451,18 @@ class ScheduleService
                 $ppStopConfig = is_string($data['pp_stop_config']) ? json_decode($data['pp_stop_config'], true) : $data['pp_stop_config'];
                 if (is_array($ppStopConfig)) {
                     foreach ($ppStopConfig as $config) {
-                        if (isset($config['route_stop_id'])) {
+                        $routeStopId = $config['route_stop_id'] ?? null;
+                        // PP pertama kali: id stop dari preview = null.
+                        // Resolusi via city_code terhadap rute pulang yang baru dibuat.
+                        if (!$routeStopId && !empty($config['city_code'])) {
+                            $matchedStop = $returnRoute->stops()
+                                ->where('city_code', $config['city_code'])
+                                ->first();
+                            $routeStopId = $matchedStop->id ?? null;
+                        }
+                        if ($routeStopId) {
                             ScheduleStop::where('schedule_id', $schedulePP->id)
-                                ->where('route_stop_id', $config['route_stop_id'])
+                                ->where('route_stop_id', $routeStopId)
                                 ->update([
                                     'is_pickup_available' => $config['is_pickup_available'] ?? false,
                                     'is_dropoff_available' => $config['is_dropoff_available'] ?? false,
@@ -463,11 +475,27 @@ class ScheduleService
                 $ppPricing = is_string($data['pp_pricing']) ? json_decode($data['pp_pricing'], true) : $data['pp_pricing'];
                 if (is_array($ppPricing)) {
                     foreach ($ppPricing as $priceItem) {
-                        if (isset($priceItem['origin_stop_id'], $priceItem['destination_stop_id'], $priceItem['price'])) {
+                        $originStopId = $priceItem['origin_stop_id'] ?? null;
+                        $destStopId = $priceItem['destination_stop_id'] ?? null;
+                        // PP pertama kali: id stop dari preview = null.
+                        // Resolusi via city_code terhadap rute pulang yang baru dibuat.
+                        if ((!$originStopId || !$destStopId)
+                            && !empty($priceItem['origin_city_code'])
+                            && !empty($priceItem['destination_city_code'])) {
+                            $originStop = $returnRoute->stops()
+                                ->where('city_code', $priceItem['origin_city_code'])
+                                ->first();
+                            $destStop = $returnRoute->stops()
+                                ->where('city_code', $priceItem['destination_city_code'])
+                                ->first();
+                            $originStopId = $originStop->id ?? null;
+                            $destStopId = $destStop->id ?? null;
+                        }
+                        if ($originStopId && $destStopId && isset($priceItem['price'])) {
                             RoutePricing::create([
                                 'schedule_id' => $schedulePP->id,
-                                'origin_stop_id' => $priceItem['origin_stop_id'],
-                                'destination_stop_id' => $priceItem['destination_stop_id'],
+                                'origin_stop_id' => $originStopId,
+                                'destination_stop_id' => $destStopId,
                                 'price' => (float) $priceItem['price'],
                             ]);
                         }
@@ -644,6 +672,9 @@ class ScheduleService
             $allowedFields = ['departure_date', 'departure_time', 'travel_class', 'max_overload', 'price_per_seat', 'baggage_limit_kg'];
             foreach ($allowedFields as $field) {
                 if (isset($data[$field])) $updateData[$field] = $data[$field];
+            }
+            if (!empty($data['payment_methods'])) {
+                $updateData['payment_methods'] = $data['payment_methods'];
             }
             if (!empty($updateData)) $schedule->update($updateData);
             if (!empty($data['pricing'])) {

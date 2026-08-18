@@ -226,28 +226,6 @@
     </div>
 </section>
 
-{{-- STATISTIK --}}
-<section class="section py-8 md:py-12 container-magazine">
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-        <div class="text-center">
-            <p class="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-[#BA1826]">{{ \App\Models\Agency::where('is_verified', true)->count() }}+</p>
-            <p class="text-xs sm:text-sm text-gray-500 font-light mt-0.5">Agency Terverifikasi</p>
-        </div>
-        <div class="text-center">
-            <p class="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-[#BA1826]">{{ \App\Models\Route::where('is_active', true)->count() }}+</p>
-            <p class="text-xs sm:text-sm text-gray-500 font-light mt-0.5">Rute Travel</p>
-        </div>
-        <div class="text-center">
-            <p class="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-[#BA1826]">{{ $rentalVehiclesCount }}+</p>
-            <p class="text-xs sm:text-sm text-gray-500 font-light mt-0.5">Mobil Rental</p>
-        </div>
-        <div class="text-center">
-            <p class="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-[#BA1826]">{{ $mapWarungs->count() }}+</p>
-            <p class="text-xs sm:text-sm text-gray-500 font-light mt-0.5">Warung GoMad</p>
-        </div>
-    </div>
-</section>
-
 {{-- ═══════════════════════════════════════════ --}}
 {{-- SECTION 1: PROMO ROLLING --}}
 {{-- ═══════════════════════════════════════════ --}}

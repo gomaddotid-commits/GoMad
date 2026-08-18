@@ -104,7 +104,7 @@
             </div>
             @if(!$canSelfDrive)
             <div class="mt-3 bg-yellow-50 border border-yellow-200 rounded-lg p-2 text-xs text-yellow-700">
-                ⚠️ Lengkapi <a href="{{ route('customer.documents') }}" class="text-[#BA1826] underline font-medium">dokumen KTP & SIM</a> untuk bisa Lepas Kunci
+                ⚠️ Lengkapi <a href="{{ route('customer.documents') }}" class="text-[#BA1826] underline font-medium">dokumen KTP, SIM & Selfie</a> untuk bisa Lepas Kunci
             </div>
             @endif
         </a>

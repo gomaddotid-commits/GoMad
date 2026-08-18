@@ -217,6 +217,9 @@ class RentalService
                     'driver_fee_per_hour' => $data['driver_fee_per_hour'] ?? null,
                     'driver_fee_per_day' => $data['driver_fee_per_day'] ?? null,
                     'deposit_amount' => $data['deposit_amount'] ?? 0,
+                    'payment_methods' => !empty($data['payment_methods'])
+                        ? $data['payment_methods']
+                        : null,
                     'requirements' => $data['requirements'] ?? ['ktp' => true, 'sim' => true],
                     'photos' => $data['photos'] ?? [],
                     'terms_conditions' => $data['terms_conditions'] ?? [],
@@ -346,6 +349,11 @@ class RentalService
                 'verified' => (bool) $documents?->npwp_verified,
                 'number' => $documents?->npwp_number,
             ],
+            'selfie' => [
+                'uploaded' => !empty($documents?->selfie_photo),
+                'verified' => (bool) $documents?->selfie_verified,
+                'photo' => $documents?->selfie_photo,
+            ],
             'verification_status' => $documents?->verification_status ?? 'not_submitted',
             'is_complete_for_self_drive' => $documents ? $documents->isCompleteForSelfDrive() : false,
         ];
@@ -367,12 +375,38 @@ class RentalService
                     'sim_photo' => $data['sim_photo'] ?? null,
                     'npwp_number' => $data['npwp_number'] ?? null,
                     'npwp_photo' => $data['npwp_photo'] ?? null,
+                    'selfie_photo' => $data['selfie_photo'] ?? null,
                     'verification_status' => 'pending',
                 ]
             );
 
             return $documents;
         });
+    }
+
+    // ═══════════════════════════════════════════
+    // PENYERAHAN BERKAS PENYEWA KE AGENCY
+    // ═══════════════════════════════════════════
+
+    /**
+     * Serahkan seluruh berkas penyewa (KTP, SIM, NPWP, Selfie) ke agency
+     * pemilik kendaraan. Dipanggil saat rental memasuki masa sewa (active),
+     * tepat ketika mobil diserahkan / pembayaran OTS dikonfirmasi.
+     */
+    public function releaseDocumentsToAgency(Rental $rental): Rental
+    {
+        if (!$rental->documents_released_at) {
+            $rental->update(['documents_released_at' => now()]);
+
+            Log::info('Berkas penyewa diserahkan ke agency', [
+                'rental_code' => $rental->rental_code,
+                'rental_id' => $rental->id,
+                'agency_id' => $rental->agency_id,
+                'customer_id' => $rental->customer_id,
+            ]);
+        }
+
+        return $rental->fresh();
     }
 
     // ═══════════════════════════════════════════
@@ -399,8 +433,15 @@ class RentalService
                 throw new \Exception('Metode pembayaran tidak valid.');
             }
 
-            if ($paymentMethod === 'ots' && !$vehicleSetting->allow_ots) {
-                throw new \Exception('Kendaraan ini tidak menyediakan pembayaran di tempat (OTS).');
+            if ($paymentMethod === 'ots') {
+                if (!$vehicleSetting->allow_ots) {
+                    throw new \Exception('Kendaraan ini tidak menyediakan pembayaran di tempat (OTS).');
+                }
+                // Personalisasi Agency: cek kebijakan OTS khusus
+                $agencyPolicy = $agency->policy;
+                if ($agencyPolicy && !$agencyPolicy->canUseOts()) {
+                    throw new \Exception('Agency ini tidak diizinkan menerima pembayaran OTS (personalisasi admin).');
+                }
             }
 
             if ($type === RentalType::SELF_DRIVE) {
@@ -409,7 +450,7 @@ class RentalService
                 }
                 if (!$this->canCustomerUseSelfDrive($customer)) {
                     throw new \Exception(
-                        'Anda harus melengkapi verifikasi KTP & SIM terlebih dahulu. ' .
+                        'Anda harus melengkapi verifikasi KTP, SIM, & Selfie terlebih dahulu. ' .
                         'Saat ini Anda hanya bisa rental dengan supir atau gunakan layanan Travel.'
                     );
                 }
@@ -727,6 +768,9 @@ class RentalService
                 'started_at' => now(),
             ]);
 
+            // ✅ Flow Baru: serahkan berkas penyewa ke agency saat masa sewa dimulai
+            $this->releaseDocumentsToAgency($rental);
+
             if ($rental->customer->phone) {
                 $this->notificationService->sendWhatsApp(
                     $rental->customer->phone,
@@ -800,6 +844,9 @@ class RentalService
                 'status' => RentalStatus::ACTIVE->value,
                 'started_at' => now(),
             ]);
+
+            // ✅ Flow Baru: serahkan berkas penyewa ke agency saat OTS dikonfirmasi
+            $this->releaseDocumentsToAgency($rental);
 
             if ($rental->customer->phone) {
                 $this->notificationService->sendWhatsApp(

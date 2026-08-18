@@ -86,6 +86,9 @@
                     <a href="{{ route('admin.settlements.index') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-[10px] text-sm transition {{ request()->routeIs('admin.settlements.*') ? 'bg-[#BA1826] text-white' : 'text-gray-400 hover:bg-[#BA1826]/10 hover:text-white' }}">
                         <span>📋</span> Settlement
                     </a>
+                    <a href="{{ route('admin.agency-policies.index') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-[10px] text-sm transition {{ request()->routeIs('admin.agency-policies.*') ? 'bg-[#BA1826] text-white' : 'text-gray-400 hover:bg-[#BA1826]/10 hover:text-white' }}">
+                        <span>⚙️</span> Personalisasi Agency
+                    </a>
                     
                     <p class="px-3 py-2 text-[10px] font-mono uppercase tracking-wider text-gray-500 mt-4">Lainnya</p>
                     <a href="{{ route('admin.reports') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-[10px] text-sm transition {{ request()->routeIs('admin.reports') ? 'bg-[#BA1826] text-white' : 'text-gray-400 hover:bg-[#BA1826]/10 hover:text-white' }}">

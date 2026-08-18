@@ -31,6 +31,8 @@ class CreateScheduleRequest extends FormRequest
             'price_per_seat' => ['required', 'numeric', 'min:1000'],
             'baggage_limit_kg' => ['nullable', 'numeric', 'min:0', 'max:50'],
             'allow_cod' => ['nullable', 'boolean'],
+            'payment_methods' => ['nullable', 'array'],
+            'payment_methods.*' => ['string', 'in:midtrans,cash,cod'],
 
             // Stops
             'stops' => ['nullable', 'array'],

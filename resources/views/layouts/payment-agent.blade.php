@@ -42,6 +42,9 @@
                 </a>
                 
                 @if($agent->is_verified)
+                <a href="{{ route('payment-agent.pos.index') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-[10px] text-sm transition {{ request()->routeIs('payment-agent.pos.*') ? 'bg-[#BA1826]/10 text-[#BA1826] font-semibold' : 'text-gray-600 hover:bg-[#F9FAFB]' }}">
+                    <span>🧾</span> Kasir
+                </a>
                 <a href="{{ route('payment-agent.payments') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-[10px] text-sm transition {{ request()->routeIs('payment-agent.payments') ? 'bg-[#BA1826]/10 text-[#BA1826] font-semibold' : 'text-gray-600 hover:bg-[#F9FAFB]' }}">
                     <span>💰</span> Pembayaran
                 </a>

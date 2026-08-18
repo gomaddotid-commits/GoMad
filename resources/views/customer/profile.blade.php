@@ -103,12 +103,21 @@
                 </div>
                 <p class="text-xs text-gray-400 font-mono mt-1">{{ $docStatus['sim']['number'] ?? '-' }}</p>
             </div>
+            <div class="bg-[#F9FAFB] border border-[#E5E7EB] rounded-[10px] p-3">
+                <div class="flex items-center justify-between">
+                    <span class="text-gray-500 font-light">🤳 Selfie</span>
+                    <span class="text-[10px] font-mono {{ $docStatus['selfie']['verified'] ? 'text-green-600' : ($docStatus['selfie']['uploaded'] ? 'text-yellow-600' : 'text-gray-400') }}">
+                        {{ $docStatus['selfie']['verified'] ? '✅' : ($docStatus['selfie']['uploaded'] ? '⏳' : '❌') }}
+                    </span>
+                </div>
+                <p class="text-xs text-gray-400 font-mono mt-1">{{ $docStatus['selfie']['uploaded'] ? 'Sudah diupload' : '-' }}</p>
+            </div>
         </div>
         
         @if(!$canSelfDrive)
         <div class="mt-3 bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-xs text-yellow-700">
             <p class="font-medium">⚠️ Lepas Kunci belum tersedia</p>
-            <p class="font-light mt-1">Lengkapi KTP & SIM untuk bisa menyewa mobil tanpa supir.</p>
+            <p class="font-light mt-1">Lengkapi KTP, SIM & Selfie untuk bisa menyewa mobil tanpa supir.</p>
         </div>
         @endif
         

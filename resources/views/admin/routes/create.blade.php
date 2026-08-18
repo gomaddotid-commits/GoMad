@@ -103,28 +103,50 @@
             </div>
         </div>
 
-        {{-- Pilih Stop --}}
+        {{-- Pilih Stop (searchable) --}}
         <div class="bg-white border border-[#E5E5E5] rounded-[12px] p-6 shadow-sm" x-show="origin && destination">
-            <h2 class="font-bold text-lg text-[#111111] mb-4">🛑 Pilih Kota Stop (Opsional)</h2>
-            <p class="text-sm text-gray-500 mb-4 font-light">Kota yang tersedia di antara rute:</p>
+            <h2 class="font-bold text-lg text-[#111111] mb-2">🛑 Pilih Kota Stop (Opsional)</h2>
+            <p class="text-sm text-gray-500 mb-4 font-light">Cari kota mana saja untuk dijadikan pemberhentian:</p>
 
-            <div class="grid md:grid-cols-3 gap-3" x-show="availableStops.length > 0">
-                <template x-for="city in availableStops" :key="city.code">
-                    <label class="flex items-center gap-3 p-4 border-2 border-[#E5E5E5] rounded-[12px] cursor-pointer hover:border-[#C1121F] transition"
-                           :class="selectedStops.includes(city.code) ? 'border-[#C1121F] bg-[#C1121F]/5' : ''">
-                        <input type="checkbox" name="stop_city_codes[]" :value="city.code" x-model="selectedStops"
-                               class="w-4 h-4 text-[#C1121F] rounded border-[#E5E5E5] focus:ring-[#C1121F]">
-                        <div>
-                            <span class="text-sm font-semibold text-[#111111]" x-text="city.name"></span>
-                            <span class="text-[10px] text-gray-400 block font-light" x-text="city.province?.name"></span>
-                        </div>
-                    </label>
+            {{-- Search box --}}
+            <div class="relative mb-4">
+                <input type="text" x-model="stopQuery" placeholder="🔍 Cari kota stop..."
+                       @input="searchStops()"
+                       @keydown.escape="stopOpen = false"
+                       class="w-full px-4 py-2.5 border border-[#E5E5E5] rounded-[12px] focus:border-[#C1121F] focus:ring-2 focus:ring-[#C1121F]/20 outline-none text-[#111111] text-sm transition">
+                <div x-show="stopOpen && stopResults.length > 0" x-cloak x-transition
+                     class="absolute z-50 mt-1 w-full max-h-64 overflow-auto bg-white border border-[#E5E5E5] rounded-[12px] shadow-lg">
+                    <template x-for="city in stopResults" :key="city.code">
+                        <button type="button" @mousedown.prevent="addStop(city.code)"
+                                class="w-full text-left px-4 py-2.5 hover:bg-[#F5F5F5] flex items-center justify-between"
+                                :class="selectedStops.includes(city.code) ? 'bg-[#C1121F]/5' : ''">
+                            <span>
+                                <span class="block font-medium text-[#111111] text-sm" x-text="city.name"></span>
+                                <span class="block text-[10px] text-gray-400" x-text="city.province"></span>
+                            </span>
+                            <span x-show="selectedStops.includes(city.code)" class="text-[#C1121F] text-sm">✓</span>
+                        </button>
+                    </template>
+                </div>
+                <div x-show="stopOpen && stopQuery.length >= 2 && stopResults.length === 0" x-cloak
+                     class="absolute z-50 mt-1 w-full bg-white border border-[#E5E5E5] rounded-[12px] shadow-lg px-4 py-3 text-sm text-gray-500">
+                    Tidak ada kota yang cocok.
+                </div>
+            </div>
+
+            {{-- Selected stops chips --}}
+            <div class="flex flex-wrap gap-2 mb-3" x-show="selectedStops.length > 0">
+                <template x-for="code in selectedStops" :key="code">
+                    <span class="inline-flex items-center gap-2 px-3 py-1.5 bg-[#C1121F]/5 text-[#C1121F] rounded-full text-sm">
+                        <span x-text="cityName(code)"></span>
+                        <input type="hidden" name="stop_city_codes[]" :value="code">
+                        <button type="button" @click="removeStop(code)" class="text-[#C1121F] hover:text-red-700 font-bold">✕</button>
+                    </span>
                 </template>
             </div>
-
-            <div x-show="availableStops.length === 0 && origin && destination" class="text-center py-4 text-gray-500 font-light">
-                Tidak ada kota di antara rute ini.
-            </div>
+            <p class="text-xs text-gray-400 font-light" x-show="selectedStops.length === 0">
+                Belum ada stop dipilih. Stop akan diurutkan otomatis berdasarkan jarak dari kota asal.
+            </p>
         </div>
 
         {{-- Preview Rute --}}
@@ -191,7 +213,6 @@ function routeForm() {
         origin: '{{ old('origin_city_code', '') }}',
         destination: '{{ old('destination_city_code', '') }}',
         selectedStops: @json(old('stop_city_codes', [])),
-        availableStops: [],
         cities: @json($cities->map(fn($c) => ['code' => $c->code, 'name' => $c->name, 'province' => $c->province->name ?? ''])),
 
         // ── Searchable combobox: asal & tujuan ──
@@ -199,6 +220,11 @@ function routeForm() {
         originOpen: false,
         destQuery: '',
         destOpen: false,
+
+        // ── Searchable stop selector ──
+        stopQuery: '',
+        stopOpen: false,
+        stopResults: [],
 
         get selectedOrigin() { return this.cities.find(c => c.code === this.origin) || null; },
         get selectedOriginName() { return this.selectedOrigin ? this.selectedOrigin.name : ''; },
@@ -217,10 +243,45 @@ function routeForm() {
                 .filter(c => c.code !== this.origin && (!q || (c.name + ' ' + c.province).toLowerCase().includes(q)))
                 .slice(0, 60);
         },
-        selectOrigin(code) { this.origin = code; this.originQuery = ''; this.originOpen = false; this.loadAvailableStops(); },
+        selectOrigin(code) { this.origin = code; this.originQuery = ''; this.originOpen = false; },
         clearOrigin() { this.origin = ''; this.originQuery = ''; this.originOpen = true; },
-        selectDest(code) { this.destination = code; this.destQuery = ''; this.destOpen = false; this.loadAvailableStops(); },
+        selectDest(code) { this.destination = code; this.destQuery = ''; this.destOpen = false; },
         clearDest() { this.destination = ''; this.destQuery = ''; this.destOpen = true; },
+
+        cityName(code) {
+            const city = this.cities.find(c => c.code === code);
+            return city ? city.name : code;
+        },
+
+        async searchStops() {
+            const q = (this.stopQuery || '').trim();
+            if (q.length < 2) {
+                this.stopResults = [];
+                this.stopOpen = false;
+                return;
+            }
+            this.stopOpen = true;
+            try {
+                const res = await fetch(`/api/v1/cities/search?q=${encodeURIComponent(q)}`);
+                const data = await res.json();
+                this.stopResults = (data.data || []).filter(c =>
+                    c.code !== this.origin && c.code !== this.destination
+                );
+            } catch (e) {
+                this.stopResults = [];
+            }
+        },
+        addStop(code) {
+            if (!this.selectedStops.includes(code)) {
+                this.selectedStops.push(code);
+            }
+            this.stopQuery = '';
+            this.stopResults = [];
+            this.stopOpen = false;
+        },
+        removeStop(code) {
+            this.selectedStops = this.selectedStops.filter(c => c !== code);
+        },
 
         get routeName() {
             if (!this.origin || !this.destination) return '';
@@ -237,17 +298,6 @@ function routeForm() {
                 return city ? city.name : code;
             }).join(' → ');
         },
-
-        async loadAvailableStops() {
-            if (!this.origin || !this.destination) return;
-            try {
-                const res = await fetch(`/api/v1/route-stops/available?origin=${this.origin}&destination=${this.destination}`);
-                const data = await res.json();
-                this.availableStops = data.data || [];
-            } catch (e) {
-                this.availableStops = [];
-            }
-        }
     }
 }
 

@@ -225,7 +225,7 @@
         </div>
         <div class="mt-3 bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-xs text-yellow-700">
             <p class="font-medium">⚠️ Informasi</p>
-            <p class="font-light mt-1">Anda wajib datang ke lokasi di atas untuk mengambil mobil. Bawa KTP & SIM asli.</p>
+            <p class="font-light mt-1">Anda wajib datang ke lokasi di atas untuk mengambil mobil. Bawa KTP, SIM & dokumen asli. Berkas Anda (KTP, SIM, NPWP, Selfie) akan diserahkan ke agency saat mobil diserahkan.</p>
         </div>
     </div>
     @endif

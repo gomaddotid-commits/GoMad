@@ -13,7 +13,7 @@
         
         @php
             $docStatus = $documentStatus;
-            $allVerified = $docStatus['ktp']['verified'] && $docStatus['sim']['verified'];
+            $allVerified = $docStatus['ktp']['verified'] && $docStatus['sim']['verified'] && $docStatus['selfie']['verified'];
         @endphp
 
         <div class="rounded-[12px] p-4 mb-4 border 
@@ -45,7 +45,7 @@
                         @if($allVerified)
                             Anda sudah bisa menggunakan layanan Rental Lepas Kunci.
                         @else
-                            Lengkapi KTP & SIM untuk bisa menyewa mobil tanpa supir.
+                            Lengkapi KTP, SIM & Selfie untuk bisa menyewa mobil tanpa supir.
                         @endif
                     </p>
                 </div>
@@ -108,6 +108,26 @@
                     @if($docStatus['npwp']['verified']) ✅ Verified
                     @elseif($docStatus['npwp']['uploaded']) ⏳ Menunggu
                     @else ⚪ Opsional
+                    @endif
+                </span>
+            </div>
+
+            <div class="flex items-center justify-between p-3 bg-[#F5F5F5] rounded-[12px] border border-[#E5E5E5]">
+                <div class="flex items-center gap-2">
+                    <span>🤳</span>
+                    <div>
+                        <span class="font-medium text-[#111111] text-sm">Selfie</span>
+                        <span class="text-[10px] text-gray-400 font-light ml-1">(Wajib)</span>
+                        <p class="text-[10px] text-gray-500 font-light">{{ $docStatus['selfie']['uploaded'] ? 'Sudah diupload' : 'Belum diupload' }}</p>
+                    </div>
+                </div>
+                <span class="px-2 py-0.5 rounded-full text-[10px] font-mono uppercase tracking-wider border
+                    @if($docStatus['selfie']['verified']) bg-green-50 text-green-700 border-green-200
+                    @elseif($docStatus['selfie']['uploaded']) bg-yellow-50 text-yellow-700 border-yellow-200
+                    @else bg-[#F5F5F5] text-gray-400 border-[#E5E5E5] @endif">
+                    @if($docStatus['selfie']['verified']) ✅ Verified
+                    @elseif($docStatus['selfie']['uploaded']) ⏳ Menunggu
+                    @else ❌ Belum
                     @endif
                 </span>
             </div>
@@ -181,6 +201,52 @@
                     <input type="file" name="npwp_photo" accept="image/*" class="w-full text-sm">
                     <p class="text-[10px] text-gray-400 mt-1 font-light">Format: JPG, PNG. Max 2MB</p>
                 </div>
+
+                <hr class="border-[#E5E5E5]">
+
+                <div>
+                    <label class="block text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">
+                        Foto Selfie (Kamera) <span class="text-[#C1121F]">*</span>
+                    </label>
+
+                    {{-- Live camera capture (real-time) --}}
+                    <div class="border border-[#E5E5E5] rounded-[12px] overflow-hidden">
+                        <div class="relative bg-[#111111] w-full" style="aspect-ratio: 3/4;">
+                            <video id="selfieVideo" playsinline muted autoplay class="w-full h-full object-cover hidden"></video>
+                            <img id="selfieResult" class="w-full h-full object-cover hidden" alt="Hasil selfie">
+                            <div id="selfiePlaceholder" class="absolute inset-0 flex flex-col items-center justify-center text-center p-6">
+                                <span class="text-5xl mb-3">🤳</span>
+                                <p class="text-white/70 text-sm font-light">Kamera belum aktif</p>
+                            </div>
+                        </div>
+                        <div class="p-4 bg-white">
+                            <button type="button" id="btnStartCamera" class="w-full bg-[#C1121F] text-white py-2.5 rounded-[12px] font-semibold hover:bg-[#8A0F18] transition text-sm">
+                                📷 Buka Kamera & Ambil Selfie
+                            </button>
+                            <div id="cameraControls" class="hidden grid grid-cols-2 gap-2">
+                                <button type="button" id="btnCapture" class="bg-[#C1121F] text-white py-2.5 rounded-[12px] font-semibold hover:bg-[#8A0F18] transition text-sm">
+                                    📸 Ambil Foto
+                                </button>
+                                <button type="button" id="btnRetake" class="hidden border border-[#E5E5E5] py-2.5 rounded-[12px] font-medium text-[#111111] hover:bg-[#F5F5F5] transition text-sm">
+                                    🔄 Ambil Ulang
+                                </button>
+                                <button type="button" id="btnStopCamera" class="hidden col-span-2 border border-[#E5E5E5] py-2 rounded-[12px] text-xs text-gray-500 hover:bg-[#F5F5F5] transition">
+                                    ✖ Tutup Kamera
+                                </button>
+                            </div>
+                            <div id="selfieFallback" class="hidden mt-2">
+                                <p class="text-[10px] text-gray-500 font-light mb-1">Kamera tidak tersedia? Unggah dari galeri:</p>
+                                <input type="file" id="selfieFileInput" name="selfie_photo" accept="image/*" capture="user" class="w-full text-sm" {{ $docStatus['selfie']['uploaded'] ? '' : 'required' }}>
+                            </div>
+                            <p id="selfieStatus" class="text-[10px] text-gray-400 mt-2 font-light">
+                                📷 Ambil foto wajah Anda secara langsung (real-time). Format JPG, maks 2MB.
+                            </p>
+                            @if($docStatus['selfie']['uploaded'])
+                            <p class="text-[10px] text-green-600 mt-1 font-light">✅ Sudah diupload sebelumnya</p>
+                            @endif
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <button type="submit" class="w-full btn-gomad-primary mt-6 py-3 rounded-[12px] font-semibold">
@@ -190,3 +256,133 @@
     </div>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const video = document.getElementById('selfieVideo');
+    const result = document.getElementById('selfieResult');
+    const placeholder = document.getElementById('selfiePlaceholder');
+    const fileInput = document.getElementById('selfieFileInput');
+    const btnStart = document.getElementById('btnStartCamera');
+    const btnCapture = document.getElementById('btnCapture');
+    const btnRetake = document.getElementById('btnRetake');
+    const btnStop = document.getElementById('btnStopCamera');
+    const cameraControls = document.getElementById('cameraControls');
+    const fallbackWrap = document.getElementById('selfieFallback');
+    const statusEl = document.getElementById('selfieStatus');
+
+    let stream = null;
+
+    function setStatus(msg, isOk) {
+        statusEl.textContent = msg;
+        statusEl.classList.remove('text-gray-400', 'text-green-600', 'text-red-600');
+        statusEl.classList.add(isOk === true ? 'text-green-600' : (isOk === false ? 'text-red-600' : 'text-gray-400'));
+    }
+
+    async function startCamera() {
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: 'user', width: { ideal: 720 }, height: { ideal: 960 } },
+                audio: false,
+            });
+            video.srcObject = stream;
+            video.classList.remove('hidden');
+            placeholder.classList.add('hidden');
+            result.classList.add('hidden');
+            btnStart.classList.add('hidden');
+            cameraControls.classList.remove('hidden');
+            btnRetake.classList.add('hidden');
+            btnCapture.classList.remove('hidden');
+            btnStop.classList.remove('hidden');
+            fallbackWrap.classList.add('hidden');
+            setStatus('Kamera aktif — posisikan wajah Anda lalu tekan "Ambil Foto".', true);
+        } catch (err) {
+            setStatus('Kamera tidak tersedia / izin ditolak. Unggah dari galeri di bawah.', false);
+            fallbackWrap.classList.remove('hidden');
+            cameraControls.classList.add('hidden');
+            btnStart.classList.remove('hidden');
+        }
+    }
+
+    function stopCamera() {
+        if (stream) {
+            stream.getTracks().forEach(t => t.stop());
+            stream = null;
+        }
+        video.srcObject = null;
+        video.classList.add('hidden');
+        placeholder.classList.remove('hidden');
+        if (!fileInput.files || fileInput.files.length === 0) {
+            result.classList.add('hidden');
+        }
+    }
+
+    btnCapture.addEventListener('click', function () {
+        if (!video.videoWidth) return;
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        canvas.toBlob(function (blob) {
+            if (!blob) return;
+            const file = new File([blob], 'selfie.jpg', { type: 'image/jpeg' });
+            const dt = new DataTransfer();
+            dt.items.add(file);
+            fileInput.files = dt.files;
+
+            // Tampilkan hasil
+            result.src = URL.createObjectURL(blob);
+            result.classList.remove('hidden');
+            video.classList.add('hidden');
+            placeholder.classList.add('hidden');
+
+            // Stop kamera tapi tampilkan preview hasil
+            stopCamera();
+            placeholder.classList.add('hidden');
+
+            // Toggle tombol
+            btnCapture.classList.add('hidden');
+            btnRetake.classList.remove('hidden');
+            btnStop.classList.add('hidden');
+            cameraControls.classList.remove('hidden');
+
+            setStatus('✅ Selfie berhasil diambil. Klik "Ambil Ulang" untuk mengganti.', true);
+        }, 'image/jpeg', 0.9);
+    });
+
+    btnRetake.addEventListener('click', function () {
+        fileInput.value = '';
+        result.classList.add('hidden');
+        btnCapture.classList.remove('hidden');
+        btnRetake.classList.add('hidden');
+        btnStop.classList.remove('hidden');
+        startCamera();
+    });
+
+    btnStop.addEventListener('click', stopCamera);
+    btnStart.addEventListener('click', startCamera);
+
+    // Fallback galeri: cerminkan file ke input utama + preview
+    fileInput.addEventListener('change', function () {
+        if (fileInput.files && fileInput.files.length > 0) {
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                result.src = e.target.result;
+                result.classList.remove('hidden');
+                placeholder.classList.add('hidden');
+                video.classList.add('hidden');
+                btnStart.classList.add('hidden');
+                btnCapture.classList.add('hidden');
+                btnRetake.classList.remove('hidden');
+                cameraControls.classList.remove('hidden');
+                btnStop.classList.add('hidden');
+            };
+            reader.readAsDataURL(fileInput.files[0]);
+            setStatus('✅ Foto dari galeri dipilih.', true);
+        }
+    });
+});
+</script>
+@endpush

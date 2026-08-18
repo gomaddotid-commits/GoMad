@@ -158,6 +158,11 @@ class Agency extends Model
         return $this->hasOne(AgencyWallet::class);
     }
 
+    public function policy(): HasOne
+    {
+        return $this->hasOne(AgencyPolicy::class);
+    }
+
     public function walletTransactions(): HasMany
     {
         return $this->hasMany(WalletTransaction::class);

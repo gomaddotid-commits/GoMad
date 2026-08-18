@@ -23,6 +23,7 @@ class VehicleRentalSetting extends Model
         'driver_fee_per_hour',
         'driver_fee_per_day',
         'deposit_amount',
+        'payment_methods',
         'requirements',
         'photos',
         'terms_conditions',
@@ -56,6 +57,36 @@ class VehicleRentalSetting extends Model
             'use_agency_address' => 'boolean',
 
         ];
+    }
+
+    /**
+     * Payment methods array (midtrans, ots)
+     */
+    public function getPaymentMethodsArrayAttribute(): array
+    {
+        $value = $this->attributes['payment_methods'] ?? null;
+        if (empty($value)) {
+            return ['midtrans', 'ots'];
+        }
+        if (is_array($value)) return $value;
+        return explode(',', $value);
+    }
+
+    public function setPaymentMethodsAttribute($value): void
+    {
+        if (is_array($value)) {
+            $value = array_values(array_filter($value));
+            $this->attributes['payment_methods'] = !empty($value) ? implode(',', $value) : null;
+        } elseif (is_string($value)) {
+            $this->attributes['payment_methods'] = !empty($value) ? $value : null;
+        } else {
+            $this->attributes['payment_methods'] = null;
+        }
+    }
+
+    public function isPaymentMethodAvailable(string $method): bool
+    {
+        return in_array($method, $this->payment_methods_array);
     }
 
     public function vehicle(): BelongsTo

@@ -64,9 +64,11 @@
                 </div>
                 @if($rental->type == 'self_drive' && $customer->customerDocuments)
                 <div class="bg-blue-50 border border-blue-200 rounded-[12px] p-3">
-                    <span class="text-[10px] font-mono uppercase tracking-wider text-gray-400">Dokumen</span>
+                    <span class="text-[10px] font-mono uppercase tracking-wider text-gray-400">Dokumen Penyewa</span>
                     <p class="text-xs text-blue-700 font-light">KTP: {{ $customer->customerDocuments->ktp_number ?? '-' }} @if($customer->customerDocuments->ktp_verified)✅@else❌@endif</p>
                     <p class="text-xs text-blue-700 font-light">SIM: {{ $customer->customerDocuments->sim_number ?? '-' }} @if($customer->customerDocuments->sim_verified)✅@else❌@endif</p>
+                    <p class="text-xs text-blue-700 font-light">NPWP: {{ $customer->customerDocuments->npwp_number ?? '-' }} @if($customer->customerDocuments->npwp_verified)✅@elseif($customer->customerDocuments->npwp_number)⏳@else⚪@endif</p>
+                    <p class="text-xs text-blue-700 font-light">Selfie: {{ $customer->customerDocuments->selfie_photo ? 'Sudah diupload' : '-' }} @if($customer->customerDocuments->selfie_verified)✅@elseif($customer->customerDocuments->selfie_photo)⏳@else❌@endif</p>
                 </div>
                 @endif
             </div>
@@ -144,6 +146,88 @@
             </div>
             @endif
         </div>
+    </div>
+
+    {{-- 📋 BERKAS PENYEWA (Flow Baru: diserahkan ke agency saat masa sewa) --}}
+    @php $berkas = $customer->customerDocuments ?? null; @endphp
+    <div class="bg-white border border-[#E5E5E5] rounded-[12px] p-6 mt-6 shadow-sm">
+        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mb-4">
+            <h2 class="font-bold text-lg text-[#111111]">📋 Berkas Penyewa</h2>
+            @if($rental->documents_released_at)
+            <span class="px-3 py-1 rounded-full text-[10px] font-mono uppercase tracking-wider bg-green-50 text-green-700 border border-green-200 self-start">✅ Diserahkan</span>
+            @else
+            <span class="px-3 py-1 rounded-full text-[10px] font-mono uppercase tracking-wider bg-yellow-50 text-yellow-700 border border-yellow-200 self-start">🔒 Terkunci</span>
+            @endif
+        </div>
+
+        @if($rental->documents_released_at && $berkas)
+        <p class="text-xs text-gray-500 font-light mb-4">
+            Berkas penyewa diserahkan ke agency Anda pada <strong>{{ $rental->documents_released_at->format('d M Y H:i') }}</strong>.
+            Gunakan untuk verifikasi identitas penyewa selama masa sewa.
+        </p>
+        <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {{-- Selfie --}}
+            <div class="border border-[#E5E5E5] rounded-[12px] p-4">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="font-mono uppercase tracking-wider text-[10px] text-gray-500">🤳 Selfie</span>
+                    @if($berkas->selfie_verified)<span class="text-[10px] font-mono text-green-600">✅ Verified</span>@endif
+                </div>
+                @if($berkas->selfie_photo)
+                <a href="{{ $berkas->selfie_photo }}" target="_blank" class="block">
+                    <img src="{{ $berkas->selfie_photo }}" alt="Selfie penyewa" class="w-full h-24 object-cover rounded-[8px] border border-[#E5E5E5]">
+                </a>
+                <a href="{{ $berkas->selfie_photo }}" target="_blank" class="text-xs text-[#C1121F] hover:underline mt-1 inline-block">Lihat Foto Selfie →</a>
+                @else <p class="text-sm text-gray-400 font-light">Belum diupload</p> @endif
+            </div>
+
+            {{-- KTP --}}
+            <div class="border border-[#E5E5E5] rounded-[12px] p-4">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="font-mono uppercase tracking-wider text-[10px] text-gray-500">🪪 KTP</span>
+                    @if($berkas->ktp_verified)<span class="text-[10px] font-mono text-green-600">✅</span>@endif
+                </div>
+                <p class="text-sm font-mono text-[#111111]">{{ $berkas->ktp_number ?? '-' }}</p>
+                @if($berkas->ktp_photo)
+                <a href="{{ $berkas->ktp_photo }}" target="_blank" class="text-xs text-[#C1121F] hover:underline mt-1 inline-block">Lihat Foto KTP →</a>
+                @else <p class="text-xs text-gray-400 font-light mt-1">Belum diupload</p> @endif
+            </div>
+
+            {{-- SIM --}}
+            <div class="border border-[#E5E5E5] rounded-[12px] p-4">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="font-mono uppercase tracking-wider text-[10px] text-gray-500">🚗 SIM</span>
+                    @if($berkas->sim_verified)<span class="text-[10px] font-mono text-green-600">✅</span>@endif
+                </div>
+                <p class="text-sm font-mono text-[#111111]">{{ $berkas->sim_number ?? '-' }}</p>
+                @if($berkas->sim_photo)
+                <a href="{{ $berkas->sim_photo }}" target="_blank" class="text-xs text-[#C1121F] hover:underline mt-1 inline-block">Lihat Foto SIM →</a>
+                @else <p class="text-xs text-gray-400 font-light mt-1">Belum diupload</p> @endif
+            </div>
+
+            {{-- NPWP --}}
+            <div class="border border-[#E5E5E5] rounded-[12px] p-4">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="font-mono uppercase tracking-wider text-[10px] text-gray-500">📄 NPWP</span>
+                    @if($berkas->npwp_verified)<span class="text-[10px] font-mono text-green-600">✅</span>@elseif($berkas->npwp_number)<span class="text-[10px] font-mono text-yellow-600">⏳</span>@endif
+                </div>
+                <p class="text-sm font-mono text-[#111111]">{{ $berkas->npwp_number ?? '-' }}</p>
+                @if($berkas->npwp_photo)
+                <a href="{{ $berkas->npwp_photo }}" target="_blank" class="text-xs text-[#C1121F] hover:underline mt-1 inline-block">Lihat Foto NPWP →</a>
+                @else <p class="text-xs text-gray-400 font-light mt-1">{{ $berkas->npwp_number ? 'Tanpa foto' : 'Tidak ada' }}</p> @endif
+            </div>
+        </div>
+        @else
+        <div class="bg-yellow-50 border border-yellow-200 rounded-[12px] p-4 flex items-start gap-3">
+            <span class="text-2xl">🔒</span>
+            <div>
+                <p class="text-sm font-medium text-yellow-700">Berkas penyewa belum diserahkan.</p>
+                <p class="text-xs text-yellow-700 font-light mt-0.5">
+                    Berkas (KTP, SIM, NPWP, Selfie) akan dirilis otomatis ke agency Anda saat verifikasi pengambilan mobil (masa sewa dimulai).
+                    Verifikasi pengambilan di halaman ini setelah penyewa datang.
+                </p>
+            </div>
+        </div>
+        @endif
     </div>
 
     {{-- Alamat Penjemputan (with_driver) --}}

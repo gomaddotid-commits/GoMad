@@ -72,6 +72,17 @@
                         SIM: {{ $customer->customerDocuments->sim_number ?? '-' }} 
                         @if($customer->customerDocuments->sim_verified) ✅ @else ❌ @endif
                     </p>
+                    <p class="text-xs text-blue-700 font-light">
+                        NPWP: {{ $customer->customerDocuments->npwp_number ?? '-' }} 
+                        @if($customer->customerDocuments->npwp_verified) ✅ @elseif($customer->customerDocuments->npwp_number) ⏳ @else ⚪ @endif
+                    </p>
+                    <p class="text-xs text-blue-700 font-light">
+                        Selfie: {{ $customer->customerDocuments->selfie_photo ? 'Sudah diupload' : '-' }} 
+                        @if($customer->customerDocuments->selfie_verified) ✅ @elseif($customer->customerDocuments->selfie_photo) ⏳ @else ❌ @endif
+                    </p>
+                    @if($rental->documents_released_at)
+                    <p class="text-[10px] text-green-600 font-mono mt-1">📤 Berkas diserahkan ke agency: {{ $rental->documents_released_at->format('d M Y H:i') }}</p>
+                    @endif
                 </div>
                 @endif
             </div>

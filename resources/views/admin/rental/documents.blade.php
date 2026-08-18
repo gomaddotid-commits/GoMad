@@ -80,7 +80,7 @@
             </div>
             
             {{-- Detail Dokumen --}}
-            <div class="grid md:grid-cols-3 gap-4 mb-4">
+            <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
                 {{-- KTP --}}
                 <div class="border border-[#E5E5E5] rounded-[12px] p-4">
                     <div class="flex items-center justify-between mb-2">
@@ -122,6 +122,20 @@
                     <a href="{{ $doc->npwp_photo }}" target="_blank" class="text-xs text-[#C1121F] hover:underline mt-1 inline-block">Lihat Foto NPWP →</a>
                     @endif
                 </div>
+                
+                {{-- SELFIE --}}
+                <div class="border border-[#E5E5E5] rounded-[12px] p-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="font-mono uppercase tracking-wider text-[10px] text-gray-500">🤳 SELFIE</span>
+                        <span class="text-[10px] font-mono {{ $doc->selfie_verified ? 'text-green-600' : 'text-yellow-600' }}">
+                            {{ $doc->selfie_verified ? '✅ Verified' : '⏳ Pending' }}
+                        </span>
+                    </div>
+                    <p class="text-sm font-mono text-[#111111]">{{ $doc->selfie_photo ? 'Sudah diupload' : '-' }}</p>
+                    @if($doc->selfie_photo)
+                    <a href="{{ $doc->selfie_photo }}" target="_blank" class="text-xs text-[#C1121F] hover:underline mt-1 inline-block">Lihat Foto Selfie →</a>
+                    @endif
+                </div>
             </div>
             
             {{-- Tombol Aksi (hanya untuk pending) --}}
@@ -131,6 +145,7 @@
                     @csrf
                     <input type="hidden" name="ktp_verified" value="1">
                     <input type="hidden" name="sim_verified" value="1">
+                    <input type="hidden" name="selfie_verified" value="1">
                     @if($doc->npwp_number)
                     <input type="hidden" name="npwp_verified" value="1">
                     @endif
