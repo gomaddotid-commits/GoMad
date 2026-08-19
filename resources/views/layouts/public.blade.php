@@ -157,7 +157,7 @@
         {{-- MOBILE DRAWER --}}
         <div x-show="mobileMenu" x-cloak
              @click="mobileMenu = false"
-             class="fixed inset-0 bg-[#111827]/50 z-40 lg:hidden"
+             class="fixed inset-0 h-screen bg-[#111827]/50 z-60 lg:hidden"
              x-transition:enter="transition ease-out duration-300"
              x-transition:enter-start="opacity-0"
              x-transition:enter-end="opacity-100"
@@ -183,8 +183,8 @@
             <div class="flex flex-col gap-6 text-lg font-medium text-[#111827]">
                 <a href="{{ route('home') }}" class="border-b border-[#E5E7EB] pb-3 hover:text-[#BA1826] transition">Beranda</a>
                 <a href="{{ route('search') }}" class="border-b border-[#E5E7EB] pb-3 hover:text-[#BA1826] transition">Cari Travel</a>
-                <a href="{{ route('listing') }}" class="border-b border-[#E5E7EB] pb-3 hover:text-[#BA1826] transition">Agency</a>
                 <a href="{{ route('rental.public') }}" class="border-b border-[#E5E7EB] pb-3 hover:text-[#BA1826] transition">Sewa Kendaraan</a>
+                <a href="{{ route('listing') }}" class="border-b border-[#E5E7EB] pb-3 hover:text-[#BA1826] transition">Agency</a>
                 <a href="{{ route('eticket.public') }}" class="border-b border-[#E5E7EB] pb-3 hover:text-[#BA1826] transition">Cek E-Ticket</a>
             </div>
 
@@ -215,7 +215,7 @@
     </main>
 
     {{-- BOTTOM NAV --}}
-    <nav class="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-[#E5E7EB] z-40 lg:hidden safe-area-bottom">
+    <nav class="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-[#E5E7EB] z-30 lg:hidden safe-area-bottom">
         <div class="flex items-center justify-around py-2">
             <a href="{{ route('home') }}" class="flex flex-col items-center gap-1 text-[10px] {{ request()->routeIs('home') ? 'text-[#BA1826]' : 'text-gray-500' }}">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3"/></svg>
@@ -225,13 +225,13 @@
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                 <span>Cari Travel</span>
             </a>
-            <a href="{{ route('listing') }}" class="flex flex-col items-center gap-1 text-[10px] {{ request()->routeIs('listing') ? 'text-[#BA1826]' : 'text-gray-500' }}">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3"/></svg>
-                <span>Agency</span>
-            </a>
             <a href="{{ route('rental.public') }}" class="flex flex-col items-center gap-1 text-[10px] {{ request()->routeIs('rental.public') ? 'text-[#BA1826]' : 'text-gray-500' }}">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
                 <span>Sewa Kendaraan</span>
+            </a>
+            <a href="{{ route('listing') }}" class="flex flex-col items-center gap-1 text-[10px] {{ request()->routeIs('listing') ? 'text-[#BA1826]' : 'text-gray-500' }}">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3"/></svg>
+                <span>Agency</span>
             </a>
             @auth
             <a href="{{ route('customer.profile') }}" class="flex flex-col items-center gap-1 text-[10px] {{ request()->routeIs('customer.profile') ? 'text-[#BA1826]' : 'text-gray-500' }}">

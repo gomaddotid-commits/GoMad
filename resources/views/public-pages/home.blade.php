@@ -114,12 +114,12 @@
                         <button @click="searchMode = 'travel'" 
                                 :class="searchMode === 'travel' ? 'bg-white shadow text-[#BA1826]' : 'text-gray-500 hover:text-[#111827]'"
                                 class="flex-1 py-1.5 md:py-2 rounded-md text-xs sm:text-sm font-semibold transition">
-                            🚐 Travel
+                            Travel
                         </button>
                         <button @click="searchMode = 'rental'" 
                                 :class="searchMode === 'rental' ? 'bg-white shadow text-[#BA1826]' : 'text-gray-500 hover:text-[#111827]'"
                                 class="flex-1 py-1.5 md:py-2 rounded-md text-xs sm:text-sm font-semibold transition">
-                            🚗 Rental
+                            Rental
                         </button>
                     </div>
                 </div>
@@ -297,7 +297,7 @@
         </div>
         <div class="card-gomad flex flex-col gap-3 md:gap-4 group p-4 md:p-6">
             <div class="text-3xl md:text-4xl text-[#BA1826]">🏪</div>
-            <h3 class="text-base md:text-xl font-bold text-[#111827]">Warung GoMad</h3>
+            <h3 class="text-base md:text-xl font-bold text-[#111827]">Warung GoMad (Coming Soon)</h3>
             <p class="text-sm text-gray-500 leading-relaxed">Bayar cash di warung terdekat. Tanpa rekening, tanpa ribet. Tersebar di seluruh Madura.</p>
             <div class="mt-auto pt-3 md:pt-4 border-t border-[#E5E7EB] group-hover:border-[#BA1826] transition-colors flex justify-between items-center">
                 <span class="text-[10px] md:text-xs font-mono uppercase">{{ $mapWarungs->count() }}+ Titik</span>
@@ -336,17 +336,17 @@
         <p class="text-sm md:text-base text-gray-500 mb-6 md:mb-8 font-light">Download aplikasi GoMad untuk pengalaman booking yang lebih mudah.</p>
         <div class="flex flex-col sm:flex-row gap-3 md:gap-4 justify-center">
             <a href="{{ route('download-app') }}" class="bg-[#111827] text-white px-6 md:px-8 py-3 md:py-4 rounded-[10px] inline-flex items-center gap-3 md:gap-4 hover:bg-[#111827]/80 transition justify-center">
-                <span class="text-2xl md:text-3xl font-mono">▶</span>
+                <span class="text-2xl md:text-3xl font-mono"></span>
                 <div class="text-left">
-                    <div class="text-[8px] md:text-[10px] font-mono uppercase tracking-wider opacity-80">GET IT ON</div>
-                    <div class="text-base md:text-lg font-bold">Google Play</div>
+                    <div class="text-[8px] md:text-[10px] font-mono uppercase tracking-wider opacity-80">GET IT ON GOOGLE PLAY</div>
+                    <div class="text-base md:text-lg font-bold">Coming Soon</div>
                 </div>
             </a>
             <a href="{{ route('download-app') }}" class="bg-[#111827] text-white px-6 md:px-8 py-3 md:py-4 rounded-[10px] inline-flex items-center gap-3 md:gap-4 hover:bg-[#111827]/80 transition justify-center">
-                <span class="text-2xl md:text-3xl font-mono">🍎</span>
+                <span class="text-2xl md:text-3xl font-mono"></span>
                 <div class="text-left">
-                    <div class="text-[8px] md:text-[10px] font-mono uppercase tracking-wider opacity-80">DOWNLOAD ON</div>
-                    <div class="text-base md:text-lg font-bold">App Store</div>
+                    <div class="text-[8px] md:text-[10px] font-mono uppercase tracking-wider opacity-80">DOWNLOAD ON APP STORE</div>
+                    <div class="text-base md:text-lg font-bold">Coming Soon</div>
                 </div>
             </a>
         </div>

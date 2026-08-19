@@ -15,12 +15,12 @@
             
             <div class="flex flex-col sm:flex-row gap-4 justify-center mb-12">
                 <a href="#" class="bg-[#111827] text-white px-8 py-4 rounded-[10px] inline-flex items-center gap-4 hover:bg-[#111827]/80 transition justify-center">
-                    <span class="text-3xl font-mono">▶</span>
-                    <div class="text-left"><div class="text-[10px] font-mono uppercase tracking-wider opacity-80">GET IT ON</div><div class="text-lg font-bold">Google Play</div></div>
+                    <span class="text-3xl font-mono"></span>
+                    <div class="text-left"><div class="text-[10px] font-mono uppercase tracking-wider opacity-80">GET IT ON GOOGLE PLAY</div><div class="text-lg font-bold">COMING SOON</div></div>
                 </a>
                 <a href="#" class="bg-[#111827] text-white px-8 py-4 rounded-[10px] inline-flex items-center gap-4 hover:bg-[#111827]/80 transition justify-center">
-                    <span class="text-3xl font-mono">🍎</span>
-                    <div class="text-left"><div class="text-[10px] font-mono uppercase tracking-wider opacity-80">DOWNLOAD ON</div><div class="text-lg font-bold">App Store</div></div>
+                    <span class="text-3xl font-mono"></span>
+                    <div class="text-left"><div class="text-[10px] font-mono uppercase tracking-wider opacity-80">DOWNLOAD ON APP STORE</div><div class="text-lg font-bold">COMING SOON</div></div>
                 </a>
             </div>
             
